@@ -73,6 +73,14 @@ describe("aj_orch executable entrypoint", () => {
       params: { op: "get" },
       options: { signal, onUpdate },
     });
+    await expect(goal.execute("call-default", { op: "create", objective: "ship" }, undefined, undefined, { invokeTool })).resolves.toEqual({
+      params: { op: "create", objective: "ship", token_budget: 1_000_000 },
+      options: {},
+    });
+    await expect(goal.execute("call-explicit", { op: "create", objective: "ship", token_budget: 42 }, undefined, undefined, { invokeTool })).resolves.toEqual({
+      params: { op: "create", objective: "ship", token_budget: 42 },
+      options: {},
+    });
     await expect(goal.execute("call-2", { op: "get" }, signal, onUpdate, {})).rejects.toThrow(
       "OMP's native goal tool is unavailable.",
     );

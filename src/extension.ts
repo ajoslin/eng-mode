@@ -103,6 +103,8 @@ export async function executeAjOrch(input: Input): Promise<unknown> {
   }
 }
 
+const DEFAULT_GOAL_TOKEN_BUDGET = 1_000_000;
+
 export default function ajModeExtension(pi: ExtensionAPI): void {
   const z = pi.zod;
   pi.registerTool({
@@ -118,7 +120,10 @@ export default function ajModeExtension(pi: ExtensionAPI): void {
     loadMode: "essential",
     async execute(_toolCallId, input, signal, onUpdate, context) {
       if (!context?.invokeTool) throw new Error("OMP's native goal tool is unavailable.");
-      return context.invokeTool(input, {
+      const params = input.op === "create" && input.token_budget === undefined
+        ? { ...input, token_budget: DEFAULT_GOAL_TOKEN_BUDGET }
+        : input;
+      return context.invokeTool(params, {
         ...(signal === undefined ? {} : { signal }),
         ...(onUpdate === undefined ? {} : { onUpdate }),
       });
