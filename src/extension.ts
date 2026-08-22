@@ -40,6 +40,7 @@ interface ExtensionAPI {
   readonly zod: SchemaBuilder;
   registerTool(tool: ToolDefinition): void;
 }
+import { join, resolve } from "node:path";
 import { decideRepositoryContracts, observeRepositoryContracts } from "./contracts.ts";
 import { openStore, parseVerdict } from "./store.ts";
 
@@ -65,13 +66,18 @@ function required(value: string | undefined, name: string): string {
   return value;
 }
 
+function resolveStore(input: Input): string {
+  if (input.store !== undefined && input.store.length > 0) return input.store;
+  return join(resolve(required(input.repositoryRoot, "repositoryRoot")), ".omp", "aj-orch");
+}
+
 export async function executeAjOrch(input: Input): Promise<unknown> {
   if (input.action === "contracts") {
     const repositoryRoot = required(input.repositoryRoot, "repositoryRoot");
     const observations = observeRepositoryContracts(repositoryRoot);
     return decideRepositoryContracts({ repositoryRoot, mode: input.mode ?? "code-producing", observations });
   }
-  const store = openStore(required(input.store, "store"), input.force === undefined ? {} : { force: input.force });
+  const store = openStore(resolveStore(input), input.force === undefined ? {} : { force: input.force });
   try {
     switch (input.action) {
       case "init": return await store.init({ spawner: required(input.spawner, "spawner") });
@@ -103,7 +109,7 @@ export async function executeAjOrch(input: Input): Promise<unknown> {
   }
 }
 
-const DEFAULT_GOAL_TOKEN_BUDGET = 1_000_000;
+const MINIMUM_GOAL_TOKEN_BUDGET = 1_000_000;
 
 export default function ajModeExtension(pi: ExtensionAPI): void {
   const z = pi.zod;
@@ -120,8 +126,9 @@ export default function ajModeExtension(pi: ExtensionAPI): void {
     loadMode: "essential",
     async execute(_toolCallId, input, signal, onUpdate, context) {
       if (!context?.invokeTool) throw new Error("OMP's native goal tool is unavailable.");
-      const params = input.op === "create" && input.token_budget === undefined
-        ? { ...input, token_budget: DEFAULT_GOAL_TOKEN_BUDGET }
+      const requestedBudget = typeof input.token_budget === "number" ? input.token_budget : 0;
+      const params = input.op === "create"
+        ? { ...input, token_budget: Math.max(requestedBudget, MINIMUM_GOAL_TOKEN_BUDGET) }
         : input;
       return context.invokeTool(params, {
         ...(signal === undefined ? {} : { signal }),

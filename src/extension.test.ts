@@ -32,11 +32,15 @@ describe("aj_orch executable entrypoint", () => {
   });
 
 
-  it("initializes and reads a durable store through actions", async () => {
-    const store = join(await root(), "store");
-    expect(await executeAjOrch({ action: "init", store, spawner: "session" })).toEqual({ store });
-    expect(await executeAjOrch({ action: "unit_add", store, id: "unit-1", track: "core" })).toMatchObject({ id: "unit-1", track: "core" });
-    expect(await executeAjOrch({ action: "unit_counts", store })).toEqual({ pending: 1 });
+  it("initializes the default project store and honors an explicit store", async () => {
+    const repositoryRoot = await root();
+    const defaultStore = join(repositoryRoot, ".omp", "aj-orch");
+    expect(await executeAjOrch({ action: "init", repositoryRoot, spawner: "session" })).toEqual({ store: defaultStore });
+    expect(await executeAjOrch({ action: "unit_add", repositoryRoot, id: "unit-1", track: "core" })).toMatchObject({ id: "unit-1", track: "core" });
+    expect(await executeAjOrch({ action: "unit_counts", repositoryRoot })).toEqual({ pending: 1 });
+
+    const explicitStore = join(repositoryRoot, "explicit-store");
+    expect(await executeAjOrch({ action: "init", store: explicitStore, spawner: "session" })).toEqual({ store: explicitStore });
   });
 
   it("registers goal and aj_orch from one entrypoint", async () => {
@@ -77,8 +81,12 @@ describe("aj_orch executable entrypoint", () => {
       params: { op: "create", objective: "ship", token_budget: 1_000_000 },
       options: {},
     });
-    await expect(goal.execute("call-explicit", { op: "create", objective: "ship", token_budget: 42 }, undefined, undefined, { invokeTool })).resolves.toEqual({
-      params: { op: "create", objective: "ship", token_budget: 42 },
+    await expect(goal.execute("call-low", { op: "create", objective: "ship", token_budget: 42 }, undefined, undefined, { invokeTool })).resolves.toEqual({
+      params: { op: "create", objective: "ship", token_budget: 1_000_000 },
+      options: {},
+    });
+    await expect(goal.execute("call-high", { op: "create", objective: "ship", token_budget: 2_000_000 }, undefined, undefined, { invokeTool })).resolves.toEqual({
+      params: { op: "create", objective: "ship", token_budget: 2_000_000 },
       options: {},
     });
     await expect(goal.execute("call-2", { op: "get" }, signal, onUpdate, {})).rejects.toThrow(
