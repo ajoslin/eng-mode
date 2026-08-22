@@ -1,33 +1,49 @@
-# OMP AJ Mode
+# AJ Mode for OMP
 
-AJ Mode is a global engineering workflow plugin for [Oh My Pi](https://github.com/can1357/oh-my-pi). It supplies reusable playbooks, principle skills, task agents, durable orchestration, and OMP's native `goal` tool wrapper. Repositories keep their own standards and product-verification contracts under `.omp/skills/`.
+Reusable engineering playbooks, agents, orchestration, and goal management for [Oh My Pi](https://github.com/can1357/oh-my-pi).
 
 ## Install
 
-Install a pinned revision:
-
 ```sh
-omp plugin install 'github:ajoslin/omp-aj-mode#<commit>'
+omp plugin install github:ajoslin/omp-aj-mode
 ```
 
-Restart OMP after installation. Then run the `setup-aj-mode` skill to validate model roles, agent chains, plugin provenance, worktree isolation, and repository contracts.
+Restart OMP. Then open every repository where you use AJ Mode and run:
+
+```text
+setup-aj-mode
+```
+
+**Run `setup-aj-mode` in every repository.** It checks the plugin, model roles, agent chains, worktree isolation, and that repository's standards and verification contracts.
 
 ## Update
 
-OMP updates Git plugins by reinstalling a newer revision:
+Run the install command again, restart OMP, then rerun `setup-aj-mode` in each repository.
 
-```sh
-omp plugin install 'github:ajoslin/omp-aj-mode#<new-commit>'
-```
+## What belongs in each repository
 
-## Repository contracts
-
-Code-producing AJ Mode work expects the target repository to own:
+AJ Mode supplies the reusable workflow. Each repository owns its local rules and real verification surface:
 
 - `.omp/skills/project-standards/SKILL.md`
 - `.omp/skills/verify-project/SKILL.md`
 
-`project-standards` indexes repository law and selected tooling. `verify-project` defines the real product verification surface. AJ Mode validates these files through `aj_orch contracts`; installation-time provider provenance remains the responsibility of `setup-aj-mode`.
+`project-standards` indexes repository law and tooling. `verify-project` defines how to prove the product works. `setup-aj-mode` validates both.
+
+## Forked from pstack
+
+AJ Mode is an OMP fork of [Lauren Tan's pstack](https://github.com/cursor/plugins/tree/main/pstack). It keeps pstack's playbook-driven approach with small OMP-specific changes: native OMP tools and agents, `goal` and `aj_orch`, and repository-local setup through `setup-aj-mode`.
+
+The core ideas come directly from pstack's playbooks:
+
+> - **Investigation:** “a read-only question. how does x work, why was y built this way, are we sure.”
+> - **Bug fix:** “reproduce a defect, root-cause it, and fix with runtime evidence.”
+> - **Feature:** “new or changed behavior, built from a named data shape.”
+> - **Refactoring:** “a behavior-preserving change to structure or shape.”
+> - **Performance:** “trace a measured slowness and improve it against a baseline.”
+
+AJ Mode also carries pstack's broader rules: route work through a matching playbook, prove behavior on the real artifact, fix root causes, keep changes small, and use parallel agents without lowering the quality bar. See [pstack's full playbook list](https://github.com/cursor/plugins/blob/main/pstack/README.md#just-use-poteto-mode).
+
+Both projects are MIT licensed. Upstream copyright and license terms are preserved in [`LICENSE`](LICENSE).
 
 ## Development
 
