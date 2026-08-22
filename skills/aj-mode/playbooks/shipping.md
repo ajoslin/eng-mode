@@ -1,6 +1,6 @@
 ### Shipping
 
-1. Read the stack tooling and GitHub workflow skills `project-standards` names (fall back to plain `gh` for state). Do not use Graphite.
+1. Use native OMP `github` and `pr://` for ordinary repository and PR state. Read the stack tooling and GitHub workflow skills `project-standards` names for stack operations, unresolved-thread aggregation, and CI failure drilldown (fall back to plain `gh`). Do not use Graphite.
 2. Snapshot each PR base, head SHA, checks, threads, and merge state. Freeze bottom-to-top order.
 3. Assign independent verification per meaningful-risk PR. Return `PASS`, `PASS+NOTES`, or `FAIL` pinned to SHA. Avoid ceremonial delegation for command-only changes.
 4. A new SHA voids the verdict unless `git patch-id` proves the patch identity unchanged.
