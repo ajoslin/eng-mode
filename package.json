@@ -1,0 +1,33 @@
+{
+  "name": "@aj/aj-mode",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Global AJ Mode engineering workflows, agents, orchestration, and native goal integration for OMP.",
+  "repository": "github:ajoslin/omp-aj-mode",
+  "license": "MIT",
+  "files": [
+    "agents",
+    "skills",
+    "src",
+    "README.md"
+  ],
+  "omp": {
+    "extensions": [
+      "./src/extension.ts"
+    ]
+  },
+  "scripts": {
+    "test": "bun test ./src",
+    "typecheck": "bunx tsgo -p tsconfig.json",
+    "check": "bun run test && bun run typecheck"
+  },
+  "dependencies": {
+    "yaml": "2.9.0",
+    "zod": "4.3.3"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "@typescript/native-preview": "^7.0.0-dev.20260707.2"
+  }
+}

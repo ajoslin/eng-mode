@@ -1,0 +1,115 @@
+/**
+ * Frozen AJ Mode extension manifest. The reviewed migration plan, tests,
+ * provenance checks, and the repository deletion inventory all consume these
+ * exact sets; changing them is a plan-level decision, not a refactor.
+ */
+
+export const skillNames = [
+  "aj-mode",
+  "setup-aj-mode",
+  "architect",
+  "arena",
+  "automate-me",
+  "blast-radius",
+  "bro",
+  "codebase-design",
+  "create-verification-skill",
+  "diagnosing-bugs",
+  "domain-modeling",
+  "figure-it-out",
+  "how",
+  "interrogate",
+  "maintain-verification-skill",
+  "no-comments",
+  "principle-boundary-discipline",
+  "principle-build-the-lever",
+  "principle-encode-lessons-in-structure",
+  "principle-exhaust-the-design-space",
+  "principle-experience-first",
+  "principle-fix-root-causes",
+  "principle-foundational-thinking",
+  "principle-guard-the-context-window",
+  "principle-laziness-protocol",
+  "principle-make-operations-idempotent",
+  "principle-migrate-callers-then-delete-legacy-apis",
+  "principle-minimize-reader-load",
+  "principle-model-the-domain",
+  "principle-never-block-on-the-human",
+  "principle-outcome-oriented-execution",
+  "principle-prove-it-works",
+  "principle-redesign-from-first-principles",
+  "principle-separate-before-serializing-shared-state",
+  "principle-sequence-verifiable-units",
+  "principle-subtract-before-you-add",
+  "principle-type-system-discipline",
+  "prototype",
+  "recall",
+  "reflect",
+  "show-me-your-work",
+  "swarm",
+  "teach",
+  "technical-writing",
+  "tdd",
+  "typescript-best-practices",
+  "unslop",
+  "why",
+] as const;
+
+export const agentNames = [
+  "implementation-agent",
+  "judgment-agent",
+  "comment-sicko",
+  "panel-opus",
+  "panel-sol",
+  "panel-fable",
+  "panel-grok",
+] as const;
+
+export type SkillName = (typeof skillNames)[number];
+export type AgentName = (typeof agentNames)[number];
+
+/** Exact shipped role chains; no shipped agent pins a concrete provider model. */
+export const agentModelChains: Readonly<Record<AgentName, readonly string[]>> = {
+  "implementation-agent": ["@code", "@judgment", "@smol"],
+  "judgment-agent": ["@judgment", "@code", "@smol"],
+  "comment-sicko": ["@adversary", "@review"],
+  "panel-opus": ["@panel_opus", "@adversary", "@review"],
+  "panel-sol": ["@panel_sol", "@adversary", "@review"],
+  "panel-fable": ["@panel_fable", "@adversary", "@review"],
+  "panel-grok": ["@panel_grok", "@adversary", "@review"],
+};
+
+export const playbookNames = [
+  "investigation",
+  "bug-fix",
+  "perf-issue",
+  "hillclimb",
+  "runtime-forensics",
+  "trace-forensics",
+  "feature",
+  "refactoring",
+  "prototype",
+  "visual-parity",
+  "authoring-a-skill",
+  "eval",
+  "babysit",
+  "shipping",
+  "opening-a-pr",
+  "autonomous-run",
+  "orchestrate",
+  "autopilot-full",
+  "autopilot-stack",
+  "session-pickup",
+  "pause-safely",
+  "multi-phase-plan",
+  "worktree-cleanup",
+] as const;
+
+export type PlaybookName = (typeof playbookNames)[number];
+
+export const manifest = {
+  skillNames,
+  agentNames,
+  agentModelChains,
+  playbookNames,
+} as const;
