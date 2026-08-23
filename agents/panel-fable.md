@@ -1,6 +1,6 @@
 ---
 name: panel-fable
-description: AJ interrogate panel seat. Fable. Read-only review only.
+description: Eng interrogate panel seat. Fable. Read-only review only.
 model:
   - "@panel_fable"
   - "@adversary"

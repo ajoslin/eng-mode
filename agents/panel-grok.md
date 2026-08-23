@@ -1,6 +1,6 @@
 ---
 name: panel-grok
-description: AJ interrogate panel seat. Grok. Read-only review only.
+description: Eng interrogate panel seat. Grok. Read-only review only.
 model:
   - "@panel_grok"
   - "@adversary"

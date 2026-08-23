@@ -1,28 +1,16 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-/**
- * Repository contract decisions for AJ Mode. AJ procedure is global; a
- * repository supplies two native project contracts under its own
- * `.omp/skills`: `project-standards` (repository law and skill index) and
- * `verify-project` (product verification). Every AJ repository playbook calls
- * `aj_orch contracts` before repository mutation or behavioral claims and
- * obeys the returned decision. This is auditable tool output, not model
- * self-report and not an OMP-wide write interceptor.
- */
 
 export const contractNames = ["project-standards", "verify-project"] as const;
 export type ContractName = (typeof contractNames)[number];
 
-export type ContractParseStatus = "ok" | "missing" | "unreadable" | "malformed" | "wrong-name";
+export type ContractParseStatus = "ok" | "unconfigured" | "missing" | "unreadable" | "malformed" | "wrong-name";
 
 export interface ContractObservation {
   readonly name: ContractName;
-  /** The only acceptable source: `<repositoryRoot>/.omp/skills/<name>/SKILL.md`. */
   readonly expectedPath: string;
   readonly parse: ContractParseStatus;
-  /** False when the contract is an explicit `UNCONFIGURED` sentinel. */
-  readonly configured: boolean;
 }
 
 export type ContractDecision =
@@ -57,7 +45,6 @@ function observedContract(input: RepositoryContractsInput, name: ContractName): 
     name,
     expectedPath: expectedContractPath(input.repositoryRoot, name),
     parse: "missing",
-    configured: false,
   };
 }
 
@@ -65,10 +52,6 @@ export function expectedContractPath(repositoryRoot: string, name: ContractName)
   return join(resolve(repositoryRoot), ".omp", "skills", name, "SKILL.md");
 }
 
-/**
- * Decide whether AJ work may proceed against this repository. Precedence:
- * the standards gate, then the verification gate for behavioral claims.
- */
 export function decideRepositoryContracts(
   input: RepositoryContractsInput,
 ): RepositoryContractsResult {
@@ -87,7 +70,7 @@ export function decideRepositoryContracts(
   if (standards.parse === "unreadable" || standards.parse === "malformed" || standards.parse === "wrong-name") {
     return done("blocked-standards", [`project-standards is ${standards.parse} at ${standards.expectedPath}`]);
   }
-  if (standards.parse === "ok" && !standards.configured) {
+  if (standards.parse === "unconfigured") {
     return done("unconfigured", ["project-standards is an explicit UNCONFIGURED sentinel"]);
   }
   if (standards.parse === "missing") {
@@ -101,7 +84,7 @@ export function decideRepositoryContracts(
     ]);
   }
 
-  if (verification.parse === "ok" && !verification.configured) {
+  if (verification.parse === "unconfigured") {
     return done("unconfigured", ["verify-project is an explicit UNCONFIGURED sentinel"]);
   }
   if (verification.parse !== "ok") {
@@ -113,7 +96,6 @@ export function decideRepositoryContracts(
   return done("proceed", ["both project contracts are valid repository-owned .omp/skills files"]);
 }
 
-/** Observe and validate both repository-owned contract files on disk. */
 export function observeRepositoryContracts(repositoryRoot: string): ContractObservation[] {
   return contractNames.map((name) => {
     const expectedPath = expectedContractPath(repositoryRoot, name);
@@ -126,21 +108,20 @@ export function observeRepositoryContracts(repositoryRoot: string): ContractObse
         name,
         expectedPath,
         parse: missing ? ("missing" as const) : ("unreadable" as const),
-        configured: false,
       };
     }
     if (UNCONFIGURED_SENTINEL.test(text)) {
-      return { name, expectedPath, parse: "ok" as const, configured: false };
+      return { name, expectedPath, parse: "unconfigured" as const };
     }
     const frontmatter = /^---\n([\s\S]*?)\n---/.exec(text);
     if (!frontmatter) {
-      return { name, expectedPath, parse: "malformed" as const, configured: true };
+      return { name, expectedPath, parse: "malformed" as const };
     }
     const declaredName = /^name:\s*(\S+)\s*$/m.exec(frontmatter[1] ?? "");
     if (!declaredName || declaredName[1] !== name) {
-      return { name, expectedPath, parse: "wrong-name" as const, configured: true };
+      return { name, expectedPath, parse: "wrong-name" as const };
     }
-    return { name, expectedPath, parse: "ok" as const, configured: true };
+    return { name, expectedPath, parse: "ok" as const };
   });
 }
 

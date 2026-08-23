@@ -1,6 +1,6 @@
 ---
 name: panel-sol
-description: AJ interrogate panel seat. Sol. Read-only review only.
+description: Eng interrogate panel seat. Sol. Read-only review only.
 model:
   - "@panel_sol"
   - "@adversary"

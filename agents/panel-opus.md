@@ -1,6 +1,6 @@
 ---
 name: panel-opus
-description: AJ interrogate panel seat. Opus. Read-only review only.
+description: Eng interrogate panel seat. Opus. Read-only review only.
 model:
   - "@panel_opus"
   - "@adversary"

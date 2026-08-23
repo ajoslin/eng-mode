@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import ajModeExtension, { executeAjOrch } from "./extension.ts";
+import engModeExtension, { executeEngOrch } from "./extension.ts";
 
 const roots: string[] = [];
 
@@ -11,7 +11,7 @@ afterEach(async () => {
 });
 
 async function root(): Promise<string> {
-  const value = await mkdtemp(join(tmpdir(), "aj-mode-extension-"));
+  const value = await mkdtemp(join(tmpdir(), "eng-mode-extension-"));
   roots.push(value);
   return value;
 }
@@ -22,32 +22,49 @@ async function contract(repository: string, name: "project-standards" | "verify-
   await writeFile(join(directory, "SKILL.md"), `---\nname: ${name}\ndescription: test\n---\nconfigured\n`);
 }
 
-describe("aj_orch executable entrypoint", () => {
+describe("eng_orch executable entrypoint", () => {
   it("returns the repository contract decision", async () => {
     const repositoryRoot = await root();
     await contract(repositoryRoot, "project-standards");
     await contract(repositoryRoot, "verify-project");
-    const result = await executeAjOrch({ action: "contracts", repositoryRoot, mode: "code-producing" });
+    const result = await executeEngOrch({ action: "contracts", repositoryRoot, mode: "code-producing" });
     expect(result).toMatchObject({ decision: "proceed", mode: "code-producing" });
+  });
+
+  it("keeps an explicit sentinel distinct from missing and unreadable contracts", async () => {
+    const repositoryRoot = await root();
+    const standardsDirectory = join(repositoryRoot, ".omp", "skills", "project-standards");
+    await mkdir(standardsDirectory, { recursive: true });
+    await writeFile(join(standardsDirectory, "SKILL.md"), "UNCONFIGURED\n");
+    await contract(repositoryRoot, "verify-project");
+
+    const result = await executeEngOrch({ action: "contracts", repositoryRoot, mode: "code-producing" });
+    expect(result).toMatchObject({
+      decision: "unconfigured",
+      contracts: [
+        { name: "project-standards", parse: "unconfigured" },
+        { name: "verify-project", parse: "ok" },
+      ],
+    });
   });
 
 
   it("initializes the default project store and honors an explicit store", async () => {
     const repositoryRoot = await root();
-    const defaultStore = join(repositoryRoot, ".omp", "aj-orch");
-    expect(await executeAjOrch({ action: "init", repositoryRoot, spawner: "session" })).toEqual({ store: defaultStore });
-    expect(await executeAjOrch({ action: "unit_add", repositoryRoot, id: "unit-1", track: "core" })).toMatchObject({ id: "unit-1", track: "core" });
-    expect(await executeAjOrch({ action: "unit_counts", repositoryRoot })).toEqual({ pending: 1 });
+    const defaultStore = join(repositoryRoot, ".omp", "eng-orch");
+    expect(await executeEngOrch({ action: "init", repositoryRoot, spawner: "session" })).toEqual({ store: defaultStore });
+    expect(await executeEngOrch({ action: "unit_add", repositoryRoot, id: "unit-1", track: "core" })).toMatchObject({ id: "unit-1", track: "core" });
+    expect(await executeEngOrch({ action: "unit_counts", repositoryRoot })).toEqual({ pending: 1 });
 
     const explicitStore = join(repositoryRoot, "explicit-store");
-    expect(await executeAjOrch({ action: "init", store: explicitStore, spawner: "session" })).toEqual({ store: explicitStore });
+    expect(await executeEngOrch({ action: "init", store: explicitStore, spawner: "session" })).toEqual({ store: explicitStore });
   });
 
-  it("registers goal and aj_orch from one entrypoint", async () => {
+  it("registers goal and eng_orch from one entrypoint", async () => {
     const repositoryRoot = await root();
     await contract(repositoryRoot, "project-standards");
     await contract(repositoryRoot, "verify-project");
-    type RegisteredTool = Parameters<Parameters<typeof ajModeExtension>[0]["registerTool"]>[0];
+    type RegisteredTool = Parameters<Parameters<typeof engModeExtension>[0]["registerTool"]>[0];
     const registered = new Map<string, RegisteredTool>();
     const chain = { optional: () => chain, int: () => chain, positive: () => chain };
     const zod = {
@@ -58,17 +75,17 @@ describe("aj_orch executable entrypoint", () => {
       boolean: () => chain,
       array: () => chain,
     };
-    ajModeExtension({
+    engModeExtension({
       zod,
       registerTool: (tool) => registered.set(tool.name, tool),
     });
 
-    expect([...registered.keys()]).toEqual(["goal", "aj_orch"]);
+    expect([...registered.keys()]).toEqual(["goal", "eng_orch"]);
     const goal = registered.get("goal");
-    const ajOrch = registered.get("aj_orch");
+    const engOrch = registered.get("eng_orch");
     expect(goal).toBeDefined();
-    expect(ajOrch).toBeDefined();
-    if (!goal || !ajOrch) throw new Error("AJ Mode tools were not registered");
+    expect(engOrch).toBeDefined();
+    if (!goal || !engOrch) throw new Error("Eng Mode tools were not registered");
     expect(goal).toMatchObject({ strict: true, loadMode: "essential" });
     const signal = new AbortController().signal;
     const onUpdate = () => {};
@@ -93,7 +110,7 @@ describe("aj_orch executable entrypoint", () => {
       "OMP's native goal tool is unavailable.",
     );
 
-    const output = await ajOrch.execute("call-3", {
+    const output = await engOrch.execute("call-3", {
       action: "contracts",
       repositoryRoot,
       mode: "code-producing",

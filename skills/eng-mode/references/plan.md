@@ -1,8 +1,8 @@
 # Plan
 
-Produce a phased implementation plan grounded in the **Principles** section of the `aj-mode` skill. The plan is the deliverable. Do not implement.
+Produce a phased implementation plan grounded in the **Principles** section of the `eng-mode` skill. The plan is the deliverable. Do not implement.
 
-Open the finite task graph in `todo` per AJ Mode's Start rule. An active native goal owns the durable objective and continuation, not another graph. A delegated planner reports the graph to its lead instead of mutating parent state.
+Open the finite task graph in `todo` per Eng Mode's Start rule. An active native goal owns the durable objective and continuation, not another graph. A delegated planner reports the graph to its lead instead of mutating parent state.
 
 ## 0. Triage
 
@@ -12,7 +12,7 @@ Plan when the change spans three or more files, introduces architecture, has com
 
 ## 1. Re-read principles
 
-Read the **Principles** section of the `aj-mode` skill end to end, and the leaf `principle-*` skills it indexes. The principles govern every plan decision; cross-link them.
+Read the **Principles** section of the `eng-mode` skill end to end, and the leaf `principle-*` skills it indexes. The principles govern every plan decision; cross-link them.
 
 ## 2. Scope and constraints
 
@@ -72,7 +72,7 @@ Order phases so infrastructure and shared types land first (the **foundational-t
 
 For changes touching existing code, apply the **redesign-from-first-principles** principle skill: if we'd built this with the new requirement on day one, what would it look like? Redesign holistically; deliver incrementally.
 
-If a phase creates or edits a skill, route it through the AJ Mode Authoring a skill playbook; AJ Mode's autonomy rule resolves the contract from repository context instead of interviewing.
+If a phase creates or edits a skill, route it through the Eng Mode Authoring a skill playbook; Eng Mode's autonomy rule resolves the contract from repository context instead of interviewing.
 
 ## 5. Verification per phase
 
@@ -92,13 +92,13 @@ For bug fixes, the loop is reproduce on the surface, fix, verify on the same sur
 
 ## 6. Implementation guidance
 
-In the overview, name which aj-mode non-negotiables the implementer must apply, by name:
+In the overview, name which eng-mode non-negotiables the implementer must apply, by name:
 
 - the **how** skill over each unfamiliar subsystem before changing it.
 - the **interrogate** skill for adversarial review on contested designs before shipping.
 - the project pre-commit pass (per `project-standards`) over each diff before commit. the **unslop** skill over any prose surface.
 - the **show-me-your-work** skill to keep a decision trail when the plan is large enough to need an auditable record.
-- the AJ Mode `playbooks/babysit.md` workflow after opening the PR.
+- the Eng Mode `playbooks/babysit.md` workflow after opening the PR.
 
 ## 7. Hand back
 

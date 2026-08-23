@@ -1,21 +1,21 @@
 ---
-name: setup-aj-mode
-description: Validate and orchestrate an AJ Mode installation. Use for /setup-aj-mode, checking the AJ extension link, migrating model roles, auditing skill or agent shadows, or validating project contracts.
+name: setup-eng-mode
+description: Validate and orchestrate an Eng Mode installation. Use for /setup-eng-mode, checking the Eng extension link, migrating model roles, auditing skill or agent shadows, or validating project contracts.
 ---
 
-# Setup AJ Mode
+# Setup Eng Mode
 
 Setup is a validator and orchestrator, never an installer of duplicate machinery. It configures OMP, never Cursor or Graphite. Re-running setup is idempotent.
 
 ## 1. Installation and source identity
 
 1. Report the extension's own load state: whether this session runs from a fresh `omp -e <path>` process-local load or a persistent plugin link, and whether the `omp-plugins` provider is enabled.
-2. Pin the exact expected absolute extension root. Provenance passes only when every shipped skill and agent resolves from that exact root, not merely from any AJ package.
-3. Verify tool discovery: the `aj_orch` tool is callable and one live `init` against a throwaway store succeeds.
+2. Pin the exact expected absolute extension root. Provenance passes only when every shipped skill and agent resolves from that exact root, not merely from any Eng package.
+3. Verify tool discovery: the `eng_orch` tool is callable and one live `init` against a throwaway store succeeds.
 
 ## 2. Shadows and collisions
 
-Observed skill precedence: native project/user `.omp/skills` (project before user), then the AJ extension through `omp-plugins`, then Claude-provider skills, then `.agents/skills`. Observed agent precedence: project `.omp/agents`, user agents, extension agents, then bundled.
+Observed skill precedence: native project/user `.omp/skills` (project before user), then the Eng extension through `omp-plugins`, then Claude-provider skills, then `.agents/skills`. Observed agent precedence: project `.omp/agents`, user agents, extension agents, then bundled.
 
 1. Report the full intersection of the extension's exact `skillNames` with the host repository's `.agents/skills` and `.claude/skills` in both directions. Extension-wins overrides are intentional but require operator visibility; never replace silently.
 2. Any user-native `.omp/skills` or user-agent shadow of an exact `skillNames`/`agentNames` entry is an error. Report it by name; quarantining a shadow is an explicit operator-approved setup action with a rollback record, never a silent move.
@@ -38,7 +38,7 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 
 ## 5. Project contracts
 
-1. Run `aj_orch contracts` and report the structured decision and per-contract source paths.
+1. Run `eng_orch contracts` and report the structured decision and per-contract source paths.
 2. Validate existing `project-standards` and `verify-project` contracts; never overwrite them.
 3. After explicit repository inspection, setup may create only an `UNCONFIGURED` sentinel (`SKILL.md` whose body is the single line `UNCONFIGURED`) for an absent contract, so the gap is explicit tool output rather than silence. It never infers a verification contract from package scripts; real contract authoring routes through `create-verification-skill` and the repository owners.
 

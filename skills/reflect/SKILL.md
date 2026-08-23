@@ -40,12 +40,12 @@ Sanity-check the synthesizer's Accepted list. For any item that would be enforce
 
 Before applying any Accepted edit, present the synthesizer's full Accepted/Rejected/Backlog output to the user and wait for explicit approval. The user picks which subset to apply and may redirect routings. Skill changes affect every future agent in the org; do not auto-apply.
 
-Backlog items file to whatever devex / backlog tracker your team uses automatically. Those are tracker submissions, not skill edits. Only the Accepted list waits for approval.
+Route every Backlog item through `capture-learning`. It expects `linear_graphql`, resolves configured team/project identifiers, and deduplicates before creating or updating a candidate ticket. Tracker submission is automatic; only Accepted skill edits wait for approval.
 
 For each approved Accepted item, follow the Routing field exactly:
 
 - Trivial existing-skill edit (a one-line bullet, a tightened sentence, a stale fact corrected): parent does directly.
-- Substantive existing-skill edit (a new section, a new pattern table, more than ~10 lines): run the AJ Mode Authoring a skill playbook's draft / validate / iterate loop.
+- Substantive existing-skill edit (a new section, a new pattern table, more than ~10 lines): run the Eng Mode Authoring a skill playbook's draft / validate / iterate loop.
 - `tune description: <skill path>` (the skill exists but didn't trigger when it should have): rework the description through the Authoring a skill playbook until the trigger fires.
 - `new skill: <kebab-name>`: create it through the Authoring a skill playbook. Do not invent the shape ad hoc.
 

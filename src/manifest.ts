@@ -1,12 +1,7 @@
-/**
- * Frozen AJ Mode extension manifest. The reviewed migration plan, tests,
- * provenance checks, and the repository deletion inventory all consume these
- * exact sets; changing them is a plan-level decision, not a refactor.
- */
 
 export const skillNames = [
-  "aj-mode",
-  "setup-aj-mode",
+  "eng-mode",
+  "setup-eng-mode",
   "architect",
   "arena",
   "automate-me",
@@ -15,6 +10,7 @@ export const skillNames = [
   "codebase-design",
   "create-verification-skill",
   "diagnosing-bugs",
+  "capture-learning",
   "domain-modeling",
   "figure-it-out",
   "how",
@@ -42,6 +38,7 @@ export const skillNames = [
   "principle-sequence-verifiable-units",
   "principle-subtract-before-you-add",
   "principle-type-system-discipline",
+  "omp-workflows",
   "prototype",
   "recall",
   "reflect",
@@ -68,7 +65,6 @@ export const agentNames = [
 export type SkillName = (typeof skillNames)[number];
 export type AgentName = (typeof agentNames)[number];
 
-/** Exact shipped role chains; no shipped agent pins a concrete provider model. */
 export const agentModelChains: Readonly<Record<AgentName, readonly string[]>> = {
   "implementation-agent": ["@code", "@judgment", "@smol"],
   "judgment-agent": ["@judgment", "@code", "@smol"],
@@ -91,7 +87,7 @@ export const playbookNames = [
   "prototype",
   "visual-parity",
   "authoring-a-skill",
-  "eval",
+  "prove-out",
   "babysit",
   "shipping",
   "opening-a-pr",

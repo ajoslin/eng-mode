@@ -1,9 +1,9 @@
 ---
-name: aj-mode
-description: AJ's default engineering operating system. Routes feature, bug, investigation, design, review, autonomous, and shipping work through playbooks implemented with OMP /goal, /loop, typed agents, hub, todo, LSP, debug, browser, and the aj_orch tool. Use for nontrivial repository work or /aj-mode.
+name: eng-mode
+description: Eng's default engineering operating system. Routes feature, bug, investigation, design, review, autonomous, and shipping work through playbooks implemented with OMP /goal, /loop, typed agents, hub, todo, LSP, debug, browser, and the eng_orch tool. Use for nontrivial repository work or /eng-mode.
 ---
 
-# AJ Mode
+# Eng Mode
 
 Correctness first. Smallest coherent change. Prove the real behavior. OMP only. No Cursor or Graphite.
 
@@ -16,20 +16,20 @@ Correctness first. Smallest coherent change. Prove the real behavior. OMP only. 
 
 ## Repository contracts
 
-AJ procedure is global; the repository owns standards, stack policy, product verification, domain law, production restrictions, and specialized delivery behavior through two native project contracts:
+Eng procedure is global; the repository owns standards, stack policy, product verification, domain law, production restrictions, and specialized delivery behavior through two native project contracts:
 
 - `project-standards` — the index over repository law, commands, review agents, and repository-selected skills. It is the only route from these playbooks to repository-selected skills (test law, stack-specific guidance, pre-commit, Standards + Spec review, GitHub and stack tooling).
 - `verify-project` — the product verification contract: launch, drive, evidence, health gate, and feature map for the project's real user surface.
 
-Every repository playbook calls the `aj_orch` tool's `contracts` action before repository mutation or behavioral claims, and obeys its structured decision:
+Every repository playbook calls the `eng_orch` tool's `contracts` action before repository mutation or behavioral claims, and obeys its structured decision:
 
 - `proceed` — both repository-owned `.omp/skills` contract files are present and valid.
 - `standards-unavailable-read-only` — read-only investigation may proceed but makes no policy-compliance claim.
 - `blocked-standards` — code-producing work stops before any edit, write, or writer delegation.
 - `inconclusive-verification` — behavioral claims on the product surface are `INCONCLUSIVE`; never substitute OMP `browser` for an unknown or private project driver.
-- `unconfigured` — a contract is an explicit `UNCONFIGURED` sentinel; run `setup-aj-mode`.
+- `unconfigured` — a contract is an explicit `UNCONFIGURED` sentinel; run `setup-eng-mode`.
 
-The decision is auditable on-disk validation, not model self-report. `setup-aj-mode` separately verifies provider provenance and collisions because OMP's extension API does not expose authoritative skill-provider paths. Outside AJ invocation, OMP and repository context remain authoritative.
+The decision is auditable on-disk validation, not model self-report. `setup-eng-mode` separately verifies provider provenance and collisions because OMP's extension API does not expose authoritative skill-provider paths. Outside Eng invocation, OMP and repository context remain authoritative.
 
 ## Router
 
@@ -43,14 +43,14 @@ The decision is auditable on-disk validation, not model self-report. `setup-aj-m
 - Pixel-exact equivalence work: `playbooks/visual-parity.md`.
 - Empirical behavior or state-model fork: `playbooks/prototype.md` and the `prototype` skill.
 - Competing module designs: the `architect` skill with writable `arena` candidates; read-only panel seats may judge but never produce candidates.
-- Comparative skill or workflow evaluation: `playbooks/eval.md` and `arena`.
+- Comparative skill or workflow evaluation: `playbooks/prove-out.md`, `omp-workflows`, and `arena`.
 - Skill authoring: `playbooks/authoring-a-skill.md`.
 - PR health: `playbooks/babysit.md` and the GitHub tooling `project-standards` names.
 - Landing: `playbooks/shipping.md` and the stack tooling `project-standards` names.
 - One long falsifiable task: `playbooks/autonomous-run.md`, `/goal`, and optionally `/loop`.
 - Independent PR program with merge authority: `playbooks/autopilot-full.md`.
 - Dependent review-first PR chain: `playbooks/autopilot-stack.md`.
-- Project-scale program: `playbooks/orchestrate.md` and the `aj_orch` tool. Work one agent could finish inside the session budget is Autonomous run, not Orchestrate. Do not use OMP's `orchestrate` magic keyword; it supplies no scheduler or transport.
+- Project-scale program: `playbooks/orchestrate.md` and the `eng_orch` tool. Work one agent could finish inside the session budget is Autonomous run, not Orchestrate. Do not use OMP's `orchestrate` magic keyword; it supplies no scheduler or transport.
 - Large planned program without active execution: `playbooks/multi-phase-plan.md`.
 - Recent workspace context: `recall`; one known session uses `playbooks/session-pickup.md`.
 - Personal working-convention mining: `automate-me`.
@@ -74,7 +74,7 @@ The decision is auditable on-disk validation, not model self-report. `setup-aj-m
 
 ## Goals, loops, and state
 
-- `/goal` is OMP-owned durable objective state and automatic continuation. When the native `goal` tool is available, the lead may create a complete falsifiable objective, inspect it with `get`, and call `complete` only after its verification surface passes. Otherwise the operator starts `/guided-goal`. OMP owns persistence, pause/resume/drop, and usage accounting; AJ Mode owns the predicate and evidence. Pausing is operator-owned through `/goal pause` after a durable checkpoint.
+- `/goal` is OMP-owned durable objective state and automatic continuation. When the native `goal` tool is available, the lead may create a complete falsifiable objective, inspect it with `get`, and call `complete` only after its verification surface passes. Otherwise the operator starts `/guided-goal`. OMP owns persistence, pause/resume/drop, and usage accounting; Eng Mode owns the predicate and evidence. Pausing is operator-owned through `/goal pause` after a durable checkpoint.
 - `/loop` is OMP-owned prompt repetition with optional iteration or duration bounds. It does not own metrics, baselines, plateau detection, or verification, and model-callable activation is not assumed. Use it only when the operator has started a measured repetition or bounded polling run. The playbook checks stop conditions and tells the operator to `/loop stop`; never edit the ruler or its inputs to manufacture progress.
 - `todo` always owns the live finite task graph, including while a goal is active. It does not duplicate `/loop` iterations.
 - `show-me-your-work` owns durable decision trails. Use it for unattended, high-risk, or multi-phase runs. ADRs record only hard-to-reverse, surprising decisions with a real tradeoff.
@@ -82,7 +82,7 @@ The decision is auditable on-disk validation, not model self-report. `setup-aj-m
 ## Verification
 
 - Reproduce bugs before hypotheses. Verify fixes on the same surface.
-- Product web behavior the project verification contract maps uses `verify-project`: its own driver, its own isolated allocation, and its startup/reset and first-state health gate. Do not attach OMP `browser` to a harness-owned private Chromium. A failed health gate, unmapped path, shared dev stack, or wrong surface is `INCONCLUSIVE`. Missing or unconfigured verification is an `aj_orch contracts` outcome, never a license to substitute browser proof. Other web UI uses OMP `browser`. Runtime state uses `debug` or the relevant profiler. Symbol work uses `lsp`. CLI/TUI work runs the actual program through a managed process when interactive.
+- Product web behavior the project verification contract maps uses `verify-project`: its own driver, its own isolated allocation, and its startup/reset and first-state health gate. Do not attach OMP `browser` to a harness-owned private Chromium. A failed health gate, unmapped path, shared dev stack, or wrong surface is `INCONCLUSIVE`. Missing or unconfigured verification is an `eng_orch contracts` outcome, never a license to substitute browser proof. Other web UI uses OMP `browser`. Runtime state uses `debug` or the relevant profiler. Symbol work uses `lsp`. CLI/TUI work runs the actual program through a managed process when interactive.
 - Tests follow the project test law `project-standards` names. Use `tdd` only when a cheap red test represents an uncovered observable contract at a correct public seam.
 - Read the stack-specific skills `project-standards` names before changing code they govern.
 - Before commit or handoff, run the pre-commit pass `project-standards` names. Before review, run `no-comments`. Review-automation findings use the Babysit playbook's review-agent loop and the triage reference `project-standards` indexes. Never merge while that loop is unfinished. Use the Standards + Spec review skill `project-standards` names; use `interrogate` when independent adversarial pressure is warranted.

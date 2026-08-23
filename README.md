@@ -1,8 +1,8 @@
-# AJ Mode for OMP
+# Eng Mode for OMP
 
-**AJ Mode is the [Oh My Pi](https://github.com/can1357/oh-my-pi) port of [Lauren Tan's pstack](https://github.com/cursor/plugins/tree/main/pstack).** It keeps pstack's playbook-driven engineering system and adapts it to OMP with a small set of runtime and repository-integration changes.
+**Eng Mode is the [Oh My Pi](https://github.com/can1357/oh-my-pi) port of [Lauren Tan's pstack](https://github.com/cursor/plugins/tree/main/pstack).** It keeps pstack's playbook-driven engineering system and adapts it to OMP with a small set of runtime and repository-integration changes.
 
-AJ Mode exists to:
+Eng Mode exists to:
 
 - route nontrivial work through pstack-derived investigation, bug-fix, feature, refactoring, performance, review, and delivery playbooks;
 - favor small changes, root-cause fixes, and proof against the real artifact;
@@ -11,40 +11,44 @@ AJ Mode exists to:
 
 ## OMP-native by design
 
-AJ Mode uses OMP's built-in tools instead of recreating their behavior:
+Eng Mode uses OMP's built-in tools instead of recreating their behavior:
 
 - `todo` for the active finite work list;
 - `task` and `hub` for typed agents, parallel work, and coordination;
 - LSP, debugger, browser, and GitHub CLI surfaces for grounded code and runtime evidence;
 - OMP's native `goal` runtime, wrapped with a minimum token budget of 1,000,000;
-- plugin discovery for skills and agents, plus `aj_orch` for repository contracts and durable orchestration state.
+- plugin discovery for skills and agents, plus `eng_orch` for repository contracts and durable orchestration state.
 
 It does not try to make OMP behave like Cursor. The playbooks stay; the runtime mechanics are native OMP.
+
+## Operator guide
+
+Start with the [Eng Mode operator guide](docs/guide/README.md). It explains the runtime mental model, setup gates, routing, delegation, verification, context management, blinded evals, and repository adoption for complex monorepos.
 
 ## Install
 
 ```sh
-omp plugin install github:ajoslin/omp-aj-mode
+omp plugin install github:ajoslin/eng-mode
 ```
 
-Restart OMP. Then open every repository where you use AJ Mode and run:
+Restart OMP. Then open every repository where you use Eng Mode and run:
 
 ```text
-setup-aj-mode
+setup-eng-mode
 ```
 
-**Run `setup-aj-mode` in every repository.** It checks the plugin, model roles, agent chains, worktree isolation, and that repository's standards and verification contracts.
+**Run `setup-eng-mode` in every repository.** It checks the plugin, model roles, agent chains, worktree isolation, and that repository's standards and verification contracts.
 
-To update, run the install command again, restart OMP, and rerun `setup-aj-mode` in each repository.
+To update, run the install command again, restart OMP, and rerun `setup-eng-mode` in each repository.
 
 ## What belongs in each repository
 
-AJ Mode supplies the reusable workflow. Each repository owns:
+Eng Mode supplies the reusable workflow. Each repository owns:
 
 - `.omp/skills/project-standards/SKILL.md` — repository law and selected tooling;
 - `.omp/skills/verify-project/SKILL.md` — the real product-verification surface.
 
-`setup-aj-mode` validates both contracts.
+`setup-eng-mode` validates both contracts.
 
 ## From pstack
 
@@ -70,6 +74,6 @@ omp plugin link "$PWD"
 The single extension entrypoint, `src/extension.ts`, registers:
 
 - `goal`, an essential wrapper around OMP's native same-name tool via `ctx.invokeTool`
-- `aj_orch`, the repository-contract gate and durable orchestration store
+- `eng_orch`, the repository-contract gate and durable orchestration store
 
 Do not install a second standalone `goal` extension alongside this plugin.

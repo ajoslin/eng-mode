@@ -68,10 +68,10 @@ function required(value: string | undefined, name: string): string {
 
 function resolveStore(input: Input): string {
   if (input.store !== undefined && input.store.length > 0) return input.store;
-  return join(resolve(required(input.repositoryRoot, "repositoryRoot")), ".omp", "aj-orch");
+  return join(resolve(required(input.repositoryRoot, "repositoryRoot")), ".omp", "eng-orch");
 }
 
-export async function executeAjOrch(input: Input): Promise<unknown> {
+export async function executeEngOrch(input: Input): Promise<unknown> {
   if (input.action === "contracts") {
     const repositoryRoot = required(input.repositoryRoot, "repositoryRoot");
     const observations = observeRepositoryContracts(repositoryRoot);
@@ -111,7 +111,7 @@ export async function executeAjOrch(input: Input): Promise<unknown> {
 
 const MINIMUM_GOAL_TOKEN_BUDGET = 1_000_000;
 
-export default function ajModeExtension(pi: ExtensionAPI): void {
+export default function engModeExtension(pi: ExtensionAPI): void {
   const z = pi.zod;
   pi.registerTool({
     name: "goal",
@@ -137,9 +137,9 @@ export default function ajModeExtension(pi: ExtensionAPI): void {
     },
   });
   pi.registerTool({
-    name: "aj_orch",
-    label: "AJ orchestration store",
-    description: "Validate repository contracts or update AJ Mode's durable orchestration store.",
+    name: "eng_orch",
+    label: "Eng orchestration store",
+    description: "Validate repository contracts or update Eng Mode's durable orchestration store.",
     parameters: z.object({
       action: z.enum(actionNames), store: z.string().optional(), repositoryRoot: z.string().optional(),
       mode: z.enum(["read-only", "code-producing"]).optional(), spawner: z.string().optional(),
@@ -153,7 +153,7 @@ export default function ajModeExtension(pi: ExtensionAPI): void {
     }),
     async execute(_toolCallId, input) {
       try {
-        const details = await executeAjOrch(input as Input);
+        const details = await executeEngOrch(input as Input);
         return { content: [{ type: "text", text: JSON.stringify(details, null, 2) }], details };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

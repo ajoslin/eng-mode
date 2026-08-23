@@ -1,8 +1,10 @@
-### Eval
+### Prove-out
 
-**You own the experiment design. Plan, blind, run, synthesize.**
+Renamed from pstack's `eval` playbook to `prove-out`.
 
-Evals test how a change affects agent behavior before promoting it: a new skill variant, a structural change, a prompt tweak. The failure mode is the observer effect. An agent that knows it's being evaluated behaves differently, so candidates must run blind.
+**Own the experiment design. Plan, blind, run, synthesize.**
+
+Prove-outs test how a change affects agent behavior before promotion: a skill variant, structural change, or prompt change. The failure mode is observer effect. Candidates must not know they are being measured.
 
 **Non-negotiables for blinding:**
 
@@ -14,7 +16,7 @@ Evals test how a change affects agent behavior before promoting it: a new skill 
 - The judge can know it's judging but sees outputs by sanitized label only, never by model name.
 - Comparing two variants: one judge scores both sets in a single pass on one scale, blind to which set each came from. Two judge runs with different prompts don't compare, the calibration drifts.
 
-**Steps:**
+**Steps:** Read `omp-workflows` before building a matrix or staged run.
 
 1. **Frame.** State what variant is under test and what behavior counts as success. Write the rubric (3-6 concrete criteria) for the judge only. Hold it back from candidates.
 2. **Set up sanitized environments.** Per-candidate working dir with the variant in place. Plant any context an organic task would have: a project skeleton, the skills the candidate would naturally read.

@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Recall
 
-1. One specific prior session routes to AJ Mode Session pickup. Habit mining routes to `automate-me`.
+1. One specific prior session routes to Eng Mode Session pickup. Habit mining routes to `automate-me`.
 2. Fix workspace, topic, and time window. Default to seven days. Never search another workspace without request.
 3. Read OMP `history://` for this workspace. For a large corpus, partition independent time slices across `scout` agents in one batch. Return only topic, goal, decisions, open threads, corrections, and artifacts with session IDs.
 4. For a named feature, file, subsystem, or bug, run `why` across git, PRs, issues, ADRs, the project tracker, and available operational evidence. Null searches are evidence.

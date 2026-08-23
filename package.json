@@ -1,13 +1,14 @@
 {
-  "name": "@aj/aj-mode",
+  "name": "@eng/eng-mode",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Global AJ Mode engineering workflows, agents, orchestration, and native goal integration for OMP.",
-  "repository": "github:ajoslin/omp-aj-mode",
+  "description": "Global Eng Mode engineering workflows, agents, orchestration, and native goal integration for OMP.",
+  "repository": "github:ajoslin/eng-mode",
   "license": "MIT",
   "files": [
     "agents",
+    "docs",
     "skills",
     "src",
     "README.md"
