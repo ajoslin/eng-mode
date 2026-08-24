@@ -95,15 +95,15 @@ describe("eng_orch executable entrypoint", () => {
       options: { signal, onUpdate },
     });
     await expect(goal.execute("call-default", { op: "create", objective: "ship" }, undefined, undefined, { invokeTool })).resolves.toEqual({
-      params: { op: "create", objective: "ship", token_budget: 1_000_000 },
+      params: { op: "create", objective: "ship", token_budget: 500_000_000 },
       options: {},
     });
     await expect(goal.execute("call-low", { op: "create", objective: "ship", token_budget: 42 }, undefined, undefined, { invokeTool })).resolves.toEqual({
-      params: { op: "create", objective: "ship", token_budget: 1_000_000 },
+      params: { op: "create", objective: "ship", token_budget: 500_000_000 },
       options: {},
     });
-    await expect(goal.execute("call-high", { op: "create", objective: "ship", token_budget: 2_000_000 }, undefined, undefined, { invokeTool })).resolves.toEqual({
-      params: { op: "create", objective: "ship", token_budget: 2_000_000 },
+    await expect(goal.execute("call-high", { op: "create", objective: "ship", token_budget: 600_000_000 }, undefined, undefined, { invokeTool })).resolves.toEqual({
+      params: { op: "create", objective: "ship", token_budget: 600_000_000 },
       options: {},
     });
     await expect(goal.execute("call-2", { op: "get" }, signal, onUpdate, {})).rejects.toThrow(

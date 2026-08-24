@@ -109,7 +109,7 @@ export async function executeEngOrch(input: Input): Promise<unknown> {
   }
 }
 
-const MINIMUM_GOAL_TOKEN_BUDGET = 1_000_000;
+const MINIMUM_GOAL_TOKEN_BUDGET = 500_000_000;
 
 export default function engModeExtension(pi: ExtensionAPI): void {
   const z = pi.zod;
