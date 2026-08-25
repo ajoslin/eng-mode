@@ -48,6 +48,7 @@ export const skillNames = [
   "teach",
   "technical-writing",
   "tdd",
+  "thermo-nuclear-code-quality-review",
   "typescript-best-practices",
   "unslop",
   "why",
