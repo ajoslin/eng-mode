@@ -58,6 +58,7 @@ The decision is auditable on-disk validation, not model self-report. `setup-eng-
 - Pause current work: `playbooks/pause-safely.md`.
 - Independent adversarial review: the `interrogate` skill directly; there is no Interrogate playbook.
 - Harsh maintainability review, explicit only: the `thermo-nuclear-code-quality-review` skill directly; there is no Thermo-nuclear playbook.
+- Pre-open quality: `playbooks/pre-pr-gates.md` (serial; receipts; not Pullfrog).
 - Missing or rotten product verification: `create-verification-skill` and `maintain-verification-skill`.
 - No fitting playbook or large migration: `figure-it-out`.
 - Any code-producing playbook ends with `playbooks/opening-a-pr.md` when delivery includes a PR.
