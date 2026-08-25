@@ -1,11 +1,11 @@
 ---
 name: setup-eng-mode
-description: Validate and orchestrate an Eng Mode installation. Use for /setup-eng-mode, checking the Eng extension link, migrating model roles, auditing skill or agent shadows, or validating project contracts.
+description: Validate and orchestrate an Eng Mode installation. Use for /setup-eng-mode, checking the Eng extension link, migrating model roles, installing the watchdog advisor, auditing skill or agent shadows, or validating project contracts.
 ---
 
 # Setup Eng Mode
 
-Setup is a validator and orchestrator, never an installer of duplicate machinery. It configures OMP, never Cursor or Graphite. Re-running setup is idempotent.
+Setup is a validator and orchestrator, never an installer of duplicate machinery. The one copy it performs is the shipped watchdog into the active agent dir, because OMP does not load WATCHDOG from plugin roots. It configures OMP, never Cursor or Graphite. Re-running setup is idempotent.
 
 ## 1. Installation and source identity
 
@@ -28,26 +28,35 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 1. **Prepare:** atomically add and validate all new roles while retaining all old roles: `code` from `boja_code` when absent, `judgment` from `boja_judgment`, `adversary` from `boja_adversary`, `fast` from `boja_fast`; `panel_opus`, `panel_sol`, `panel_fable`, `panel_grok` from the workstation's current pinned panel selectors. An existing valid new value wins. A differing old/new pair is a conflict and produces no change without explicit user selection. On a workstation with no old roles, absent panel roles require explicit selection from actually available models; never invent a concrete model.
 2. **Retire:** only after hard-cut proof shows no old workflow consumer remains, atomically delete `boja_fast`, `boja_code`, `boja_judgment`, and `boja_adversary`.
 3. Both stages capture the prior config and restore it byte-for-byte on failure. `smol`, `review`, `commit`, and all unrelated settings are preserved.
-4. Do not create a second config file. OMP owns model config in the active agent directory's `config.yml`; project behavior lives in the repository's `.omp` directory and the extension.
+4. Do not create a second config file. OMP owns model config in the active agent directory's `config.yml`; project behavior lives in the repository's `.omp` directory and the extension. Luna, the Eng watchdog advisor, uses `modelRoles.advisor` when its roster model is omitted. Do not invent or hand-edit that role.
 
-## 4. Agents and panel resolution
+## 4. Watchdog
+
+OMP discovers `WATCHDOG.md` and `WATCHDOG.yml` from the active agent directory (`~/.omp/agent`, `PI_CODING_AGENT_DIR`, or a named profile's agent dir) and from project `.omp/WATCHDOG.md`. Plugin roots are not searched.
+
+1. From the exact extension root, run `bun src/watchdog.ts` (or `installWatchdog` in `src/watchdog.ts`) so the shipped files land in that agent dir. Re-run is idempotent: matching dests are left alone; stale dests are refreshed.
+2. Do not create `config.yml`. Do not edit `modelRoles`. Workstation config already owns `advisor.enabled` and `modelRoles.advisor`.
+3. Do not load `typescript-best-practices`, `project-standards`, or any `principle-*` skill into the advisor prompt. The shipped files are the whole prompt addendum.
+4. Do not write a project `.omp/WATCHDOG.md` unless the operator asked for a repo-specific extra.
+
+## 5. Agents and panel resolution
 
 1. Verify each shipped agent (`implementation-agent`, `judgment-agent`, `comment-sicko`, `panel-opus`, `panel-sol`, `panel-fable`, `panel-grok`) is discoverable and that its role chain resolves end to end. No shipped agent may contain a concrete provider-qualified selector; the workstation config supplies concrete models.
 2. Resolve every chain through all referenced role keys, flag entries that resolve identically to an earlier entry, and require at least one fallback after the primary to use a different provider where the workstation allows it. `comment-sicko` must retain a resolvable fallback.
 3. Report each panel seat's actual `resolvedModel` and fallback status. Never claim full-roster or cross-vendor diversity from nominal seat names; report actual resolved models and refuse to claim diversity the resolution does not show.
 
-## 5. Project contracts
+## 6. Project contracts
 
 1. Run `eng_orch contracts` and report the structured decision and per-contract source paths.
 2. Validate existing `project-standards` and `verify-project` contracts; never overwrite them.
 3. After explicit repository inspection, setup may create only an `UNCONFIGURED` sentinel (`SKILL.md` whose body is the single line `UNCONFIGURED`) for an absent contract, so the gap is explicit tool output rather than silence. It never infers a verification contract from package scripts; real contract authoring routes through `create-verification-skill` and the repository owners.
 
-## 6. Capabilities
+## 7. Capabilities
 
 1. Verify OMP native goal mode availability without activating a live goal or loop. If a device-local bridge exists, it must expose only OMP's native `goal` tool; do not install a second goal or loop runtime.
 2. Validate that task worktree isolation is supported by current OMP configuration before any playbook depends on it.
 3. Dry-route one feature, one bug, and one contested design without editing product code, exercising discovery for every shipped agent.
 
-## 7. Report
+## 8. Report
 
-Report installation state, provider enablement, exact source root, shadow inventory in both directions, role migration stage results with conflicts and fallbacks, per-agent resolved models, contract decisions with source paths, isolation and native-goal capability, and every unavailable capability. Refuse to report a capability as present without observing it.
+Report installation state, provider enablement, exact source root, shadow inventory in both directions, role migration stage results with conflicts and fallbacks, watchdog install paths and per-file status, per-agent resolved models, contract decisions with source paths, isolation and native-goal capability, and every unavailable capability. Refuse to report a capability as present without observing it.

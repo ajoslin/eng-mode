@@ -2,7 +2,7 @@
 
 - **Delegate lacks LSP:** inspect `task.enableLsp`; enable and restart.
 - **Checkpoint missing:** inspect `checkpoint.enabled`; restart after enabling.
-- **Generic advisor:** keep only cross-cutting risks in `.omp/WATCHDOG.md`; inspect `/advisor status`.
+- **Advisor reviewing taste or principles:** it is a truth-checker for spec drift, flaws, lies, and untruths. Inspect `/advisor status`. Optional project extra: `.omp/WATCHDOG.md` for repo-specific traps only.
 - **Wrong panel model:** enable resolved-model badges; use actual vendors and fallbacks.
 - **Isolated worker cannot revive:** expected; isolation is terminal.
 - **Eval child cannot receive hub:** expected; use normal tasks for steering.
