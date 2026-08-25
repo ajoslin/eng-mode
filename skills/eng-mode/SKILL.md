@@ -1,6 +1,6 @@
 ---
 name: eng-mode
-description: Eng's default engineering operating system. Routes feature, bug, investigation, design, review, autonomous, and shipping work through playbooks implemented with OMP /goal, /loop, typed agents, hub, todo, LSP, debug, browser, and the eng_orch tool. Use for nontrivial repository work or /eng-mode.
+description: Eng's default engineering operating system. Routes feature, bug, investigation, design, review, autonomous, and shipping work through playbooks implemented with OMP /goal, typed agents, hub, todo, LSP, debug, browser, and the eng_orch tool. Use for nontrivial repository work or /eng-mode.
 ---
 
 # Eng Mode
@@ -47,7 +47,7 @@ The decision is auditable on-disk validation, not model self-report. `setup-eng-
 - Skill authoring: `playbooks/authoring-a-skill.md`.
 - PR health through squash-merge when green and approved: `playbooks/babysit.md` and the GitHub tooling `project-standards` names.
 - Landing: `playbooks/shipping.md` and the stack tooling `project-standards` names.
-- One long falsifiable task: `playbooks/autonomous-run.md`, `/goal`, and optionally `/loop`.
+- One long falsifiable task: `playbooks/autonomous-run.md` and `/goal`. Interval/polling work belongs in the goal (`/goal do x until y, sleep 30 minutes between iterations`).
 - Independent PR program with merge authority: `playbooks/autopilot-full.md`.
 - Dependent review-first PR chain: `playbooks/autopilot-stack.md`.
 - Project-scale program: `playbooks/orchestrate.md` and the `eng_orch` tool. Work one agent could finish inside the session budget is Autonomous run, not Orchestrate. Do not use OMP's `orchestrate` magic keyword; it supplies no scheduler or transport.
@@ -70,13 +70,13 @@ The decision is auditable on-disk validation, not model self-report. `setup-eng-
 - Parallelize only genuinely independent slices whose merged union is intended. Dispatch one `task` batch. Before relying on worktree isolation, verify OMP isolation is configured and set `isolated: true` only for independent writer tasks whose outputs should apply to the parent tree. Competing candidates use distinct `local://` artifacts, never isolated writer workspaces. Use `hub` for lifecycle and peer messages.
 - Use the most specific OMP agent type. `scout` is read-only exploration. `sonic` handles trivial mechanical edits. `reviewer` and `security-reviewer` review. Use `judgment-agent` for vague, cross-cutting, concurrency-heavy, or algorithmically subtle implementation; use `implementation-agent` for precisely specified implementation. Agent definitions own model routing.
 - The lead owns decomposition, integration, and verification. A delegate summary is not evidence.
-- `todo`, `/goal`, and `/loop` are main-session state. Delegates never call them; they report requested transitions through `hub` or their final result, and the lead performs the state change.
+- `todo` and `/goal` are main-session state. Delegates never call them; they report requested transitions through `hub` or their final result, and the lead performs the state change.
 
 ## Goals, loops, and state
 
 - `/goal` is OMP-owned durable objective state and automatic continuation. When the native `goal` tool is available, the lead may create a complete falsifiable objective, inspect it with `get`, and call `complete` only after its verification surface passes. Otherwise the operator starts `/guided-goal`. OMP owns persistence, pause/resume/drop, and usage accounting; Eng Mode owns the predicate and evidence. Pausing is operator-owned through `/goal pause` after a durable checkpoint.
-- `/loop` is OMP-owned prompt repetition with optional iteration or duration bounds. It does not own metrics, baselines, plateau detection, or verification, and model-callable activation is not assumed. Use it only when the operator has started a measured repetition or bounded polling run. The playbook checks stop conditions and tells the operator to `/loop stop`; never edit the ruler or its inputs to manufacture progress.
-- `todo` always owns the live finite task graph, including while a goal is active. It does not duplicate `/loop` iterations.
+- Interval or polling work is the same `/goal`, with sleep between iterations: `/goal do x until y, sleep 30 minutes between iterations`. The playbook still owns the stop condition, metric, and ruler. Never edit the ruler or its inputs to manufacture progress.
+- `todo` always owns the live finite task graph, including while a goal is active.
 - `show-me-your-work` owns durable decision trails. Use it for unattended, high-risk, or multi-phase runs. ADRs record only hard-to-reverse, surprising decisions with a real tradeoff.
 
 ## Verification
