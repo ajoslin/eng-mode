@@ -47,7 +47,7 @@ The decision is auditable on-disk validation, not model self-report. `setup-eng-
 - Skill authoring: `playbooks/authoring-a-skill.md`.
 - PR health through squash-merge when green and approved: `playbooks/babysit.md` and the GitHub tooling `project-standards` names.
 - Landing: `playbooks/shipping.md` and the stack tooling `project-standards` names.
-- One long falsifiable task: `playbooks/autonomous-run.md` and `/goal`. Interval/polling work belongs in the goal (`/goal do x until y, sleep 30 minutes between iterations`).
+- One long falsifiable task: `playbooks/autonomous-run.md` and `/goal`.
 - Independent PR program with merge authority: `playbooks/autopilot-full.md`.
 - Dependent review-first PR chain: `playbooks/autopilot-stack.md`.
 - Project-scale program: `playbooks/orchestrate.md` and the `eng_orch` tool. Work one agent could finish inside the session budget is Autonomous run, not Orchestrate. Do not use OMP's `orchestrate` magic keyword; it supplies no scheduler or transport.
@@ -75,7 +75,7 @@ The decision is auditable on-disk validation, not model self-report. `setup-eng-
 ## Goals, loops, and state
 
 - `/goal` is OMP-owned durable objective state and automatic continuation. When the native `goal` tool is available, the lead may create a complete falsifiable objective, inspect it with `get`, and call `complete` only after its verification surface passes. Otherwise the operator starts `/guided-goal`. OMP owns persistence, pause/resume/drop, and usage accounting; Eng Mode owns the predicate and evidence. Pausing is operator-owned through `/goal pause` after a durable checkpoint.
-- Interval or polling work is the same `/goal`, with sleep between iterations: `/goal do x until y, sleep 30 minutes between iterations`. The playbook still owns the stop condition, metric, and ruler. Never edit the ruler or its inputs to manufacture progress.
+- Sleep between `/goal` iterations only when the loop itself requires an interval (`/goal do x until y, sleep 30 minutes between iterations`). Most goals have no sleep. The playbook still owns the stop condition, metric, and ruler. Never edit the ruler or its inputs to manufacture progress.
 - `todo` always owns the live finite task graph, including while a goal is active.
 - `show-me-your-work` owns durable decision trails. Use it for unattended, high-risk, or multi-phase runs. ADRs record only hard-to-reverse, surprising decisions with a real tradeoff.
 

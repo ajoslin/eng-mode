@@ -8,6 +8,6 @@
 4. The root opens the PR with required evidence and runs Babysit. A new head invalidates the verdict unless patch identity is unchanged; corrections use a fresh writer on that branch, followed by re-verification.
 5. Finish one branch before checking out the next. Dependent changes route to Autopilot-stack.
 6. With explicit full-autonomy authority, a clean current-head verdict, **and** Babysit's review-agent loop quiet on that SHA, merge through GitHub or the project's stack tooling. Operator-owned items wait.
-7. For requested watching, continue under a native `/goal`. Interval watching is `/goal do x until y, sleep 30 minutes between iterations`. Each tick audits ownership, protocol, and trails. The playbook checks exit conditions. User stop sends immediate zero-writes instructions through `hub`.
+7. For requested watching, continue under a native `/goal`. Sleep only if the operator asked for an interval. Each tick audits ownership, protocol, and trails. The playbook checks exit conditions. User stop sends immediate zero-writes instructions through `hub`.
 
 Report owner, PR, head SHA, verdict, merges, gates, and trail paths.
