@@ -24,30 +24,17 @@ Resolve what is in scope vs explicitly out, technical or platform constraints, p
 
 Delegate codebase exploration (the **guard-the-context-window** principle skill).
 
-- Use `scout` for read-only exploration. Use `implementation-agent` only when the slice writes artifacts. Agent definitions and OMP configuration own model routing; never pass prompt-level model slugs.
-
 Each explorer returns file pointers, conventions, dependencies, test infrastructure, and entry points. No inlined dumps.
 
 ## 4. Write the plan
 
 The user specifies where the plan lives.
 
-Single file `NN-slug.md` for small plans. For three or more phases, a directory with `overview.md` plus phase files:
-
-```
-NN-slug/
-├── overview.md
-├── phase-1-scaffold.md
-├── phase-2-...md
-└── testing.md
-```
+Single file for small plans. For multiple phases, a directory with `overview.md` plus phase files.
 
 ### Phase sizing
 
-- One function or type plus tests, or one bug fix. Not "one file".
-- Two to three files touched, max.
-- Prefer eight to ten small phases over three to four large ones to preserve option value (the **foundational-thinking** principle skill).
-- Split if a phase has more than five test cases or three functions.
+Small independently shippable phases. Prefer more small ones over few large ones (the **foundational-thinking** principle skill).
 
 ### Overview file
 
@@ -80,25 +67,13 @@ Each phase needs both:
 
 **Static.** Type check, lint, project tests pass.
 
-**Runtime.** Exercise the feature on the matching surface:
-
-- Web UIs the project verification contract maps: the parent runs the mapped `verify-project` workflow on its isolated allocation after the workflow's own health gate passes; OMP `browser` cannot attach to a private harness-owned Chromium.
-- Other web UIs: OMP `browser`.
-- CLIs and TUIs: launch the actual program through a managed process.
-- Native mobile: no repository simulator-driving skill is installed. Use a real supported simulator control path when available; otherwise record the proof gap and route creation through `create-verification-skill` before claiming visible behavior.
-- No real control path for the touched surface: flag it in the plan; do not claim verification.
+**Runtime.** Exercise the feature on the matching surface. If there is no real control path for the touched surface, flag it in the plan; do not claim verification.
 
 For bug fixes, the loop is reproduce on the surface, fix, verify on the same surface. Unit tests show a branch behaves a certain way; they do not prove the bug is gone (the **prove-it-works** principle skill).
 
 ## 6. Implementation guidance
 
-In the overview, name which eng-mode non-negotiables the implementer must apply, by name:
-
-- the **how** skill over each unfamiliar subsystem before changing it.
-- the **interrogate** skill for adversarial review on contested designs before shipping.
-- the project pre-commit pass (per `project-standards`) over each diff before commit. the **unslop** skill over any prose surface.
-- the **show-me-your-work** skill to keep a decision trail when the plan is large enough to need an auditable record.
-- the Eng Mode `playbooks/babysit.md` workflow after opening the PR.
+In the overview, name which eng-mode non-negotiables apply to this plan.
 
 ## 7. Hand back
 
