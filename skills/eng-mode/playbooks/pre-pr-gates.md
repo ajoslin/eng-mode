@@ -1,29 +1,40 @@
 ### Pre-PR gates
 
-**Serial remediating quality gates before any PR open. Receipt-backed. Not Pullfrog. Not a merge gate.**
+**One parallel panel, one synthesis, no reruns. Receipt-backed. Not Pullfrog. Not a merge gate.**
 
-Opening a PR hard-stops unless current `HEAD` has three passing receipts at `.omp/pre-pr-gates/<sha>/gate-{1,2,3}.json`. Feature, Bug fix, Refactoring, and Autopilot one-shots inherit this because they open through Opening a PR.
+Opening a PR hard-stops unless a synthesis receipt exists at `.omp/pre-pr-gates/<sha>/synthesis.json` for the SHA the panel froze. Feature, Bug fix, Refactoring, and Autopilot one-shots inherit this because they open through Opening a PR.
 
-1. Resolve `sha=$(git rev-parse HEAD)`. Do not call `github` or `pr://` open.
-2. Run gates **1 → 2 → 3**. Skip a gate only when a valid passing receipt already exists for this exact `sha`.
-3. Each gate: read its skill and run one pass, then remediate, then recheck. After remediate, the pass is **harsh** when any blocker remains or high-conviction findings exceed 3; rerun the **same** gate. Max 3 passes per gate per SHA. Exhaustion is a hard-stop.
-4. Write a passing receipt only after a non-harsh pass, at `.omp/pre-pr-gates/<sha>/gate-<n>.json`:
+1. Freeze `sha=$(git rev-parse HEAD)`. Seats review this SHA only. Do not call `github` or `pr://` open.
+2. Dispatch **one** `task` batch of three seats, same frozen SHA, same diff: `pre-pr-swarm`, `meaningful-contribution`, `thermo-nuclear-pre-pr`. No serial order. No remediating between seats. No harsh-rerun loop. If a seat drops, continue and record the dropout.
+3. Browser work lives on the `pre-pr-swarm` seat and runs only when the diff is UI. Otherwise that seat reports `browser: not-ui` and still reviews colocated logic. Do not attach OMP `browser` to a harness-owned private Chromium.
+4. After the batch settles, the lead synthesizes every finding into Interrogate buckets. Deduplicate. Do not rerun the panel.
+
+- **Act on.** Correctness, security, observable contract, or documented project invariant.
+- **Consider.** Real concern; cost or timing unclear.
+- **Noted.** Valid but not actionable now.
+- **Dismissed.** Wrong, nit, or missing context. State why.
+
+5. Write one receipt at `.omp/pre-pr-gates/<sha>/synthesis.json`. Do not commit it. Do not write `gate-{1,2,3}.json`.
 
 ```json
 {
-  "gate": 1,
-  "skill": "pre-pr-swarm",
-  "sha": "<full HEAD>",
-  "status": "pass",
-  "pass": 1,
-  "blocker": 0,
-  "highConviction": 2,
-  "remediated": true,
+  "sha": "<frozen HEAD>",
+  "seats": {
+    "pre-pr-swarm": "ran",
+    "meaningful-contribution": "ran",
+    "thermo-nuclear-pre-pr": "ran"
+  },
+  "browser": "ran",
+  "actOn": [],
+  "consider": [],
+  "noted": [],
+  "dismissed": [],
+  "remediate": "none",
+  "headAfterRemediate": null,
   "ts": "<ISO-8601>"
 }
 ```
 
-   A receipt is valid only when `status` is `pass`, `sha` equals current `HEAD`, and `gate` matches the filename. Do not commit receipts.
-5. A SHA-changing remediation voids every receipt for the previous `HEAD`. Restart at gate 1 on the new `HEAD`. After 3 full serial restarts without all three current-`HEAD` receipts, hard-stop.
-6. Gate map: `1` `pre-pr-swarm`; `2` `meaningful-contribution`; `3` `thermo-nuclear-pre-pr`. `interrogate` stays never-auto-apply and is not a gate. These gates remediate. Pullfrog, CI, and Babysit do not substitute.
-7. Return to Opening a PR only when all three receipts exist for current `HEAD`. Do not merge.
+   `browser` is `ran` or `not-ui`. A receipt is valid when `sha` is the frozen panel SHA and the four buckets are present.
+6. After synthesis, remediate the full Act-on set — one finding or many. Then return to Opening a PR. If that remediate changes `HEAD`, set `remediate` to `act-on` and `headAfterRemediate` to the new SHA. Do not rerun the panel. Consider / Noted / Dismissed do not block open.
+7. `interrogate` stays never-auto-apply and is not this panel. Pullfrog, CI, and Babysit do not substitute. Do not merge.

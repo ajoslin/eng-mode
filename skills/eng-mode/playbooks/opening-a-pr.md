@@ -2,7 +2,7 @@
 
 Invoked at the end of a code-producing playbook when delivery includes a PR.
 
-**Pre-PR gates.** Before any `github` or `pr://` open, run **Pre-PR gates**. Hard-stop unless current `HEAD` has three passing receipts at `.omp/pre-pr-gates/<sha>/gate-{1,2,3}.json`. Not Pullfrog. Not a merge gate.
+**Pre-PR gates.** Before any `github` or `pr://` open, run **Pre-PR gates**. Hard-stop unless a synthesis receipt exists at `.omp/pre-pr-gates/<sha>/synthesis.json` for the SHA the panel froze. After that playbook remediates the synthesized Act-on set, open without rerunning the panel. Not Pullfrog. Not a merge gate.
 
 **Worktree.** Work from a clean branch off the correct base. Independent PR-owning writers are one-shot non-isolated agents on an exclusive branch; do not set `isolated: true` for them, because OMP isolation applies completed output onto the parent tree. Set `isolated: true` only for independent writers whose merged union is intended on the parent. Competing candidates use `local://`. Dirty branch with unrelated work requires an explicit safe split—never reset or discard user work.
 
