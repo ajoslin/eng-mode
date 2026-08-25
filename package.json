@@ -11,6 +11,8 @@
     "docs",
     "skills",
     "src",
+    "WATCHDOG.md",
+    "WATCHDOG.yml",
     "README.md"
   ],
   "omp": {

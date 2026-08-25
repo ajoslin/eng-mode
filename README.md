@@ -37,7 +37,7 @@ Restart OMP. Then open every repository where you use Eng Mode and run:
 setup-eng-mode
 ```
 
-**Run `setup-eng-mode` in every repository.** It checks the plugin, model roles, agent chains, worktree isolation, and that repository's standards and verification contracts.
+**Run `setup-eng-mode` in every repository.** It checks the plugin, model roles, agent chains, worktree isolation, and that repository's standards and verification contracts, and installs the Eng watchdog advisor (Luna) into the active OMP agent directory.
 
 To update, run the install command again, restart OMP, and rerun `setup-eng-mode` in each repository.
 
@@ -48,7 +48,7 @@ Eng Mode supplies the reusable workflow. Each repository owns:
 - `.omp/skills/project-standards/SKILL.md` — repository law and selected tooling;
 - `.omp/skills/verify-project/SKILL.md` — the real product-verification surface.
 
-`setup-eng-mode` validates both contracts.
+`setup-eng-mode` validates both contracts. A project `.omp/WATCHDOG.md` is optional, for repo-specific traps only.
 
 ## From pstack
 
