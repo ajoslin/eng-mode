@@ -36,5 +36,5 @@ Opening a PR hard-stops unless a synthesis receipt exists at `.omp/pre-pr-gates/
 ```
 
    `browser` is `ran` or `not-ui`. A receipt is valid when `sha` is the frozen panel SHA and the four buckets are present.
-6. After synthesis, remediate the full Act-on set — one finding or many. Then return to Opening a PR. If that remediate changes `HEAD`, set `remediate` to `act-on` and `headAfterRemediate` to the new SHA. Do not rerun the panel. Consider / Noted / Dismissed do not block open.
-7. `interrogate` stays never-auto-apply and is not this panel. Pullfrog, CI, and Babysit do not substitute. Do not merge.
+
+**After.** Remediate the full synthesized Act-on set — one finding or many. Then return to Opening a PR. If that remediate changes `HEAD`, set `remediate` to `act-on` and `headAfterRemediate` to the new SHA. Do not rerun the panel. Consider / Noted / Dismissed do not block open. `interrogate` stays never-auto-apply and is not this panel. Pullfrog, CI, and Babysit do not substitute. Do not merge.
