@@ -47,7 +47,8 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 1. Verify OMP native goal mode availability without activating a live goal or loop. If a device-local bridge exists, it must expose only OMP's native `goal` tool; do not install a second goal or loop runtime.
 2. Validate that task worktree isolation is supported by current OMP configuration before any playbook depends on it.
 3. Dry-route one feature, one bug, and one contested design without editing product code, exercising discovery for every shipped agent.
+4. Observe `omp commit --help`. Observe `gh stack view --help` (the `github/gh-stack` extension; `gh` ≥ 2.90). Do not install the extension. Report a missing extension or `gh stack` exit 9 as unavailable; stacked PRs are a public-preview rollout with no repo toggle.
 
 ## 7. Report
 
-Report installation state, provider enablement, exact source root, shadow inventory in both directions, role migration stage results with conflicts and fallbacks, per-agent resolved models, contract decisions with source paths, isolation and native-goal capability, and every unavailable capability. Refuse to report a capability as present without observing it.
+Report installation state, provider enablement, exact source root, shadow inventory in both directions, role migration stage results with conflicts and fallbacks, per-agent resolved models, contract decisions with source paths, isolation, native-goal, `omp commit`, and `gh stack` capability, and every unavailable capability. Refuse to report a capability as present without observing it.

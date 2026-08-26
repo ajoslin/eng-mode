@@ -22,6 +22,6 @@ These gates answer different questions:
 - Verification: does it work?
 - Merge safety: are branch state, CI, threads, and dependency order safe?
 
-None substitutes for another. Prefer focused commits and PRs. State exact proof and every inconclusive surface.
+None substitutes for another. Prefer focused commits via `omp commit` and PRs. Stacked work uses `github-stack`. State exact proof and every inconclusive surface.
 
 A handoff records objective, fixed point, changed owners and paths, decisions, observed commands or scenarios, risks, current goal/todo state, and exact next action. Session pickup inherits this trail and does not redo completed work merely for reassurance.

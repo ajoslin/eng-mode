@@ -93,6 +93,7 @@ A native goal owns the durable objective; `todo` owns the finite program graph; 
 - The frontier is a computed object, never narrative. Recompute `frontier.json` from `gh stack view --json` after every merge and stack mutation. Resolve it where `gh stack` knows the stack, normally the stacker's clone.
 - Exactly one stacker per stack may run `gh stack`, serialized within its stack; record the holder in the standing orders.
 - Workers never rebase and never run `gh stack` topology commands. Babysitters follow `playbooks/babysit.md`, one per stack, scoped to one immutable frontier generation; they report conflicts to the stacker rather than restacking.
+- Native stacks exist only after `gh stack submit --auto` or `gh stack link`. Exit 9 means stacked PRs are not enabled on the repository; stop and report. `gh pr create --base` is not a stack.
 - PR closes and retargets go through the stacker only; closing a base PR orphans every chain above it. Merges and stack surgery are units with briefs like any other.
 - One retro watcher follows merged PRs for reverts, post-merge CI breaks, and orphaned follow-ups.
 

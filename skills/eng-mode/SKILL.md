@@ -18,7 +18,7 @@ Correctness first. Smallest coherent change. Prove the real behavior. OMP only. 
 
 Eng procedure is global; the repository owns standards, stack policy, product verification, domain law, production restrictions, and specialized delivery behavior through two native project contracts:
 
-- `project-standards` — the index over repository law, commands, review agents, and repository-selected skills. It is the only route from these playbooks to repository-selected skills (test law, stack-specific guidance, pre-commit, Standards + Spec review, GitHub and stack tooling).
+- `project-standards` — the index over repository law, commands, review agents, and repository-selected skills. It is the only route from these playbooks to repository-selected skills (test law, stack-specific guidance, pre-commit, Standards + Spec review, GitHub workflow). Stacked PRs use `github-stack`.
 - `verify-project` — the product verification contract: launch, drive, evidence, health gate, and feature map for the project's real user surface.
 
 Every repository playbook calls the `eng_orch` tool's `contracts` action before repository mutation or behavioral claims, and obeys its structured decision:
@@ -46,7 +46,7 @@ The decision is auditable on-disk validation, not model self-report. `setup-eng-
 - Comparative skill or workflow evaluation: `playbooks/prove-out.md`, `omp-workflows`, and `arena`.
 - Skill authoring: `playbooks/authoring-a-skill.md`.
 - PR health through squash-merge when green and approved: `playbooks/babysit.md` and the GitHub tooling `project-standards` names.
-- Landing: `playbooks/shipping.md` and the stack tooling `project-standards` names.
+- Landing: `playbooks/shipping.md` and `github-stack`.
 - One long falsifiable task: `playbooks/autonomous-run.md` and `/goal`.
 - Independent PR program with merge authority: `playbooks/autopilot-full.md`.
 - Dependent review-first PR chain: `playbooks/autopilot-stack.md`.
@@ -85,7 +85,7 @@ The decision is auditable on-disk validation, not model self-report. `setup-eng-
 - Product web behavior the project verification contract maps uses `verify-project`: its own driver, its own isolated allocation, and its startup/reset and first-state health gate. Do not attach OMP `browser` to a harness-owned private Chromium. A failed health gate, unmapped path, shared dev stack, or wrong surface is `INCONCLUSIVE`. Missing or unconfigured verification is an `eng_orch contracts` outcome, never a license to substitute browser proof. Other web UI uses OMP `browser`. Runtime state uses `debug` or the relevant profiler. Symbol work uses `lsp`. CLI/TUI work runs the actual program through a managed process when interactive.
 - Tests follow the project test law `project-standards` names. Use `tdd` only when a cheap red test represents an uncovered observable contract at a correct public seam.
 - Read the stack-specific skills `project-standards` names before changing code they govern.
-- Before commit or handoff, run the pre-commit pass `project-standards` names. Before review, run `no-comments`. Review-automation findings use the Babysit playbook's review-agent loop and the triage reference `project-standards` indexes. Never merge while that loop is unfinished. Use the Standards + Spec review skill `project-standards` names; use `interrogate` when independent adversarial pressure is warranted.
+- Before commit or handoff, run the pre-commit pass `project-standards` names, then `omp commit`. Before review, run `no-comments`. Review-automation findings use the Babysit playbook's review-agent loop and the triage reference `project-standards` indexes. Never merge while that loop is unfinished. Use the Standards + Spec review skill `project-standards` names; use `interrogate` when independent adversarial pressure is warranted.
 - Green CI is evidence, not a behavioral verdict.
 
 ## Autonomy
