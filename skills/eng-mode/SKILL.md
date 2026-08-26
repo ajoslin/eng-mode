@@ -45,7 +45,7 @@ The decision is auditable on-disk validation, not model self-report. `setup-eng-
 - Competing module designs: the `architect` skill with writable `arena` candidates; read-only panel seats may judge but never produce candidates.
 - Comparative skill or workflow evaluation: `playbooks/prove-out.md`, `omp-workflows`, and `arena`.
 - Skill authoring: `playbooks/authoring-a-skill.md`.
-- PR health through squash-merge when green and approved: `playbooks/babysit.md` and the GitHub tooling `project-standards` names.
+- PR health: `playbooks/babysit.md` and the GitHub tooling `project-standards` names.
 - Landing: `playbooks/shipping.md` and the stack tooling `project-standards` names.
 - One long falsifiable task: `playbooks/autonomous-run.md` and `/goal`.
 - Independent PR program with merge authority: `playbooks/autopilot-full.md`.
