@@ -2,7 +2,13 @@ import { afterEach, describe, expect, it } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import engModeExtension, { executeEngOrch } from "./extension.ts";
+import engModeExtension, {
+  classifierOutputNeedsExpertGuidance,
+  executeEngOrch,
+  EXPERT_DECISION_GUIDANCE,
+  EXPERT_GUIDANCE_CLASSIFIER_PROMPT,
+  parsePromptClassification,
+} from "./extension.ts";
 
 const roots: string[] = [];
 
@@ -65,6 +71,25 @@ describe("eng_orch executable entrypoint", () => {
     await contract(repositoryRoot, "project-standards");
     await contract(repositoryRoot, "verify-project");
     type RegisteredTool = Parameters<Parameters<typeof engModeExtension>[0]["registerTool"]>[0];
+    type BeforeAgentStartHandler = (
+      event: { prompt: string },
+      context: {
+        models: { resolve(spec: "@tiny"): undefined };
+        modelRegistry: { getApiKey(model: never): Promise<undefined> };
+      },
+    ) => Promise<{
+      message?: {
+        customType: string;
+        content: string;
+        display: boolean;
+        attribution: "agent";
+      };
+    }>;
+    type SessionStartHandler = (event: Record<string, never>) => void;
+    let beforeAgentStartHandler: BeforeAgentStartHandler | undefined;
+    let sessionStartHandler: SessionStartHandler | undefined;
+    const sentMessages: Array<{ message: unknown; options: unknown }> = [];
+    let expertRenderer: ((_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown) | undefined;
     const registered = new Map<string, RegisteredTool>();
     const chain = { optional: () => chain, int: () => chain, positive: () => chain };
     const zod = {
@@ -75,12 +100,56 @@ describe("eng_orch executable entrypoint", () => {
       boolean: () => chain,
       array: () => chain,
     };
+    const unavailableClassifier = {
+      models: { resolve: (_spec: "@tiny") => undefined },
+      modelRegistry: { getApiKey: async (_model: never) => undefined },
+    };
+    class TestText {
+      constructor(readonly text: string, readonly paddingX: number, readonly paddingY: number) {}
+    }
     engModeExtension({
+      pi: { Text: TestText },
+      registerMessageRenderer: (_customType, renderer) => { expertRenderer = renderer; },
       zod,
+      on: (event, handler) => {
+        if (event === "before_agent_start") beforeAgentStartHandler = handler as BeforeAgentStartHandler;
+        if (event === "session_start") sessionStartHandler = handler as SessionStartHandler;
+      },
+      sendMessage: (message, options) => sentMessages.push({ message, options }),
       registerTool: (tool) => registered.set(tool.name, tool),
     });
-
     expect([...registered.keys()]).toEqual(["goal", "eng_orch"]);
+    expect(beforeAgentStartHandler).toBeDefined();
+    expect(sessionStartHandler).toBeDefined();
+    sessionStartHandler?.({});
+    expect(sentMessages).toEqual([{
+      message: {
+        customType: "eng-mode-expert-decision-guidance",
+        content: EXPERT_DECISION_GUIDANCE,
+        display: true,
+        attribution: "agent",
+      },
+      options: { deliverAs: "nextTurn", triggerTurn: false },
+    }]);
+    await expect(beforeAgentStartHandler?.({ prompt: "Design this system" }, unavailableClassifier)).resolves.toEqual({});
+    await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" }, unavailableClassifier)).resolves.toEqual({
+      message: {
+        customType: "eng-mode-expert-decision-guidance",
+        content: EXPERT_DECISION_GUIDANCE,
+        display: true,
+        attribution: "agent",
+      },
+    });
+    expect(EXPERT_GUIDANCE_CLASSIFIER_PROMPT).toContain("Reply with exactly one label: trivial or non-trivial.");
+    expect(parsePromptClassification("trivial")).toBe("trivial");
+    expect(parsePromptClassification("non-trivial\n")).toBe("non-trivial");
+    expect(parsePromptClassification("maybe")).toBeUndefined();
+    expect(classifierOutputNeedsExpertGuidance("trivial")).toBeFalse();
+    expect(classifierOutputNeedsExpertGuidance("non-trivial")).toBeTrue();
+    expect(classifierOutputNeedsExpertGuidance(undefined)).toBeTrue();
+    expect(expertRenderer?.({}, {}, { fg: (color, text) => `<${color}>${text}</${color}>` })).toEqual(
+      new TestText("<accent>◆</accent> <dim>Expert lens</dim>", 0, 0),
+    );
     const goal = registered.get("goal");
     const engOrch = registered.get("eng_orch");
     expect(goal).toBeDefined();
