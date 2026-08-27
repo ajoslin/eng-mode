@@ -74,10 +74,9 @@ omp plugin link "$PWD"
 
 The single extension entrypoint, `src/extension.ts`:
 
-- carries the expert-decision guidance in the Eng Mode skill itself, so routed non-trivial first turns receive it as part of the workflow;
-- skips extension classification on the first prompt of every main and task/subagent session, then classifies eligible later prompts with the configured `@tiny` model;
+- classifies every prompt—including the first prompt of main and task/subagent sessions—with the configured `@tiny` model;
 - injects expert-decision guidance only when the classifier returns exact `expert`, displaying a compact `◆ Expert lens` marker while retaining the full guidance in model context and raw session data; classifier failures and ordinary work remain unmarked;
-- suppresses later classification and reinjection until 50,000 non-cached input/output/reasoning tokens have elapsed since the last extension injection; context compaction makes the next expert-classified prompt immediately eligible;
+- suppresses classification and reinjection until 50,000 non-cached input/output/reasoning tokens have elapsed since the last guidance; context compaction makes the next expert-classified prompt immediately eligible;
 - registers `goal`, an essential wrapper around OMP's native same-name tool via `ctx.invokeTool`;
 - registers `eng_orch`, the repository-contract gate and durable orchestration store.
 
