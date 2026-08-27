@@ -48,6 +48,19 @@ interface PromptClassifierContext {
 interface BeforeAgentStartEventResult {
   readonly message?: CustomMessagePayload;
 }
+interface TurnEndEvent {
+  readonly message: {
+    readonly role: string;
+    readonly usage?: {
+      readonly input?: number;
+      readonly output?: number;
+      readonly reasoningTokens?: number;
+    };
+  };
+}
+
+type SessionCompactEvent = Record<string, never>;
+
 
 
 
@@ -82,6 +95,8 @@ interface ExtensionAPI {
       context: PromptClassifierContext,
     ) => BeforeAgentStartEventResult | Promise<BeforeAgentStartEventResult>,
   ): void;
+  on(event: "turn_end", handler: (event: TurnEndEvent) => void): void;
+  on(event: "session_compact", handler: (event: SessionCompactEvent) => void): void;
 
 }
 import { join, resolve } from "node:path";
@@ -155,15 +170,28 @@ export async function executeEngOrch(input: Input): Promise<unknown> {
 
 const MINIMUM_GOAL_TOKEN_BUDGET = 500_000_000;
 const PROMPT_CLASSIFIER_MAX_TOKENS = 16;
+const EXPERT_GUIDANCE_COOLDOWN_MS = 10 * 60 * 1_000;
+const EXPERT_GUIDANCE_COOLDOWN_TOKENS = 50_000;
 
-export const EXPERT_GUIDANCE_CLASSIFIER_PROMPT = `Classify whether the user's request would materially benefit from expert decision discipline.
 
-Labels:
-- trivial: no substantive task has been stated yet (for example, "help me" or "can you help?"); an acknowledgement; a direct factual lookup with one unambiguous answer; or an explicitly mechanical typo, formatting, or exact rename request with no design choice.
-- non-trivial: a stated task involving architecture, design, planning, review, investigation, debugging, implementation with non-obvious choices, multi-file work, risk, judgment, or trade-offs.
+export const EXPERT_GUIDANCE_CLASSIFIER_PROMPT = `Decide whether this request requires an expert decision lens. This is a high threshold: complexity alone is not enough.
 
-Classify conversational scaffolding by the task that follows it: "help me" is trivial, while "help me design an app" is non-trivial. If a substantive task is stated and its difficulty is uncertain, choose non-trivial.
-Reply with exactly one label: trivial or non-trivial.`;
+Reply expert only when the stated task asks for, or necessarily requires, a material choice among plausible alternatives where a poor choice would have meaningful architectural, product, operational, security, migration, or long-term maintenance consequences.
+
+Reply ordinary for acknowledgements, open-ended offers to help, pasted text without a task, factual questions, explanations, routine investigation or debugging, ordinary implementation, mechanical edits, exact renames, and multi-file work that does not itself require a consequential design choice.
+
+Examples:
+- "help me" -> ordinary
+- "explain how this cache works" -> ordinary
+- "fix this failing test" -> ordinary
+- "implement the specified endpoint" -> ordinary
+- "help me design an app" -> expert
+- "choose between event sourcing and CRUD for this service" -> expert
+- "review this authentication architecture" -> expert
+- "plan a zero-downtime migration from Redis to Postgres" -> expert
+
+Ignore conversational scaffolding and classify the substantive task. When uncertain, reply ordinary unless the prompt itself establishes meaningful consequences.
+Reply with exactly one label: ordinary or expert.`;
 
 export const EXPERT_DECISION_GUIDANCE =
   "For every decision, ask what the best expert in that field would do and why they would reject your current choice; if you can name that reason, don't make the choice. Optimize for what that expert would judge correct, never for what satisfies the stated constraints most cheaply. Every trade-off you take must be stated to the user, never absorbed.";
@@ -175,15 +203,26 @@ const EXPERT_DECISION_MESSAGE: CustomMessagePayload = {
 };
 
 
-export function parsePromptClassification(text: string): "trivial" | "non-trivial" | undefined {
+export function parsePromptClassification(text: string): "ordinary" | "expert" | undefined {
   const normalized = text.trim().toLowerCase();
-  if (normalized === "trivial") return "trivial";
-  if (normalized === "non-trivial") return "non-trivial";
+  if (normalized === "ordinary") return "ordinary";
+  if (normalized === "expert") return "expert";
   return undefined;
 }
 
 export function classifierOutputNeedsExpertGuidance(text: string | undefined): boolean {
-  return text === undefined || parsePromptClassification(text) !== "trivial";
+  return text !== undefined && parsePromptClassification(text) === "expert";
+}
+export function expertGuidanceCooldownElapsed(
+  lastGuidanceAt: number | undefined,
+  now: number,
+  tokensSinceGuidance: number,
+  compactedSinceGuidance: boolean,
+): boolean {
+  return lastGuidanceAt === undefined
+    || compactedSinceGuidance
+    || (now - lastGuidanceAt >= EXPERT_GUIDANCE_COOLDOWN_MS
+      && tokensSinceGuidance >= EXPERT_GUIDANCE_COOLDOWN_TOKENS);
 }
 
 async function classifyPrompt(prompt: string, context: PromptClassifierContext): Promise<string | undefined> {
@@ -213,14 +252,36 @@ export default function engModeExtension(pi: ExtensionAPI): void {
     "eng-mode-expert-decision-guidance",
     (_message, _options, theme) => new pi.pi.Text(`${theme.fg("accent", "◆")} ${theme.fg("dim", "Expert lens")}`, 0, 0),
   );
+  let lastGuidanceAt: number | undefined;
+  let tokensSinceGuidance = 0;
+  let compactedSinceGuidance = false;
+  pi.on("turn_end", (event) => {
+    if (lastGuidanceAt === undefined || event.message.role !== "assistant") return;
+    const usage = event.message.usage;
+    tokensSinceGuidance += (usage?.input ?? 0) + (usage?.output ?? 0) + (usage?.reasoningTokens ?? 0);
+  });
+  pi.on("session_compact", () => {
+    if (lastGuidanceAt !== undefined) compactedSinceGuidance = true;
+  });
   pi.on("before_agent_start", async (event, context) => {
+    const eligible = expertGuidanceCooldownElapsed(
+      lastGuidanceAt,
+      Date.now(),
+      tokensSinceGuidance,
+      compactedSinceGuidance,
+    );
+    if (!eligible) return {};
     let output: string | undefined;
     try {
       output = await classifyPrompt(event.prompt, context);
     } catch {
       output = undefined;
     }
-    return classifierOutputNeedsExpertGuidance(output) ? { message: EXPERT_DECISION_MESSAGE } : {};
+    if (!classifierOutputNeedsExpertGuidance(output)) return {};
+    lastGuidanceAt = Date.now();
+    tokensSinceGuidance = 0;
+    compactedSinceGuidance = false;
+    return { message: EXPERT_DECISION_MESSAGE };
   });
 
   pi.registerTool({

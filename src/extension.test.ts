@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import engModeExtension, {
   classifierOutputNeedsExpertGuidance,
+  expertGuidanceCooldownElapsed,
   executeEngOrch,
   EXPERT_DECISION_GUIDANCE,
   EXPERT_GUIDANCE_CLASSIFIER_PROMPT,
@@ -115,29 +116,23 @@ describe("eng_orch executable entrypoint", () => {
     });
     expect([...registered.keys()]).toEqual(["goal", "eng_orch"]);
     expect(beforeAgentStartHandler).toBeDefined();
-    await expect(beforeAgentStartHandler?.({ prompt: "Design this system" }, unavailableClassifier)).resolves.toEqual({
-      message: {
-        customType: "eng-mode-expert-decision-guidance",
-        content: EXPERT_DECISION_GUIDANCE,
-        display: true,
-        attribution: "agent",
-      },
-    });
-    await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" }, unavailableClassifier)).resolves.toEqual({
-      message: {
-        customType: "eng-mode-expert-decision-guidance",
-        content: EXPERT_DECISION_GUIDANCE,
-        display: true,
-        attribution: "agent",
-      },
-    });
-    expect(EXPERT_GUIDANCE_CLASSIFIER_PROMPT).toContain("Reply with exactly one label: trivial or non-trivial.");
-    expect(parsePromptClassification("trivial")).toBe("trivial");
-    expect(parsePromptClassification("non-trivial\n")).toBe("non-trivial");
+    await expect(beforeAgentStartHandler?.({ prompt: "Design this system" }, unavailableClassifier)).resolves.toEqual({});
+    await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" }, unavailableClassifier)).resolves.toEqual({});
+    expect(EXPERT_GUIDANCE_CLASSIFIER_PROMPT).toContain("Reply with exactly one label: ordinary or expert.");
+    expect(EXPERT_GUIDANCE_CLASSIFIER_PROMPT).toContain('"fix this failing test" -> ordinary');
+    expect(EXPERT_GUIDANCE_CLASSIFIER_PROMPT).toContain('"help me design an app" -> expert');
+    expect(parsePromptClassification("ordinary")).toBe("ordinary");
+    expect(parsePromptClassification("expert\n")).toBe("expert");
     expect(parsePromptClassification("maybe")).toBeUndefined();
-    expect(classifierOutputNeedsExpertGuidance("trivial")).toBeFalse();
-    expect(classifierOutputNeedsExpertGuidance("non-trivial")).toBeTrue();
-    expect(classifierOutputNeedsExpertGuidance(undefined)).toBeTrue();
+    expect(classifierOutputNeedsExpertGuidance("ordinary")).toBeFalse();
+    expect(classifierOutputNeedsExpertGuidance("expert")).toBeTrue();
+    expect(classifierOutputNeedsExpertGuidance(undefined)).toBeFalse();
+    const injectedAt = 1_000_000;
+    expect(expertGuidanceCooldownElapsed(undefined, injectedAt, 0, false)).toBeTrue();
+    expect(expertGuidanceCooldownElapsed(injectedAt, injectedAt + 10 * 60_000, 49_999, false)).toBeFalse();
+    expect(expertGuidanceCooldownElapsed(injectedAt, injectedAt + 9 * 60_000, 50_000, false)).toBeFalse();
+    expect(expertGuidanceCooldownElapsed(injectedAt, injectedAt + 10 * 60_000, 50_000, false)).toBeTrue();
+    expect(expertGuidanceCooldownElapsed(injectedAt, injectedAt + 1, 0, true)).toBeTrue();
     expect(expertRenderer?.({}, {}, { fg: (color, text) => `<${color}>${text}</${color}>` })).toEqual(
       new TestText("<accent>◆</accent> <dim>Expert lens</dim>", 0, 0),
     );
