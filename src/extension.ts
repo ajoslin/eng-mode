@@ -159,10 +159,10 @@ const PROMPT_CLASSIFIER_MAX_TOKENS = 16;
 export const EXPERT_GUIDANCE_CLASSIFIER_PROMPT = `Classify whether the user's request would materially benefit from expert decision discipline.
 
 Labels:
-- trivial: an acknowledgement; a direct factual lookup with one unambiguous answer; or an explicitly mechanical typo, formatting, or exact rename request with no design choice.
-- non-trivial: architecture, design, planning, review, investigation, debugging, implementation with non-obvious choices, multi-file work, risky work, or any request involving judgment or trade-offs.
+- trivial: no substantive task has been stated yet (for example, "help me" or "can you help?"); an acknowledgement; a direct factual lookup with one unambiguous answer; or an explicitly mechanical typo, formatting, or exact rename request with no design choice.
+- non-trivial: a stated task involving architecture, design, planning, review, investigation, debugging, implementation with non-obvious choices, multi-file work, risk, judgment, or trade-offs.
 
-If uncertain, choose non-trivial.
+Classify conversational scaffolding by the task that follows it: "help me" is trivial, while "help me design an app" is non-trivial. If a substantive task is stated and its difficulty is uncertain, choose non-trivial.
 Reply with exactly one label: trivial or non-trivial.`;
 
 export const EXPERT_DECISION_GUIDANCE =
