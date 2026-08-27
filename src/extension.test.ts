@@ -85,10 +85,7 @@ describe("eng_orch executable entrypoint", () => {
         attribution: "agent";
       };
     }>;
-    type SessionStartHandler = (event: Record<string, never>) => void;
     let beforeAgentStartHandler: BeforeAgentStartHandler | undefined;
-    let sessionStartHandler: SessionStartHandler | undefined;
-    const sentMessages: Array<{ message: unknown; options: unknown }> = [];
     let expertRenderer: ((_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown) | undefined;
     const registered = new Map<string, RegisteredTool>();
     const chain = { optional: () => chain, int: () => chain, positive: () => chain };
@@ -113,25 +110,19 @@ describe("eng_orch executable entrypoint", () => {
       zod,
       on: (event, handler) => {
         if (event === "before_agent_start") beforeAgentStartHandler = handler as BeforeAgentStartHandler;
-        if (event === "session_start") sessionStartHandler = handler as SessionStartHandler;
       },
-      sendMessage: (message, options) => sentMessages.push({ message, options }),
       registerTool: (tool) => registered.set(tool.name, tool),
     });
     expect([...registered.keys()]).toEqual(["goal", "eng_orch"]);
     expect(beforeAgentStartHandler).toBeDefined();
-    expect(sessionStartHandler).toBeDefined();
-    sessionStartHandler?.({});
-    expect(sentMessages).toEqual([{
+    await expect(beforeAgentStartHandler?.({ prompt: "Design this system" }, unavailableClassifier)).resolves.toEqual({
       message: {
         customType: "eng-mode-expert-decision-guidance",
         content: EXPERT_DECISION_GUIDANCE,
         display: true,
         attribution: "agent",
       },
-      options: { deliverAs: "nextTurn", triggerTurn: false },
-    }]);
-    await expect(beforeAgentStartHandler?.({ prompt: "Design this system" }, unavailableClassifier)).resolves.toEqual({});
+    });
     await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" }, unavailableClassifier)).resolves.toEqual({
       message: {
         customType: "eng-mode-expert-decision-guidance",

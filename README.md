@@ -74,8 +74,8 @@ omp plugin link "$PWD"
 
 The single extension entrypoint, `src/extension.ts`:
 
-- injects the expert-decision guidance into the first prompt of every main and task/subagent session, displaying a compact `◆ Expert lens` marker while retaining the full guidance in model context and raw session data;
-- classifies later prompts with the configured `@tiny` model and injects the same marked guidance for every result except exact `trivial`, failing open when classification is unavailable or invalid;
+- classifies every prompt—including the first prompt of main and task/subagent sessions—with the configured `@tiny` model;
+- injects expert-decision guidance for every result except exact `trivial`, displaying a compact `◆ Expert lens` marker while retaining the full guidance in model context and raw session data, and failing open when classification is unavailable or invalid;
 - registers `goal`, an essential wrapper around OMP's native same-name tool via `ctx.invokeTool`;
 - registers `eng_orch`, the repository-contract gate and durable orchestration store.
 

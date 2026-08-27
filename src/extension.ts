@@ -48,12 +48,6 @@ interface PromptClassifierContext {
 interface BeforeAgentStartEventResult {
   readonly message?: CustomMessagePayload;
 }
-type SessionStartEvent = Record<string, never>;
-
-interface MessageDeliveryOptions {
-  readonly deliverAs: "nextTurn";
-  readonly triggerTurn: false;
-}
 
 
 
@@ -88,8 +82,6 @@ interface ExtensionAPI {
       context: PromptClassifierContext,
     ) => BeforeAgentStartEventResult | Promise<BeforeAgentStartEventResult>,
   ): void;
-  on(event: "session_start", handler: (event: SessionStartEvent) => void): void;
-  sendMessage(message: CustomMessagePayload, options: MessageDeliveryOptions): void;
 
 }
 import { join, resolve } from "node:path";
@@ -221,16 +213,7 @@ export default function engModeExtension(pi: ExtensionAPI): void {
     "eng-mode-expert-decision-guidance",
     (_message, _options, theme) => new pi.pi.Text(`${theme.fg("accent", "◆")} ${theme.fg("dim", "Expert lens")}`, 0, 0),
   );
-  let initialGuidanceQueued = false;
-  pi.on("session_start", () => {
-    initialGuidanceQueued = true;
-    pi.sendMessage(EXPERT_DECISION_MESSAGE, { deliverAs: "nextTurn", triggerTurn: false });
-  });
   pi.on("before_agent_start", async (event, context) => {
-    if (initialGuidanceQueued) {
-      initialGuidanceQueued = false;
-      return {};
-    }
     let output: string | undefined;
     try {
       output = await classifyPrompt(event.prompt, context);
