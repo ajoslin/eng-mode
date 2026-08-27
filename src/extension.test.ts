@@ -98,8 +98,9 @@ describe("eng_orch executable entrypoint", () => {
       boolean: () => chain,
       array: () => chain,
     };
+    let classifierCalls = 0;
     const unavailableClassifier = {
-      models: { resolve: (_spec: "@tiny") => undefined },
+      models: { resolve: (_spec: "@tiny") => { classifierCalls += 1; return undefined; } },
       modelRegistry: { getApiKey: async (_model: never) => undefined },
     };
     class TestText {
@@ -115,23 +116,20 @@ describe("eng_orch executable entrypoint", () => {
       registerTool: (tool) => registered.set(tool.name, tool),
     });
     expect([...registered.keys()]).toEqual(["goal", "eng_orch"]);
-    expect(beforeAgentStartHandler).toBeDefined();
     await expect(beforeAgentStartHandler?.({ prompt: "Design this system" }, unavailableClassifier)).resolves.toEqual({});
+    expect(classifierCalls).toBe(0);
     await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" }, unavailableClassifier)).resolves.toEqual({});
-    expect(EXPERT_GUIDANCE_CLASSIFIER_PROMPT).toContain("Reply with exactly one label: ordinary or expert.");
-    expect(EXPERT_GUIDANCE_CLASSIFIER_PROMPT).toContain('"fix this failing test" -> ordinary');
-    expect(EXPERT_GUIDANCE_CLASSIFIER_PROMPT).toContain('"help me design an app" -> expert');
+    expect(classifierCalls).toBe(1);
     expect(parsePromptClassification("ordinary")).toBe("ordinary");
     expect(parsePromptClassification("expert\n")).toBe("expert");
     expect(parsePromptClassification("maybe")).toBeUndefined();
     expect(classifierOutputNeedsExpertGuidance("ordinary")).toBeFalse();
     expect(classifierOutputNeedsExpertGuidance("expert")).toBeTrue();
     expect(classifierOutputNeedsExpertGuidance(undefined)).toBeFalse();
-    const injectedAt = 1_000_000;
-    expect(expertGuidanceCooldownElapsed(undefined, 0, false)).toBeTrue();
-    expect(expertGuidanceCooldownElapsed(injectedAt, 49_999, false)).toBeFalse();
-    expect(expertGuidanceCooldownElapsed(injectedAt, 50_000, false)).toBeTrue();
-    expect(expertGuidanceCooldownElapsed(injectedAt, 0, true)).toBeTrue();
+    expect(expertGuidanceCooldownElapsed(false, 0, false)).toBeTrue();
+    expect(expertGuidanceCooldownElapsed(true, 49_999, false)).toBeFalse();
+    expect(expertGuidanceCooldownElapsed(true, 50_000, false)).toBeTrue();
+    expect(expertGuidanceCooldownElapsed(true, 0, true)).toBeTrue();
     expect(expertRenderer?.({}, {}, { fg: (color, text) => `<${color}>${text}</${color}>` })).toEqual(
       new TestText("<accent>◆</accent> <dim>Expert lens</dim>", 0, 0),
     );

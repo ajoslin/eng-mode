@@ -213,11 +213,11 @@ export function classifierOutputNeedsExpertGuidance(text: string | undefined): b
   return text !== undefined && parsePromptClassification(text) === "expert";
 }
 export function expertGuidanceCooldownElapsed(
-  lastGuidanceAt: number | undefined,
+  guidanceInjected: boolean,
   tokensSinceGuidance: number,
   compactedSinceGuidance: boolean,
 ): boolean {
-  return lastGuidanceAt === undefined
+  return !guidanceInjected
     || compactedSinceGuidance
     || tokensSinceGuidance >= EXPERT_GUIDANCE_COOLDOWN_TOKENS;
 }
@@ -249,20 +249,25 @@ export default function engModeExtension(pi: ExtensionAPI): void {
     "eng-mode-expert-decision-guidance",
     (_message, _options, theme) => new pi.pi.Text(`${theme.fg("accent", "◆")} ${theme.fg("dim", "Expert lens")}`, 0, 0),
   );
-  let lastGuidanceAt: number | undefined;
+  let isFirstPrompt = true;
+  let guidanceInjected = false;
   let tokensSinceGuidance = 0;
   let compactedSinceGuidance = false;
   pi.on("turn_end", (event) => {
-    if (lastGuidanceAt === undefined || event.message.role !== "assistant") return;
+    if (!guidanceInjected || event.message.role !== "assistant") return;
     const usage = event.message.usage;
     tokensSinceGuidance += (usage?.input ?? 0) + (usage?.output ?? 0) + (usage?.reasoningTokens ?? 0);
   });
   pi.on("session_compact", () => {
-    if (lastGuidanceAt !== undefined) compactedSinceGuidance = true;
+    if (guidanceInjected) compactedSinceGuidance = true;
   });
   pi.on("before_agent_start", async (event, context) => {
+    if (isFirstPrompt) {
+      isFirstPrompt = false;
+      return {};
+    }
     const eligible = expertGuidanceCooldownElapsed(
-      lastGuidanceAt,
+      guidanceInjected,
       tokensSinceGuidance,
       compactedSinceGuidance,
     );
@@ -274,7 +279,7 @@ export default function engModeExtension(pi: ExtensionAPI): void {
       output = undefined;
     }
     if (!classifierOutputNeedsExpertGuidance(output)) return {};
-    lastGuidanceAt = Date.now();
+    guidanceInjected = true;
     tokensSinceGuidance = 0;
     compactedSinceGuidance = false;
     return { message: EXPERT_DECISION_MESSAGE };
