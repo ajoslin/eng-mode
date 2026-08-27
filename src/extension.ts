@@ -170,7 +170,6 @@ export async function executeEngOrch(input: Input): Promise<unknown> {
 
 const MINIMUM_GOAL_TOKEN_BUDGET = 500_000_000;
 const PROMPT_CLASSIFIER_MAX_TOKENS = 16;
-const EXPERT_GUIDANCE_COOLDOWN_MS = 10 * 60 * 1_000;
 const EXPERT_GUIDANCE_COOLDOWN_TOKENS = 50_000;
 
 
@@ -215,14 +214,12 @@ export function classifierOutputNeedsExpertGuidance(text: string | undefined): b
 }
 export function expertGuidanceCooldownElapsed(
   lastGuidanceAt: number | undefined,
-  now: number,
   tokensSinceGuidance: number,
   compactedSinceGuidance: boolean,
 ): boolean {
   return lastGuidanceAt === undefined
     || compactedSinceGuidance
-    || (now - lastGuidanceAt >= EXPERT_GUIDANCE_COOLDOWN_MS
-      && tokensSinceGuidance >= EXPERT_GUIDANCE_COOLDOWN_TOKENS);
+    || tokensSinceGuidance >= EXPERT_GUIDANCE_COOLDOWN_TOKENS;
 }
 
 async function classifyPrompt(prompt: string, context: PromptClassifierContext): Promise<string | undefined> {
@@ -266,7 +263,6 @@ export default function engModeExtension(pi: ExtensionAPI): void {
   pi.on("before_agent_start", async (event, context) => {
     const eligible = expertGuidanceCooldownElapsed(
       lastGuidanceAt,
-      Date.now(),
       tokensSinceGuidance,
       compactedSinceGuidance,
     );

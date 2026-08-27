@@ -128,11 +128,10 @@ describe("eng_orch executable entrypoint", () => {
     expect(classifierOutputNeedsExpertGuidance("expert")).toBeTrue();
     expect(classifierOutputNeedsExpertGuidance(undefined)).toBeFalse();
     const injectedAt = 1_000_000;
-    expect(expertGuidanceCooldownElapsed(undefined, injectedAt, 0, false)).toBeTrue();
-    expect(expertGuidanceCooldownElapsed(injectedAt, injectedAt + 10 * 60_000, 49_999, false)).toBeFalse();
-    expect(expertGuidanceCooldownElapsed(injectedAt, injectedAt + 9 * 60_000, 50_000, false)).toBeFalse();
-    expect(expertGuidanceCooldownElapsed(injectedAt, injectedAt + 10 * 60_000, 50_000, false)).toBeTrue();
-    expect(expertGuidanceCooldownElapsed(injectedAt, injectedAt + 1, 0, true)).toBeTrue();
+    expect(expertGuidanceCooldownElapsed(undefined, 0, false)).toBeTrue();
+    expect(expertGuidanceCooldownElapsed(injectedAt, 49_999, false)).toBeFalse();
+    expect(expertGuidanceCooldownElapsed(injectedAt, 50_000, false)).toBeTrue();
+    expect(expertGuidanceCooldownElapsed(injectedAt, 0, true)).toBeTrue();
     expect(expertRenderer?.({}, {}, { fg: (color, text) => `<${color}>${text}</${color}>` })).toEqual(
       new TestText("<accent>◆</accent> <dim>Expert lens</dim>", 0, 0),
     );
