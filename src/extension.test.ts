@@ -4,10 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import engModeExtension, {
   classifierOutputNeedsExpertGuidance,
-  expertGuidanceCooldownElapsed,
+  expertGuidanceWithinTokenTail,
   executeEngOrch,
   EXPERT_DECISION_GUIDANCE,
-  EXPERT_GUIDANCE_CLASSIFIER_PROMPT,
   parsePromptClassification,
 } from "./extension.ts";
 
@@ -74,10 +73,7 @@ describe("eng_orch executable entrypoint", () => {
     type RegisteredTool = Parameters<Parameters<typeof engModeExtension>[0]["registerTool"]>[0];
     type BeforeAgentStartHandler = (
       event: { prompt: string },
-      context: {
-        models: { resolve(spec: "@tiny"): undefined };
-        modelRegistry: { getApiKey(model: never): Promise<undefined> };
-      },
+      context: typeof unavailableClassifier,
     ) => Promise<{
       message?: {
         customType: string;
@@ -86,9 +82,15 @@ describe("eng_orch executable entrypoint", () => {
         attribution: "agent";
       };
     }>;
+    type SessionCompactHandler = (
+      event: { compactionEntry: { id: string; summary: string; firstKeptEntryId: string } },
+      context: typeof unavailableClassifier,
+    ) => void;
     let beforeAgentStartHandler: BeforeAgentStartHandler | undefined;
+    let sessionCompactHandler: SessionCompactHandler | undefined;
     let expertRenderer: ((_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown) | undefined;
     const registered = new Map<string, RegisteredTool>();
+    const sent: Array<{ message: { customType: string; content: string; display: boolean; attribution: "agent" }; options: { deliverAs: "steer" } }> = [];
     const chain = { optional: () => chain, int: () => chain, positive: () => chain };
     const zod = {
       object: () => ({}),
@@ -98,9 +100,12 @@ describe("eng_orch executable entrypoint", () => {
       boolean: () => chain,
       array: () => chain,
     };
+    let classifierCalls = 0;
     const unavailableClassifier = {
-      models: { resolve: (_spec: "@tiny") => undefined },
+      models: { resolve: (_spec: "@tiny") => { classifierCalls += 1; return undefined; } },
       modelRegistry: { getApiKey: async (_model: never) => undefined },
+      model: undefined,
+      sessionManager: { getBranch: () => [] },
     };
     class TestText {
       constructor(readonly text: string, readonly paddingX: number, readonly paddingY: number) {}
@@ -108,30 +113,37 @@ describe("eng_orch executable entrypoint", () => {
     engModeExtension({
       pi: { Text: TestText },
       registerMessageRenderer: (_customType, renderer) => { expertRenderer = renderer; },
+      sendMessage: (message, options) => { sent.push({ message, options }); },
       zod,
       on: (event, handler) => {
         if (event === "before_agent_start") beforeAgentStartHandler = handler as BeforeAgentStartHandler;
+        if (event === "session_compact") sessionCompactHandler = handler as SessionCompactHandler;
       },
       registerTool: (tool) => registered.set(tool.name, tool),
     });
     expect([...registered.keys()]).toEqual(["goal", "eng_orch"]);
     expect(beforeAgentStartHandler).toBeDefined();
     await expect(beforeAgentStartHandler?.({ prompt: "Design this system" }, unavailableClassifier)).resolves.toEqual({});
+    expect(classifierCalls).toBe(0);
+    await expect(beforeAgentStartHandler?.({ prompt: EXPERT_DECISION_GUIDANCE }, unavailableClassifier)).resolves.toEqual({});
+    expect(classifierCalls).toBe(0);
     await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" }, unavailableClassifier)).resolves.toEqual({});
-    expect(EXPERT_GUIDANCE_CLASSIFIER_PROMPT).toContain("Reply with exactly one label: ordinary or expert.");
-    expect(EXPERT_GUIDANCE_CLASSIFIER_PROMPT).toContain('"fix this failing test" -> ordinary');
-    expect(EXPERT_GUIDANCE_CLASSIFIER_PROMPT).toContain('"help me design an app" -> expert');
+    expect(classifierCalls).toBe(1);
     expect(parsePromptClassification("ordinary")).toBe("ordinary");
     expect(parsePromptClassification("expert\n")).toBe("expert");
     expect(parsePromptClassification("maybe")).toBeUndefined();
     expect(classifierOutputNeedsExpertGuidance("ordinary")).toBeFalse();
     expect(classifierOutputNeedsExpertGuidance("expert")).toBeTrue();
     expect(classifierOutputNeedsExpertGuidance(undefined)).toBeFalse();
-    const injectedAt = 1_000_000;
-    expect(expertGuidanceCooldownElapsed(undefined, 0, false)).toBeTrue();
-    expect(expertGuidanceCooldownElapsed(injectedAt, 49_999, false)).toBeFalse();
-    expect(expertGuidanceCooldownElapsed(injectedAt, 50_000, false)).toBeTrue();
-    expect(expertGuidanceCooldownElapsed(injectedAt, 0, true)).toBeTrue();
+    expect(expertGuidanceWithinTokenTail([`recent ${EXPERT_DECISION_GUIDANCE}`], () => 1)).toBeTrue();
+    expect(expertGuidanceWithinTokenTail(["newer", EXPERT_DECISION_GUIDANCE], () => 100_000)).toBeFalse();
+    sessionCompactHandler?.({ compactionEntry: { id: "compact", summary: EXPERT_DECISION_GUIDANCE, firstKeptEntryId: "kept" } }, unavailableClassifier);
+    expect(sent).toHaveLength(0);
+    sessionCompactHandler?.({ compactionEntry: { id: "compact", summary: "summary without guidance", firstKeptEntryId: "kept" } }, unavailableClassifier);
+    expect(sent).toEqual([{
+      message: { customType: "eng-mode-expert-decision-guidance", content: `Continue the current task. Apply this decision lens going forward:\n\n${EXPERT_DECISION_GUIDANCE}`, display: true, attribution: "agent" },
+      options: { deliverAs: "steer" },
+    }]);
     expect(expertRenderer?.({}, {}, { fg: (color, text) => `<${color}>${text}</${color}>` })).toEqual(
       new TestText("<accent>◆</accent> <dim>Expert lens</dim>", 0, 0),
     );

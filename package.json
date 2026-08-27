@@ -24,6 +24,7 @@
     "check": "bun run test && bun run typecheck"
   },
   "dependencies": {
+    "@oh-my-pi/pi-agent-core": "17.4.0",
     "@oh-my-pi/pi-ai": "17.4.0",
     "yaml": "2.9.0",
     "zod": "4.3.3"
