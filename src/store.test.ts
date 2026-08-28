@@ -14,6 +14,8 @@ import {
 
 const directories: string[] = [];
 const handles: Store[] = [];
+const gitBin = Bun.which("git") ?? "git";
+let pathLock: Promise<void> = Promise.resolve();
 
 async function makeDirectory(): Promise<string> {
   const directory = await mkdtemp(join(tmpdir(), "orch-test-"));
@@ -38,7 +40,7 @@ async function initializedStore(): Promise<{
 }
 
 function git({ args, repo }: { args: readonly string[]; repo: string }): string {
-  const result = Bun.spawnSync(["git", "-C", repo, ...args]);
+  const result = Bun.spawnSync([gitBin, "-C", repo, ...args]);
   if (result.exitCode !== 0) {
     throw new Error(`git ${args.join(" ")} failed: ${result.stderr.toString()}`);
   }
@@ -56,6 +58,8 @@ async function makeGitStack(directory: string): Promise<{
   git({ repo, args: ["init", "--initial-branch=main"] });
   git({ repo, args: ["config", "user.name", "Orch Test"] });
   git({ repo, args: ["config", "user.email", "orch@example.com"] });
+  git({ repo, args: ["config", "commit.gpgsign", "false"] });
+  git({ repo, args: ["config", "core.fsmonitor", "false"] });
   await writeFile(join(repo, "main.txt"), "main\n");
   git({ repo, args: ["add", "."] });
   git({ repo, args: ["commit", "-m", "main"] });
@@ -138,18 +142,7 @@ esac
 `,
   );
   await chmod(gt, 0o755);
-
-  const originalPath = process.env.PATH;
-  process.env.PATH = `${bin}:${originalPath ?? ""}`;
-  try {
-    return await operation();
-  } finally {
-    if (originalPath === undefined) {
-      delete process.env.PATH;
-    } else {
-      process.env.PATH = originalPath;
-    }
-  }
+  return await withPathPrefix({ bin, operation, replace: false });
 }
 
 async function withMissingGt<T>({
@@ -160,9 +153,27 @@ async function withMissingGt<T>({
   operation: () => Promise<T>;
 }): Promise<T> {
   const bin = join(directory, "bin");
-  await mkdir(bin);
+  await mkdir(bin, { recursive: true });
+  return await withPathPrefix({ bin, operation, replace: true });
+}
+
+async function withPathPrefix<T>({
+  bin,
+  operation,
+  replace,
+}: {
+  bin: string;
+  operation: () => Promise<T>;
+  replace: boolean;
+}): Promise<T> {
+  let release!: () => void;
+  const previous = pathLock;
+  pathLock = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await previous;
   const originalPath = process.env.PATH;
-  process.env.PATH = bin;
+  process.env.PATH = replace ? bin : `${bin}:${originalPath ?? ""}`;
   try {
     return await operation();
   } finally {
@@ -171,6 +182,7 @@ async function withMissingGt<T>({
     } else {
       process.env.PATH = originalPath;
     }
+    release();
   }
 }
 
