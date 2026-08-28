@@ -16,7 +16,7 @@ Eng Mode uses OMP's built-in tools instead of recreating their behavior:
 - `todo` for the active finite work list;
 - `task` and `hub` for typed agents, parallel work, and coordination;
 - LSP, debugger, browser, and GitHub CLI surfaces for grounded code and runtime evidence;
-- `omp commit` for commits; `github-stack` (`gh stack`) for native GitHub stacked PRs;
+- `omp commit` for commits; `graphite` (`gt`) for stacked PR parentage and landing;
 - OMP's native `goal` runtime, wrapped with a minimum token budget of 1,000,000;
 - plugin discovery for skills and agents, plus `eng_orch` for repository contracts and durable orchestration state.
 
