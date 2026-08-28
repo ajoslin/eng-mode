@@ -13,7 +13,7 @@ export const skillNames = [
   "capture-learning",
   "domain-modeling",
   "figure-it-out",
-  "github-stack",
+  "graphite",
   "how",
   "interrogate",
   "maintain-verification-skill",

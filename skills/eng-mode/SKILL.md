@@ -5,7 +5,7 @@ description: Eng's default engineering operating system. Routes feature, bug, in
 
 # Eng Mode
 
-Correctness first. Smallest coherent change. Prove the real behavior. OMP only. No Cursor or Graphite.
+Correctness first. Smallest coherent change. Prove the real behavior. OMP only. No Cursor.
 
 ## Start
 
@@ -18,7 +18,7 @@ Correctness first. Smallest coherent change. Prove the real behavior. OMP only. 
 
 Eng procedure is global; the repository owns standards, stack policy, product verification, domain law, production restrictions, and specialized delivery behavior through two native project contracts:
 
-- `project-standards` — the index over repository law, commands, review agents, and repository-selected skills. It is the only route from these playbooks to repository-selected skills (test law, stack-specific guidance, pre-commit, Standards + Spec review, GitHub workflow). Stacked PRs use `github-stack`.
+- `project-standards` — the index over repository law, commands, review agents, and repository-selected skills. It is the only route from these playbooks to repository-selected skills (test law, stack-specific guidance, pre-commit, Standards + Spec review, GitHub workflow). Stacked PRs use `graphite`.
 - `verify-project` — the product verification contract: launch, drive, evidence, health gate, and feature map for the project's real user surface.
 
 Every repository playbook calls the `eng_orch` tool's `contracts` action before repository mutation or behavioral claims, and obeys its structured decision:
@@ -46,7 +46,7 @@ The decision is auditable on-disk validation, not model self-report. `setup-eng-
 - Comparative skill or workflow evaluation: `playbooks/prove-out.md`, `omp-workflows`, and `arena`.
 - Skill authoring: `playbooks/authoring-a-skill.md`.
 - PR health through squash-merge when green and approved: `playbooks/babysit.md` and the GitHub tooling `project-standards` names.
-- Landing: `playbooks/shipping.md` and `github-stack`.
+- Landing: `playbooks/shipping.md` and `graphite`.
 - One long falsifiable task: `playbooks/autonomous-run.md` and `/goal`.
 - Independent PR program with merge authority: `playbooks/autopilot-full.md`.
 - Dependent review-first PR chain: `playbooks/autopilot-stack.md`.
