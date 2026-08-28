@@ -123,7 +123,9 @@ describe("eng_orch executable entrypoint", () => {
     });
     expect([...registered.keys()]).toEqual(["goal", "eng_orch"]);
     expect(beforeAgentStartHandler).toBeDefined();
-    await expect(beforeAgentStartHandler?.({ prompt: "Design this system" }, unavailableClassifier)).resolves.toEqual({});
+    await expect(beforeAgentStartHandler?.({ prompt: "Implement the assigned subagent task" }, unavailableClassifier)).resolves.toEqual({
+      message: { customType: "eng-mode-expert-decision-guidance", content: EXPERT_DECISION_GUIDANCE, display: true, attribution: "agent" },
+    });
     expect(classifierCalls).toBe(0);
     await expect(beforeAgentStartHandler?.({ prompt: EXPERT_DECISION_GUIDANCE }, unavailableClassifier)).resolves.toEqual({});
     expect(classifierCalls).toBe(0);

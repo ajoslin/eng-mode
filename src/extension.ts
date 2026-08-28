@@ -289,7 +289,8 @@ export default function engModeExtension(pi: ExtensionAPI): void {
   pi.on("before_agent_start", async (event, context) => {
     const firstPrompt = isFirstPrompt;
     isFirstPrompt = false;
-    if (event.prompt.includes(EXPERT_DECISION_GUIDANCE) || firstPrompt) return {};
+    if (event.prompt.includes(EXPERT_DECISION_GUIDANCE)) return {};
+    if (firstPrompt) return { message: EXPERT_DECISION_MESSAGE };
     let output: string | undefined;
     try {
       output = await classifyPrompt(event.prompt, context);
