@@ -74,8 +74,8 @@ omp plugin link "$PWD"
 
 The single extension entrypoint, `src/extension.ts`:
 
-- injects the exact expert-decision guidance after the first prompt of every main and task/subagent session without calling the classifier, unless that prompt already contains the guidance;
-- suppresses extension injection whenever the current user prompt already contains the exact guidance, then classifies eligible later prompts with the configured `@tiny` model and injects only on exact `expert`;
+- classifies every main and task/subagent prompt, including the first, with the configured high-threshold `@tiny` evaluator and injects exact expert-decision guidance only on exact `expert`;
+- suppresses evaluator calls and extension injection whenever the current user prompt already contains the exact guidance;
 - after context compaction, scans the actual retained context and summary; when the exact guidance is absent from the newest 150,000 tokens, steers a compact continuation plus the guidance into the current task;
 - registers `goal`, an essential wrapper around OMP's native same-name tool via `ctx.invokeTool`;
 - registers `eng_orch`, the repository-contract gate and durable orchestration store.

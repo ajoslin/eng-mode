@@ -123,14 +123,12 @@ describe("eng_orch executable entrypoint", () => {
     });
     expect([...registered.keys()]).toEqual(["goal", "eng_orch"]);
     expect(beforeAgentStartHandler).toBeDefined();
-    await expect(beforeAgentStartHandler?.({ prompt: "Implement the assigned subagent task" }, unavailableClassifier)).resolves.toEqual({
-      message: { customType: "eng-mode-expert-decision-guidance", content: EXPERT_DECISION_GUIDANCE, display: true, attribution: "agent" },
-    });
-    expect(classifierCalls).toBe(0);
-    await expect(beforeAgentStartHandler?.({ prompt: EXPERT_DECISION_GUIDANCE }, unavailableClassifier)).resolves.toEqual({});
-    expect(classifierCalls).toBe(0);
-    await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" }, unavailableClassifier)).resolves.toEqual({});
+    await expect(beforeAgentStartHandler?.({ prompt: "Explore these files and report findings" }, unavailableClassifier)).resolves.toEqual({});
     expect(classifierCalls).toBe(1);
+    await expect(beforeAgentStartHandler?.({ prompt: EXPERT_DECISION_GUIDANCE }, unavailableClassifier)).resolves.toEqual({});
+    expect(classifierCalls).toBe(1);
+    await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" }, unavailableClassifier)).resolves.toEqual({});
+    expect(classifierCalls).toBe(2);
     expect(parsePromptClassification("ordinary")).toBe("ordinary");
     expect(parsePromptClassification("expert\n")).toBe("expert");
     expect(parsePromptClassification("maybe")).toBeUndefined();

@@ -187,11 +187,12 @@ Reply ordinary for acknowledgements, open-ended offers to help, pasted text with
 
 Examples:
 - "help me" -> ordinary
-- "explain how this cache works" -> ordinary
+- "explore these files and report findings" -> ordinary
+- "make the button blue" -> ordinary
 - "fix this failing test" -> ordinary
-- "implement the specified endpoint" -> ordinary
+- "implement this exact design" -> ordinary
 - "help me design an app" -> expert
-- "choose between event sourcing and CRUD for this service" -> expert
+- "choose the storage architecture for this service" -> expert
 - "review this authentication architecture" -> expert
 - "plan a zero-downtime migration from Redis to Postgres" -> expert
 
@@ -279,7 +280,7 @@ export default function engModeExtension(pi: ExtensionAPI): void {
     "eng-mode-expert-decision-guidance",
     (_message, _options, theme) => new pi.pi.Text(`${theme.fg("accent", "◆")} ${theme.fg("dim", "Expert lens")}`, 0, 0),
   );
-  let isFirstPrompt = true;
+
   pi.on("session_compact", (event, context) => {
     const tokenizer = new Tokenizer(context.model);
     const fragments = retainedContextFragments(event, context);
@@ -287,10 +288,7 @@ export default function engModeExtension(pi: ExtensionAPI): void {
     pi.sendMessage(EXPERT_DECISION_STEER, { deliverAs: "steer" });
   });
   pi.on("before_agent_start", async (event, context) => {
-    const firstPrompt = isFirstPrompt;
-    isFirstPrompt = false;
     if (event.prompt.includes(EXPERT_DECISION_GUIDANCE)) return {};
-    if (firstPrompt) return { message: EXPERT_DECISION_MESSAGE };
     let output: string | undefined;
     try {
       output = await classifyPrompt(event.prompt, context);
