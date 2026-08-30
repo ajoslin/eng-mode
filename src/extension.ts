@@ -1,4 +1,3 @@
-import { Tokenizer } from "@oh-my-pi/pi-agent-core";
 import { completeSimple } from "@oh-my-pi/pi-ai";
 
 interface OptionalSchema {
@@ -33,20 +32,6 @@ interface CustomMessagePayload {
   readonly attribution: "agent";
 }
 
-interface SessionEntry {
-  readonly id: string;
-  readonly type: string;
-  readonly message?: unknown;
-  readonly content?: unknown;
-}
-
-interface SessionCompactEvent {
-  readonly compactionEntry: {
-    readonly id: string;
-    readonly summary: string;
-    readonly firstKeptEntryId: string;
-  };
-}
 
 interface BeforeAgentStartEvent {
   readonly prompt: string;
@@ -58,10 +43,6 @@ interface ExtensionContext {
   };
   readonly modelRegistry: {
     getApiKey(model: Parameters<typeof completeSimple>[0]): Promise<string | undefined>;
-  };
-  readonly model?: ConstructorParameters<typeof Tokenizer>[0];
-  readonly sessionManager: {
-    getBranch(): SessionEntry[];
   };
 }
 
@@ -96,7 +77,6 @@ interface ExtensionAPI {
     customType: "eng-mode-expert-decision-guidance",
     renderer: (_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown,
   ): void;
-  sendMessage(message: CustomMessagePayload, options: { deliverAs: "steer" }): void;
   on(
     event: "before_agent_start",
     handler: (
@@ -104,7 +84,6 @@ interface ExtensionAPI {
       context: ExtensionContext,
     ) => BeforeAgentStartEventResult | Promise<BeforeAgentStartEventResult>,
   ): void;
-  on(event: "session_compact", handler: (event: SessionCompactEvent, context: ExtensionContext) => void): void;
 }
 import { join, resolve } from "node:path";
 import { decideRepositoryContracts, observeRepositoryContracts } from "./contracts.ts";
@@ -177,7 +156,6 @@ export async function executeEngOrch(input: Input): Promise<unknown> {
 
 const MINIMUM_GOAL_TOKEN_BUDGET = 500_000_000;
 const PROMPT_CLASSIFIER_MAX_TOKENS = 16;
-const RECENT_GUIDANCE_TOKEN_WINDOW = 150_000;
 
 export const EXPERT_GUIDANCE_CLASSIFIER_PROMPT = `Decide whether this request requires an expert decision lens. This is a high threshold: complexity alone is not enough.
 
@@ -207,10 +185,6 @@ const EXPERT_DECISION_MESSAGE: CustomMessagePayload = {
   display: true,
   attribution: "agent",
 };
-const EXPERT_DECISION_STEER: CustomMessagePayload = {
-  ...EXPERT_DECISION_MESSAGE,
-  content: `Continue the current task. Apply this decision lens going forward:\n\n${EXPERT_DECISION_GUIDANCE}`,
-};
 
 
 export function parsePromptClassification(text: string): "ordinary" | "expert" | undefined {
@@ -222,35 +196,6 @@ export function parsePromptClassification(text: string): "ordinary" | "expert" |
 
 export function classifierOutputNeedsExpertGuidance(text: string | undefined): boolean {
   return text !== undefined && parsePromptClassification(text) === "expert";
-}
-export function expertGuidanceWithinTokenTail(
-  fragmentsNewestFirst: readonly string[],
-  countTokens: (text: string) => number,
-  tokenWindow = RECENT_GUIDANCE_TOKEN_WINDOW,
-): boolean {
-  let newerTokens = 0;
-  for (const fragment of fragmentsNewestFirst) {
-    const guidanceIndex = fragment.lastIndexOf(EXPERT_DECISION_GUIDANCE);
-    if (guidanceIndex !== -1) {
-      return newerTokens + countTokens(fragment.slice(guidanceIndex)) <= tokenWindow;
-    }
-    newerTokens += countTokens(fragment);
-    if (newerTokens > tokenWindow) return false;
-  }
-  return false;
-}
-
-function retainedContextFragments(event: SessionCompactEvent, context: ExtensionContext): string[] {
-  const branch = context.sessionManager.getBranch();
-  const compactionIndex = branch.findIndex((entry) => entry.id === event.compactionEntry.id);
-  const firstKeptIndex = branch.findIndex((entry) => entry.id === event.compactionEntry.firstKeptEntryId);
-  const retained = compactionIndex === -1 || firstKeptIndex === -1
-    ? []
-    : branch.slice(firstKeptIndex, compactionIndex);
-  return [
-    ...retained.reverse().map((entry) => JSON.stringify(entry.message ?? entry.content ?? "")),
-    event.compactionEntry.summary,
-  ];
 }
 
 async function classifyPrompt(prompt: string, context: ExtensionContext): Promise<string | undefined> {
@@ -281,12 +226,6 @@ export default function engModeExtension(pi: ExtensionAPI): void {
     (_message, _options, theme) => new pi.pi.Text(`${theme.fg("accent", "◆")} ${theme.fg("dim", "Expert lens")}`, 0, 0),
   );
 
-  pi.on("session_compact", (event, context) => {
-    const tokenizer = new Tokenizer(context.model);
-    const fragments = retainedContextFragments(event, context);
-    if (expertGuidanceWithinTokenTail(fragments, (text) => tokenizer.countTokens(text))) return;
-    pi.sendMessage(EXPERT_DECISION_STEER, { deliverAs: "steer" });
-  });
   pi.on("before_agent_start", async (event, context) => {
     if (event.prompt.includes(EXPERT_DECISION_GUIDANCE)) return {};
     let output: string | undefined;

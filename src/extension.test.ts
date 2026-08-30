@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import engModeExtension, {
   classifierOutputNeedsExpertGuidance,
-  expertGuidanceWithinTokenTail,
   executeEngOrch,
   EXPERT_DECISION_GUIDANCE,
   parsePromptClassification,
@@ -82,15 +81,9 @@ describe("eng_orch executable entrypoint", () => {
         attribution: "agent";
       };
     }>;
-    type SessionCompactHandler = (
-      event: { compactionEntry: { id: string; summary: string; firstKeptEntryId: string } },
-      context: typeof unavailableClassifier,
-    ) => void;
     let beforeAgentStartHandler: BeforeAgentStartHandler | undefined;
-    let sessionCompactHandler: SessionCompactHandler | undefined;
     let expertRenderer: ((_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown) | undefined;
     const registered = new Map<string, RegisteredTool>();
-    const sent: Array<{ message: { customType: string; content: string; display: boolean; attribution: "agent" }; options: { deliverAs: "steer" } }> = [];
     const chain = { optional: () => chain, int: () => chain, positive: () => chain };
     const zod = {
       object: () => ({}),
@@ -104,8 +97,6 @@ describe("eng_orch executable entrypoint", () => {
     const unavailableClassifier = {
       models: { resolve: (_spec: "@tiny") => { classifierCalls += 1; return undefined; } },
       modelRegistry: { getApiKey: async (_model: never) => undefined },
-      model: undefined,
-      sessionManager: { getBranch: () => [] },
     };
     class TestText {
       constructor(readonly text: string, readonly paddingX: number, readonly paddingY: number) {}
@@ -113,11 +104,9 @@ describe("eng_orch executable entrypoint", () => {
     engModeExtension({
       pi: { Text: TestText },
       registerMessageRenderer: (_customType, renderer) => { expertRenderer = renderer; },
-      sendMessage: (message, options) => { sent.push({ message, options }); },
       zod,
       on: (event, handler) => {
         if (event === "before_agent_start") beforeAgentStartHandler = handler as BeforeAgentStartHandler;
-        if (event === "session_compact") sessionCompactHandler = handler as SessionCompactHandler;
       },
       registerTool: (tool) => registered.set(tool.name, tool),
     });
@@ -135,15 +124,6 @@ describe("eng_orch executable entrypoint", () => {
     expect(classifierOutputNeedsExpertGuidance("ordinary")).toBeFalse();
     expect(classifierOutputNeedsExpertGuidance("expert")).toBeTrue();
     expect(classifierOutputNeedsExpertGuidance(undefined)).toBeFalse();
-    expect(expertGuidanceWithinTokenTail([`recent ${EXPERT_DECISION_GUIDANCE}`], () => 1)).toBeTrue();
-    expect(expertGuidanceWithinTokenTail(["newer", EXPERT_DECISION_GUIDANCE], () => 100_000)).toBeFalse();
-    sessionCompactHandler?.({ compactionEntry: { id: "compact", summary: EXPERT_DECISION_GUIDANCE, firstKeptEntryId: "kept" } }, unavailableClassifier);
-    expect(sent).toHaveLength(0);
-    sessionCompactHandler?.({ compactionEntry: { id: "compact", summary: "summary without guidance", firstKeptEntryId: "kept" } }, unavailableClassifier);
-    expect(sent).toEqual([{
-      message: { customType: "eng-mode-expert-decision-guidance", content: `Continue the current task. Apply this decision lens going forward:\n\n${EXPERT_DECISION_GUIDANCE}`, display: true, attribution: "agent" },
-      options: { deliverAs: "steer" },
-    }]);
     expect(expertRenderer?.({}, {}, { fg: (color, text) => `<${color}>${text}</${color}>` })).toEqual(
       new TestText("<accent>◆</accent> <dim>Expert lens</dim>", 0, 0),
     );
