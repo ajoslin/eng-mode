@@ -6,6 +6,7 @@ Match evidence to the changed contract.
 - Debugger: live state, breakpoints, variables, threads, memory.
 - Browser: actual web interaction and appearance.
 - Process hub: services, watchers, debuggers, REPLs, interactive programs.
+- Project CLI: prefer it for local API, Postgres, seed, and structured debug.
 - Repository verification skill: exact product launch, health, drive, evidence, cleanup.
 
 Compilation proves compilation. A test proves its assertions. Runtime reproduction proves its scenario. Product verification proves behavior on the real surface. Drive web and mobile changes in their clients, CLI/TUI changes in the real program, jobs through a real worker, migrations through apply/readback, and cross-runtime contracts in every affected runtime. A failed health gate or wrong surface is **inconclusive**.
