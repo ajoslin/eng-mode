@@ -9,6 +9,8 @@ Read this skill once and use its routing for every forge and pull-request operat
 
 Use `owner/repo#123` as `REF`. GitHub remains authoritative; PR Cockpit is the warm local read model and the default interface after a PR exists.
 
+Before the first forge operation in a session, run `pr-cockpit --help`. If the command is unavailable, use the repository's `setup-pr-cockpit` skill. If that skill is absent, stop.
+
 ## Operation ownership
 
 | Operation | Owner |
