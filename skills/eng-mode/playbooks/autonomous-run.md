@@ -1,8 +1,11 @@
 ### Autonomous run
 
-1. Form the observable predicate, scope, verification surface, human gates, and terminal evidence before work. `/goal` owns the durable objective; if none is active, form the objective and get a goal started. Put the finite execution graph in `todo`.
-2. Use ordinary execution for finite work and native `/goal` continuation for unattended work. Sleep between iterations only when the loop requires an interval. Require an explicit bound either way. Never a substitute for the predicate.
-3. Each iteration makes the smallest evidence-backed change. Keep wins; discard changes that do not advance the predicate. Never edit the ruler or its inputs. If the target or measure is invalid, stop, record the discontinuity, define a replacement, and establish a new baseline before continuing.
-4. Transition the finite graph through `todo`. Use `show-me-your-work` for durable decisions; duplicate no state.
-5. Handle reversible discoveries. For destructive actions, unreachable product choices, time-gated waits, operational failures, or a proven dead end, make the checkpoint durable and require the operator to `/goal pause`; never complete or drop a blocked goal.
-6. Call native `goal complete` only after the verification contract passes. The lead owns the terminal verdict unless the routed playbook separately requires independent review. Never weaken the predicate to finish.
+**You own the exit condition. Define done, then drive to it without stopping.** For "going to bed", "run until done", or sustained work against one predicate.
+
+1. Define one durable objective and checkable exit predicate: scope, verification surface, human gates, and terminal evidence. Invoke `goal` for the objective and put the finite execution graph in `todo`.
+2. Prefer a blocking watcher when a command can wait for the event. Otherwise invoke `loop` with a prompt and limit.
+3. Each iteration re-observes current reality. Make the smallest evidence-backed change, verify it against the predicate, keep progress, and discard non-wins. Never edit the ruler or its inputs. Use `show-me-your-work` for durable decisions; duplicate no state.
+4. On destructive actions, unreachable product choices, operational failures, or a proven dead end, checkpoint and pause or stop `loop`; never weaken the predicate.
+5. When the predicate and verification contract pass, stop `loop`, then complete `goal`. The lead owns both verdicts.
+
+**Reply:** the objective, exit predicate, iterations run, what landed, what was discarded, final evidence, and terminal goal/loop states.

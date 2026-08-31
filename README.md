@@ -11,16 +11,15 @@ Eng Mode exists to:
 
 ## OMP-native by design
 
-Eng Mode uses OMP's built-in tools instead of recreating their behavior:
+Eng Mode uses OMP primitives directly:
 
 - `todo` for the active finite work list;
 - `task` and `hub` for typed agents, parallel work, and coordination;
 - LSP, debugger, browser, and repository-selected forge surfaces for grounded code and runtime evidence;
 - plain `git commit` for commits and one repository-selected provider skill for all forge and PR work;
-- OMP's native `goal` runtime, wrapped with a minimum token budget of 1,000,000;
+- `goal` for durable objectives;
+- `loop` for bounded repetition;
 - plugin discovery for skills and agents, plus `eng_orch` for repository contracts and durable orchestration state.
-
-It does not try to make OMP behave like Cursor. The playbooks stay; the runtime mechanics are native OMP.
 
 ## Operator guide
 
@@ -38,7 +37,7 @@ Restart OMP. Then open every repository where you use Eng Mode and run:
 setup-eng-mode
 ```
 
-**Run `setup-eng-mode` in every repository.** It checks the plugin, model roles, agent chains, worktree isolation, and that repository's standards and verification contracts.
+**Run `setup-eng-mode` in every repository.** It checks the plugin, model roles, agent chains, worktree isolation, that repository's standards and verification contracts, and installs the shipped watchdog advisor into the active OMP agent directory.
 
 To update, run the install command again, restart OMP, and rerun `setup-eng-mode` in each repository.
 
@@ -74,12 +73,13 @@ bunx tsgo -p tsconfig.json
 omp plugin link "$PWD"
 ```
 
-The single extension entrypoint, `src/extension.ts`:
+The thin extension entrypoint, `src/extension.ts`, registers independent modules:
 
-- classifies every main and task/subagent prompt, including the first, with the configured high-threshold `@tiny` evaluator and injects exact expert-decision guidance only on exact `expert`;
-- suppresses evaluator calls and extension injection whenever the current user prompt already contains the exact guidance;
-- after context compaction, scans the actual retained context and summary; when the exact guidance is absent from the newest 150,000 tokens, steers a compact continuation plus the guidance into the current task;
-- registers `goal`, an essential wrapper around OMP's native same-name tool via `ctx.invokeTool`;
-- registers `eng_orch`, the repository-contract gate and durable orchestration store.
+- `auto-mode.ts` classifies main and task/subagent prompts with the configured high-threshold `@tiny` evaluator;
+- `expert-lens.ts` renders expert-decision guidance and restores it after context compaction;
+- `goal-tool.ts` registers `goal`;
+- `loop-tool.ts` registers `loop`;
+- `eng-orchestrator.ts` registers the repository-contract gate and durable orchestration store;
+- `eng-advisor.ts` idempotently installs the shipped OMP `WATCHDOG.md` and `WATCHDOG.yml` into the active agent directory.
 
-Do not install a second standalone `goal` extension alongside this plugin.
+Do not install duplicate `goal` or `loop` tools alongside this plugin.

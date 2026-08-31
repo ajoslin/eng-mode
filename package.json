@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Global Eng Mode engineering workflows, agents, orchestration, and native goal integration for OMP.",
+  "description": "Global Eng Mode engineering workflows, agents, orchestration, and goal/loop integration for OMP.",
   "repository": "github:ajoslin/eng-mode",
   "license": "MIT",
   "files": [
@@ -11,6 +11,8 @@
     "docs",
     "skills",
     "src",
+    "WATCHDOG.md",
+    "WATCHDOG.yml",
     "README.md"
   ],
   "omp": {
@@ -24,8 +26,8 @@
     "check": "bun run test && bun run typecheck"
   },
   "dependencies": {
-    "@oh-my-pi/pi-agent-core": "17.4.0",
     "@oh-my-pi/pi-ai": "17.4.0",
+    "@oh-my-pi/pi-utils": "17.4.0",
     "yaml": "2.9.0",
     "zod": "4.3.3"
   },
