@@ -10,4 +10,4 @@ Invoked at the end of a code-producing playbook when delivery includes a PR.
 
 **PRs.** Use one PR for ordinary coherent work. When a large or complicated change would be materially easier to review as dependent, independently understandable layers, deliver it through the provider's documented stack workflow; never split by arbitrary size thresholds or stack small work by default. Run the project pre-commit pass before `git commit`; run `no-comments` on the diff before review; apply the **unslop** skill to the PR title and body. Do not merge from this playbook.
 
-A one-shot subagent that opens a PR runs **Pre-PR gates**, the project pre-commit pass, and `no-comments`, returns the URL, and does NOT babysit. `interrogate` stays never-auto-apply and is not a substitute for the gates. Return to the parent. An explicitly long-lived Autopilot owner is the exception: its playbook requires babysitting after opening.
+A one-shot subagent that opens a PR runs **Pre-PR gates**, the project pre-commit pass, and `no-comments`, returns the URL, and does NOT babysit. `interrogate` stays never-auto-apply and is not a substitute for the gates. Return to the parent.
