@@ -103,3 +103,28 @@ describe("commit and Graphite stacks", () => {
     expect(babysit).not.toContain("github-stack");
   });
 });
+
+describe("thermo-nuclear stays explicit-only", () => {
+  it("Opening a PR no longer auto-runs thermo-nuclear; the explicit skill remains", async () => {
+    const gates = await read("skills/eng-mode/playbooks/pre-pr-gates.md");
+    expect(gates).toContain("batch of two seats");
+    expect(gates).toContain("`pre-pr-swarm`, `meaningful-contribution`");
+    expect(gates).not.toContain("three seats");
+    expect(gates).toContain('"pre-pr-swarm": "ran"');
+    expect(gates).toContain('"meaningful-contribution": "ran"');
+
+    const rubric = await read("skills/thermo-nuclear-code-quality-review/SKILL.md");
+    expect(rubric).toContain("disable-model-invocation: true");
+
+    const skill = await read("skills/eng-mode/SKILL.md");
+    expect(skill).toContain(
+      "Harsh maintainability review, explicit only: the `thermo-nuclear-code-quality-review` skill directly",
+    );
+
+    const { skillNames } = await import("./manifest.ts");
+    expect(skillNames).toContain("thermo-nuclear-code-quality-review");
+    expect(skillNames.filter((name) => name.startsWith("thermo-nuclear-"))).toEqual([
+      "thermo-nuclear-code-quality-review",
+    ]);
+  });
+});
