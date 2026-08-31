@@ -1,6 +1,6 @@
 # Setup and runtime health
 
-Install Eng Mode, restart OMP, then run `setup-eng-mode` in every repository. It validates exact plugin provenance, shadows, model-role fallbacks, native goal, repository contracts, and task isolation.
+Install Eng Mode, restart OMP, then run `setup-eng-mode` in every repository. It validates exact plugin provenance, shadows, model-role fallbacks, `goal`, `loop`, repository contracts, and task isolation.
 
 Repositories provide:
 

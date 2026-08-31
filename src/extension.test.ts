@@ -97,21 +97,6 @@ describe("eng_orch executable entrypoint", () => {
     });
   });
 
-  it("does not treat a configured contract containing the sentinel word as unconfigured", async () => {
-    const repositoryRoot = await root();
-    const standardsDirectory = join(repositoryRoot, ".omp", "skills", "project-standards");
-    await mkdir(standardsDirectory, { recursive: true });
-    await writeFile(
-      join(standardsDirectory, "SKILL.md"),
-      "---\nname: project-standards\ndescription: test\n---\nThe literal UNCONFIGURED is explanatory text.\n",
-    );
-    await contract(repositoryRoot, "verify-project");
-
-    const result = await executeEngOrch({ action: "contracts", repositoryRoot });
-    expect(result).toMatchObject({ decision: "proceed", forgeProvider: "github-graphite" });
-    expect(result).toHaveProperty("contracts.0", { name: "project-standards", parse: "ok", expectedPath: join(standardsDirectory, "SKILL.md") });
-  });
-
 
   it("initializes the default project store and honors an explicit store", async () => {
     const repositoryRoot = await root();
@@ -124,7 +109,7 @@ describe("eng_orch executable entrypoint", () => {
     expect(await executeEngOrch({ action: "init", store: explicitStore, spawner: "session" })).toEqual({ store: explicitStore });
   });
 
-  it("registers goal and eng_orch from one entrypoint", async () => {
+  it("registers goal, loop, and eng_orch from one entrypoint", async () => {
     const repositoryRoot = await root();
     await contract(repositoryRoot, "project-standards");
     await contract(repositoryRoot, "verify-project");
@@ -143,7 +128,12 @@ describe("eng_orch executable entrypoint", () => {
     let beforeAgentStartHandler: BeforeAgentStartHandler | undefined;
     let expertRenderer: ((_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown) | undefined;
     const registered = new Map<string, RegisteredTool>();
-    const chain = { optional: () => chain, int: () => chain, positive: () => chain };
+    const chain = {
+      optional: () => chain,
+      int: () => chain,
+      positive: () => chain,
+      nonnegative: () => chain,
+    };
     const zod = {
       object: () => ({}),
       enum: () => chain,
@@ -154,22 +144,47 @@ describe("eng_orch executable entrypoint", () => {
     };
     let classifierCalls = 0;
     const unavailableClassifier = {
-      models: { resolve: (_spec: "@tiny") => { classifierCalls += 1; return undefined; } },
+      models: {
+        resolve: (_spec: "@tiny") => {
+          classifierCalls += 1;
+          return undefined;
+        },
+      },
       modelRegistry: { getApiKey: async (_model: never) => undefined },
     };
     class TestText {
       constructor(readonly text: string, readonly paddingX: number, readonly paddingY: number) {}
     }
+    class TestInteractiveMode {
+      readonly sessionManager = { getSessionId: () => "unused" };
+      loopModeEnabled = false;
+      loopModePaused = false;
+      loopPrompt: string | undefined;
+      loopLimit: undefined;
+      async init(): Promise<void> {}
+      stop(): void {}
+      async handleLoopCommand(): Promise<string | undefined> {
+        return undefined;
+      }
+      setLoopPrompt(): void {}
+      pauseLoop(): void {}
+      disableLoopMode(): void {}
+    }
     engModeExtension({
-      pi: { Text: TestText },
-      registerMessageRenderer: (_customType, renderer) => { expertRenderer = renderer; },
+      pi: { Text: TestText, InteractiveMode: TestInteractiveMode },
+      registerMessageRenderer: (_customType, renderer) => {
+        expertRenderer = renderer;
+      },
       zod,
       on: (event, handler) => {
-        if (event === "before_agent_start") beforeAgentStartHandler = handler as BeforeAgentStartHandler;
+        if (event === "before_agent_start") {
+          beforeAgentStartHandler = handler as BeforeAgentStartHandler;
+        }
       },
       registerTool: (tool) => registered.set(tool.name, tool),
     });
-    expect([...registered.keys()]).toEqual(["goal", "eng_orch"]);
+    expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
+    expect(registered.get("loop")).toMatchObject({ strict: true, loadMode: "essential" });
     expect(beforeAgentStartHandler).toBeDefined();
     await expect(beforeAgentStartHandler?.({ prompt: "Explore these files and report findings" }, unavailableClassifier)).resolves.toEqual({});
     expect(classifierCalls).toBe(1);

@@ -42,13 +42,21 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 2. Validate existing `project-standards` and `verify-project` contracts; never overwrite them. Unknown `forge-provider` values are blocking errors. Missing selection deliberately resolves to `github-graphite` for existing repositories.
 3. After explicit repository inspection, setup may create only an `UNCONFIGURED` sentinel (`SKILL.md` whose body is the single line `UNCONFIGURED`) for an absent contract, so the gap is explicit tool output rather than silence. It never infers a verification contract from package scripts; real contract authoring routes through `create-verification-skill` and the repository owners.
 
-## 6. Runtime validation
+## 6. Watchdog advisor
 
-1. Verify OMP native goal mode availability without activating a live goal or loop. If a device-local bridge exists, it must expose only OMP's native `goal` tool; do not install a second goal or loop runtime.
+Run `bun src/eng-advisor.ts <plugin-root>` and report each installed file and status.
+
+## 7. Runtime validation
+
+OMP does not discover WATCHDOG files from plugin roots. From the exact extension root, run `bun src/eng-advisor.ts`; it installs the shipped `WATCHDOG.md` and `WATCHDOG.yml` into the active agent directory. Re-running is idempotent and refreshes stale copies. Do not create or edit `config.yml`; OMP owns advisor enablement and model selection.
+
+## 7. Capabilities
+
+1. Verify `loop` is available without starting it and `goal` remains available. Reject duplicate tools.
 2. Validate that task worktree isolation is supported by current OMP configuration before any playbook depends on it.
 3. Dry-route one feature, one bug, and one contested design without editing product code, exercising discovery for every shipped agent.
 4. Observe `git commit --help`. Read only the `forgeProvider` skill returned by `eng_orch contracts` and validate its documented prerequisites. Do not inspect, invoke, or require another provider.
 
-## 7. Report
+## 8. Report
 
-Report installation state, provider enablement, exact source root, shadow inventory in both directions, role migration stage results with conflicts and fallbacks, per-agent resolved models, contract decisions with source paths, isolation, native-goal, `git commit`, and the selected forge provider's documented prerequisite results.
+Report installation state, provider enablement, exact source root, shadow inventory in both directions, role migration stage results with conflicts and fallbacks, advisor install paths and per-file status, per-agent resolved models, contract decisions with source paths, isolation, `goal`, `loop`, commit capability, the selected forge provider's documented prerequisite results, and every unavailable capability. Refuse to report a capability as present without observing it.

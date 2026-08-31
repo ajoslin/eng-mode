@@ -5,8 +5,8 @@
     "": {
       "name": "@eng/eng-mode",
       "dependencies": {
-        "@oh-my-pi/pi-agent-core": "17.4.0",
         "@oh-my-pi/pi-ai": "17.4.0",
+        "@oh-my-pi/pi-utils": "17.4.0",
         "yaml": "2.9.0",
         "zod": "4.3.3",
       },
@@ -18,8 +18,6 @@
   },
   "packages": {
     "@oh-my-pi/omptype": ["@oh-my-pi/omptype@17.4.0", "", {}, "sha512-r622IOyt2/e8c2XZBQyKtdL8wEGsDn7tJGzRW/dNhypbUDxsZ4rMtQf5UzLWxI73SdPtPsYCVQm698r6+uZlmw=="],
-
-    "@oh-my-pi/pi-agent-core": ["@oh-my-pi/pi-agent-core@17.4.0", "", { "dependencies": { "@oh-my-pi/pi-ai": "17.4.0", "@oh-my-pi/pi-catalog": "17.4.0", "@oh-my-pi/pi-natives": "17.4.0", "@oh-my-pi/pi-utils": "17.4.0", "@oh-my-pi/pi-wire": "17.4.0", "@oh-my-pi/snapcompact": "17.4.0", "@opentelemetry/api": "^1.9.1" } }, "sha512-+Y0P3XrUG6dMujpowBd3D3/+pD00xEsIEE0joMuUmoFf4r+N1UGa/HIrvgehBW73GkgFEr80oNFtdgWLT+T2ng=="],
 
     "@oh-my-pi/pi-ai": ["@oh-my-pi/pi-ai@17.4.0", "", { "dependencies": { "@oh-my-pi/omptype": "17.4.0", "@oh-my-pi/pi-catalog": "17.4.0", "@oh-my-pi/pi-utils": "17.4.0", "@oh-my-pi/pi-wire": "17.4.0" } }, "sha512-qTHUsw/PZOnq5xqwSKwcu0o0Jdh5+QT42/rl9Yzj437D9ouZ3j7dtBH/VzBtBMkeepDHcWvlyuB0ZGV7RBFLdQ=="],
 
@@ -40,10 +38,6 @@
     "@oh-my-pi/pi-utils": ["@oh-my-pi/pi-utils@17.4.0", "", { "dependencies": { "@oh-my-pi/pi-natives": "17.4.0" } }, "sha512-sdMBGb5oU6om28z8joem1KzVEmLLp/mvF87/OX4MsZLp1qum9HHpPqmCyhtNTvE/IgTTFF1ziePr0yuIK8obKA=="],
 
     "@oh-my-pi/pi-wire": ["@oh-my-pi/pi-wire@17.4.0", "", {}, "sha512-SP3AO+XpLc4dH7BR0nTHR4DDVYfvL/GSC/loZsATzpv0UFeIxHxHbzLfCWTnC0sdxMOpRZ6DUUtHfcZ+wyxlEg=="],
-
-    "@oh-my-pi/snapcompact": ["@oh-my-pi/snapcompact@17.4.0", "", { "dependencies": { "@oh-my-pi/pi-ai": "17.4.0", "@oh-my-pi/pi-catalog": "17.4.0", "@oh-my-pi/pi-natives": "17.4.0", "@oh-my-pi/pi-utils": "17.4.0", "@oh-my-pi/pi-wire": "17.4.0" } }, "sha512-ttpQG276OM3i3Zb1/f5uS7wd6XYt7U+vtGs55tT+ttMAGH613o2IrbIbuO6Pog1NBl4IDHgFMWlmEyofq0UhSg=="],
-
-    "@opentelemetry/api": ["@opentelemetry/api@1.9.1", "", {}, "sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q=="],
 
     "@types/bun": ["@types/bun@1.4.0", "", { "dependencies": { "bun-types": "1.4.0" } }, "sha512-K+lZULY23vRgK/CfTjFIV+tyifaNdSMlPh9j+6mQ/cLfpOznLyAuzgV/JQysyECpkBQLVMSyvjlr2fBUSA9wFQ=="],
 

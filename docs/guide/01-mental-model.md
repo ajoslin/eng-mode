@@ -6,7 +6,8 @@ Eng Mode separates outcome, execution, policy, and proof.
 flowchart TD
   U[Outcome and finish condition] --> R[Router]
   R --> P[One primary playbook]
-  P --> G[goal: durable outcome]
+  P --> G[goal: durable objective]
+  P --> L[loop: bounded continuation]
   P --> T[todo: finite steps]
   P --> D[task, eval, and tools]
   D --> C[Code or artifacts]
@@ -15,7 +16,7 @@ flowchart TD
   C --> E
 ```
 
-`goal` retains the falsifiable result across turns. `todo` shows finite current execution; finishing an item does not finish the goal.
+`goal` retains the objective across turns. `loop` repeats bounded work. `todo` tracks finite steps; completing a step or iteration does not complete the goal.
 
 A playbook owns an end-to-end route such as investigation, bug fix, feature, refactoring, performance, or delivery. A skill is a focused method inside it. State the problem; name a method only to override routing.
 

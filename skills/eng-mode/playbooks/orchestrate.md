@@ -2,7 +2,7 @@
 
 **You own the program, never the code. Author briefs, drain the queue, keep the frontier green, decide.** For a whole project handed to one standing coordinator chat: multi-day, many stacked PRs, dozens to hundreds of subagents, the human checking in twice a day instead of every five minutes. One task driven to a predicate is Autonomous run. One ambitious run needing a bespoke workflow is figure-it-out. Route here when the work outlives any single agent. Work one agent could finish inside the session's budget is not a program; measured head-to-head, this playbook's ceremony turned a half-hour 12-unit job into 1 landed unit while a plain agent landed all 12. Below that line, route to Autonomous run.
 
-Do not rely on OMP's `orchestrate` magic keyword (keep it disabled in project config where possible): it only injects a hidden prompt notice and supplies no scheduler or transport. This protocol already uses OMP's native `/goal`, `todo`, `task`, and `hub`; the custom store supplies restart-safe program facts those primitives do not persist.
+Do not rely on OMP's `orchestrate` magic keyword (keep it disabled in project config where possible): it only injects a hidden prompt notice and supplies no scheduler or transport. This protocol uses OMP's `goal`, `loop`, `todo`, `task`, and `hub`; the custom store supplies restart-safe program facts those primitives do not persist.
 
 Ceremony must scale with the program. Every gate below prices in coordinator minutes; on cheap near-identical units, collapse it as each section directs rather than paying list price.
 
@@ -14,7 +14,7 @@ Three rules carry the rest.
 
 Do not spawn while an advisor is steering; orchestration contracts replace advisor steering.
 
-Open a todo of the playbook steps. An active native goal owns the durable program objective and continuation, not this finite graph. A step you skip stays listed with `skip: <reason>`.
+Open a todo of the playbook steps. An active goal owns the durable program objective, not this finite graph or its repeated drain cadence. A step you skip stays listed with `skip: <reason>`.
 
 #### Roles and placement
 
@@ -39,7 +39,7 @@ Create `.audit/orchestrate/<project-slug>/` (gitignored). That path is the `stor
 - `decisions.tsv` is the trail via the show-me-your-work skill.
 - `status.md` is derived from `units.tsv` and `ledger.tsv` at each drain.
 
-`local://` is session-scoped bulk context. `.audit/orchestrate/<slug>/` is restart-surviving program state. `/goal` owns the program predicate and continuation; `todo` owns the finite graph. Neither replaces the store.
+`local://` is session-scoped bulk context. `.audit/orchestrate/<slug>/` is restart-surviving program state. `goal` owns the program outcome, `loop` owns bounded drain or audit repetition when no blocking wait exists, and `todo` owns the finite graph. None replaces the store.
 
 #### The brief
 
@@ -75,9 +75,9 @@ A dependency is a context relay, not just ordering: undeclared upstream context 
 4. **Scale.** Spawn a rolling window of workers up to the in-flight cap, refilling as children finish; blocking batches pay the slowest child of every batch. Spawn track sub-coordinators only past the one-drain threshold in Roles. Recompute ready work after each drain; relay upstream reports into downstream briefs; keep sibling communication upward only. The sampled brief audit runs alongside the wave it samples and stops the next refill on failure, not the current one. One topology owner for the entire provider-owned stack; no implementation worker mutates stack topology.
 5. **Drain.** Run the queue discipline below at every drain point.
 6. **Land.** Landing is continuous, never a terminal phase: integration starts with the first verified unit and runs alongside the remaining waves. On heavy repos the stacker is a standing role from wave one, integrating as units verify; on repos where local git is cheap, the coordinator lands verified units itself per Roles. Keep the frontier green before upper-stack work; Stack safety governs. Advance `frontier.json` only on merge or reported new head SHAs. A new head SHA voids the ledger row; re-verify after restack. Do not keep a verdict via `git patch-id` in this playbook.
-7. **Close.** Drain the final inbox, reconcile every spawned agent to a terminal row (done, abandoned, zombie-reconciled), confirm the predicate on the real artifact, confirm every landed PR has a verdict for its current head SHA, audit the trail per show-me-your-work including its cross-model review, encode recurring corrections into `preferences.md` or the brief template. Leave the store intact; it is the postmortem. When the contract passes on the real artifact, every unit is terminal, and integrated heads have current verification, audit every native-goal deliverable and call `goal({ op: "complete" })`. The lead owns the terminal verdict.
+7. **Close.** Drain the final inbox, reconcile every spawned agent to a terminal row (done, abandoned, zombie-reconciled), confirm the predicate on the real artifact, confirm every landed PR has a verdict for its current head SHA, audit the trail per show-me-your-work including its cross-model review, encode recurring corrections into `preferences.md` or the brief template. Leave the store intact; it is the postmortem. When the contract passes on the real artifact, every unit is terminal, and integrated heads have current verification, stop `loop` if active, then audit every goal deliverable and complete `goal`. The lead owns the terminal verdict.
 
-A native goal owns the durable objective; `todo` owns the finite program graph; `show-me-your-work` owns decisions. Delegates report state transitions to the lead and never mutate parent state. Intrinsic repeated measures and watchers run as bounded passes inside the goal. Prefer blocking watch commands; when the interval itself is required, put the sleep in the goal (`/goal do x until y, sleep 30 minutes between iterations`).
+`goal` owns the durable objective; `todo` owns the finite program graph; `show-me-your-work` owns decisions. Delegates report state transitions to the lead and never mutate parent state. Prefer blocking watch commands. When repeated drain or audit passes need another turn, invoke `loop` with a prompt and limit.
 
 #### Queue and drain
 

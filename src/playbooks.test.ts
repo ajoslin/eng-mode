@@ -76,3 +76,17 @@ describe("thermo-nuclear stays explicit-only", () => {
     ]);
   });
 });
+
+describe("goal and loop ownership", () => {
+  it("assigns durable objectives to goal and bounded repetition to loop", async () => {
+    const [skill, autonomous] = await Promise.all([
+      read("skills/eng-mode/SKILL.md"),
+      read("skills/eng-mode/playbooks/autonomous-run.md"),
+    ]);
+
+    expect(skill).toContain("`goal` owns the durable objective.");
+    expect(skill).toContain("`loop` owns bounded repetition.");
+    expect(autonomous).toContain("invoke `loop` with a prompt and limit");
+    expect(autonomous).toContain("stop `loop`, then complete `goal`");
+  });
+});

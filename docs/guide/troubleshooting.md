@@ -11,6 +11,7 @@
 - **Skill or agent shadow:** remove unintended repository copies; rerun setup.
 - **Secret placeholder reaches a tool:** inspect redacted output only; never paste the secret into context.
 - **Context grows:** checkpoint, artifact matrices, delegate bulk reading, rewind with one evidence report.
+- **Loop does not continue:** inspect `loop` status. Resume a paused loop with its prompt, or start a stopped loop with a new limit.
 - **Learning project ambiguous:** configure exact team/project ID or key/name. `capture-learning` refuses ambiguity and searches before creation.
 
 For cross-session work, preserve goal, fixed point, evidence, risks, and next action.

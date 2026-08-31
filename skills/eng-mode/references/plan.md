@@ -2,7 +2,7 @@
 
 Produce a phased implementation plan grounded in the **Principles** section of the `eng-mode` skill. The plan is the deliverable. Do not implement.
 
-Open the finite task graph in `todo` per Eng Mode's Start rule. An active native goal owns the durable objective and continuation, not another graph. A delegated planner reports the graph to its lead instead of mutating parent state.
+Open the finite task graph in `todo` per Eng Mode's Start rule. Delegated planners report it to the lead instead of mutating parent state.
 
 ## 0. Triage
 
