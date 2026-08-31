@@ -5,7 +5,7 @@ description: Validate and orchestrate an Eng Mode installation. Use for /setup-e
 
 # Setup Eng Mode
 
-Setup is a validator and orchestrator, never an installer of duplicate machinery. It configures OMP, never Cursor. It does not install Graphite. Re-running setup is idempotent.
+Setup is a validator and orchestrator, never an installer of duplicate machinery. It configures OMP, never Cursor. It does not install forge providers. Re-running setup is idempotent.
 
 ## 1. Installation and source identity
 
@@ -38,17 +38,17 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 
 ## 5. Project contracts
 
-1. Run `eng_orch contracts` and report the structured decision and per-contract source paths.
-2. Validate existing `project-standards` and `verify-project` contracts; never overwrite them.
+1. Run `eng_orch contracts` and report the structured decision, per-contract source paths, and returned `forgeProvider` skill name.
+2. Validate existing `project-standards` and `verify-project` contracts; never overwrite them. Unknown `forge-provider` values are blocking errors. Missing selection deliberately resolves to `github-graphite` for existing repositories.
 3. After explicit repository inspection, setup may create only an `UNCONFIGURED` sentinel (`SKILL.md` whose body is the single line `UNCONFIGURED`) for an absent contract, so the gap is explicit tool output rather than silence. It never infers a verification contract from package scripts; real contract authoring routes through `create-verification-skill` and the repository owners.
 
-## 6. Capabilities
+## 6. Runtime validation
 
 1. Verify OMP native goal mode availability without activating a live goal or loop. If a device-local bridge exists, it must expose only OMP's native `goal` tool; do not install a second goal or loop runtime.
 2. Validate that task worktree isolation is supported by current OMP configuration before any playbook depends on it.
 3. Dry-route one feature, one bug, and one contested design without editing product code, exercising discovery for every shipped agent.
-4. Observe `omp commit --help`. Observe `gt --no-interactive auth` and `gt --no-interactive log short --stack --reverse`. Do not install Graphite. Report missing `gt` or failed auth as unavailable; stacked work cannot proceed without it.
+4. Observe `git commit --help`. Read only the `forgeProvider` skill returned by `eng_orch contracts` and validate its documented prerequisites. Do not inspect, invoke, or require another provider.
 
 ## 7. Report
 
-Report installation state, provider enablement, exact source root, shadow inventory in both directions, role migration stage results with conflicts and fallbacks, per-agent resolved models, contract decisions with source paths, isolation, native-goal, `omp commit`, and `gt` capability, and every unavailable capability. Refuse to report a capability as present without observing it.
+Report installation state, provider enablement, exact source root, shadow inventory in both directions, role migration stage results with conflicts and fallbacks, per-agent resolved models, contract decisions with source paths, isolation, native-goal, `git commit`, and the selected forge provider's documented prerequisite results.

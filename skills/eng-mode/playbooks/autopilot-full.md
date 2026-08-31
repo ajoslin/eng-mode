@@ -7,7 +7,7 @@
 3. After the writer yields, the root records the materialized head SHA and runs independent verification. Mapped browser/runtime proof is parent-sequential through the project verification contract (`verify-project`); code and policy review may swarm. No clean current-head verdict means no PR or merge.
 4. The root runs **Opening a PR** with required evidence and then Babysit. A new head invalidates the verdict unless patch identity is unchanged; corrections use a fresh writer on that branch, followed by re-verification.
 5. Finish one branch before checking out the next. Dependent changes route to Autopilot-stack.
-6. With explicit full-autonomy authority, a clean current-head verdict, **and** Babysit's review-agent loop quiet on that SHA, merge through GitHub. Dependent stacks route to Autopilot-stack and land through **graphite**. Never GitHub auto-merge on a stacked PR. Operator-owned items wait.
+6. With explicit full-autonomy authority, a clean current-head verdict, **and** Babysit's review-agent loop quiet on that SHA, merge through the selected forge provider. Dependent stacks route to Autopilot-stack. Operator-owned items wait.
 7. For requested watching, continue under a native `/goal`. Sleep only if the operator asked for an interval. Each tick audits ownership, protocol, and trails. The playbook checks exit conditions. User stop sends immediate zero-writes instructions through `hub`.
 
 Report owner, PR, head SHA, verdict, merges, gates, and trail paths.
