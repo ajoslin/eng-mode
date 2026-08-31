@@ -21,19 +21,63 @@ async function root(): Promise<string> {
   return value;
 }
 
-async function contract(repository: string, name: "project-standards" | "verify-project"): Promise<void> {
+async function contract(
+  repository: string,
+  name: "project-standards" | "verify-project",
+  forgeProvider?: string,
+): Promise<void> {
   const directory = join(repository, ".omp", "skills", name);
   await mkdir(directory, { recursive: true });
-  await writeFile(join(directory, "SKILL.md"), `---\nname: ${name}\ndescription: test\n---\nconfigured\n`);
+  const provider = name === "project-standards" && forgeProvider !== undefined
+    ? `forge-provider: ${forgeProvider}\n`
+    : "";
+  await writeFile(join(directory, "SKILL.md"), `---\nname: ${name}\n${provider}description: test\n---\nconfigured\n`);
 }
 
 describe("eng_orch executable entrypoint", () => {
-  it("returns the repository contract decision", async () => {
+  it("returns the repository contract decision with the default forge provider", async () => {
     const repositoryRoot = await root();
     await contract(repositoryRoot, "project-standards");
     await contract(repositoryRoot, "verify-project");
     const result = await executeEngOrch({ action: "contracts", repositoryRoot, mode: "code-producing" });
-    expect(result).toMatchObject({ decision: "proceed", mode: "code-producing" });
+    expect(result).toMatchObject({
+      decision: "proceed",
+      mode: "code-producing",
+      forgeProvider: "github-graphite",
+    });
+  });
+
+  it("selects an explicit forge provider and blocks unknown values", async () => {
+    const cockpitRepository = await root();
+    await contract(cockpitRepository, "project-standards", "pr-cockpit");
+    await contract(cockpitRepository, "verify-project");
+
+    expect(await executeEngOrch({ action: "contracts", repositoryRoot: cockpitRepository })).toMatchObject({
+      decision: "proceed",
+      forgeProvider: "pr-cockpit",
+    });
+
+    const unknownRepository = await root();
+    await contract(unknownRepository, "project-standards", "unknown");
+    await contract(unknownRepository, "verify-project");
+    expect(await executeEngOrch({ action: "contracts", repositoryRoot: unknownRepository })).toMatchObject({
+      decision: "blocked-standards",
+      forgeProvider: null,
+      reasons: ['project-standards selects unknown forge-provider "unknown"'],
+    });
+  });
+
+  it("blocks an explicit malformed forge provider instead of defaulting", async () => {
+    const malformedRepository = await root();
+    await contract(malformedRepository, "project-standards", "");
+    await contract(malformedRepository, "verify-project");
+    const result = await executeEngOrch({ action: "contracts", repositoryRoot: malformedRepository });
+    expect(result).toMatchObject({ decision: "blocked-standards", forgeProvider: null });
+    expect(result).toHaveProperty("contracts.0", {
+      name: "project-standards",
+      parse: "malformed",
+      expectedPath: join(malformedRepository, ".omp", "skills", "project-standards", "SKILL.md"),
+    });
   });
 
   it("keeps an explicit sentinel distinct from missing and unreadable contracts", async () => {
@@ -51,6 +95,21 @@ describe("eng_orch executable entrypoint", () => {
         { name: "verify-project", parse: "ok" },
       ],
     });
+  });
+
+  it("does not treat a configured contract containing the sentinel word as unconfigured", async () => {
+    const repositoryRoot = await root();
+    const standardsDirectory = join(repositoryRoot, ".omp", "skills", "project-standards");
+    await mkdir(standardsDirectory, { recursive: true });
+    await writeFile(
+      join(standardsDirectory, "SKILL.md"),
+      "---\nname: project-standards\ndescription: test\n---\nThe literal UNCONFIGURED is explanatory text.\n",
+    );
+    await contract(repositoryRoot, "verify-project");
+
+    const result = await executeEngOrch({ action: "contracts", repositoryRoot });
+    expect(result).toMatchObject({ decision: "proceed", forgeProvider: "github-graphite" });
+    expect(result).toHaveProperty("contracts.0", { name: "project-standards", parse: "ok", expectedPath: join(standardsDirectory, "SKILL.md") });
   });
 
 

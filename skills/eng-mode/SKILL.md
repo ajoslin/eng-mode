@@ -16,20 +16,22 @@ Correctness first. Smallest coherent change. Prove the real behavior. OMP only. 
 
 ## Repository contracts
 
-Eng procedure is global; the repository owns standards, stack policy, product verification, domain law, production restrictions, and specialized delivery behavior through two native project contracts:
+Eng procedure is global; the repository owns standards, forge workflow selection, product verification, domain law, production restrictions, and specialized delivery behavior through two native project contracts:
 
-- `project-standards` — the index over repository law, commands, review agents, and repository-selected skills. It is the only route from these playbooks to repository-selected skills (test law, stack-specific guidance, pre-commit, Standards + Spec review, GitHub workflow). Stacked PRs use `graphite`.
+- `project-standards` — the index over repository law, commands, review agents, and repository-selected skills. Its `forge-provider` frontmatter selects the PR workflow adapter. Missing selection preserves `github-graphite` for existing repositories; an explicit provider never falls back.
 - `verify-project` — the product verification contract: launch, drive, evidence, health gate, and feature map for the project's real user surface.
 
-Every repository playbook calls the `eng_orch` tool's `contracts` action before repository mutation or behavioral claims, and obeys its structured decision:
+At Eng Mode entry, call the `eng_orch` tool's `contracts` action before repository mutation or behavioral claims, and obey its structured decision:
 
-- `proceed` — both repository-owned `.omp/skills` contract files are present and valid.
+- `proceed` — both repository-owned `.omp/skills` contract files are present and valid; the result includes one `forgeProvider` skill name.
 - `standards-unavailable-read-only` — read-only investigation may proceed but makes no policy-compliance claim.
-- `blocked-standards` — code-producing work stops before any edit, write, or writer delegation.
+- `blocked-standards` — code-producing work stops before any edit, write, or writer delegation; this includes an unknown forge provider.
 - `inconclusive-verification` — behavioral claims on the product surface are `INCONCLUSIVE`; never substitute OMP `browser` for an unknown or private project driver.
 - `unconfigured` — a contract is an explicit `UNCONFIGURED` sentinel; run `setup-eng-mode`.
 
-The decision is auditable on-disk validation, not model self-report. `setup-eng-mode` separately verifies provider provenance and collisions because OMP's extension API does not expose authoritative skill-provider paths. Outside Eng invocation, OMP and repository context remain authoritative.
+On `proceed`, read the returned `forgeProvider` skill once. Use only that skill for all forge and PR work. If it does not document an operation, stop; never fall back.
+
+The contracts decision is auditable on-disk validation, not model self-report. `setup-eng-mode` validates only the selected provider skill's documented prerequisites. Outside Eng invocation, OMP and repository context remain authoritative.
 
 ## Router
 
@@ -45,11 +47,11 @@ The decision is auditable on-disk validation, not model self-report. `setup-eng-
 - Competing module designs: the `architect` skill with writable `arena` candidates; read-only panel seats may judge but never produce candidates.
 - Comparative skill or workflow evaluation: `playbooks/prove-out.md`, `omp-workflows`, and `arena`.
 - Skill authoring: `playbooks/authoring-a-skill.md`.
-- PR health through squash-merge when green and approved: `playbooks/babysit.md` and the GitHub tooling `project-standards` names.
-- Landing: `playbooks/shipping.md` and `graphite`.
+- PR health through squash-merge when green and approved: `playbooks/babysit.md` and the selected forge provider.
+- Landing: `playbooks/shipping.md` and the selected forge provider.
 - One long falsifiable task: `playbooks/autonomous-run.md` and `/goal`.
 - Independent PR program with merge authority: `playbooks/autopilot-full.md`.
-- Dependent review-first PR chain: `playbooks/autopilot-stack.md`.
+- Dependent review-first PR chain: `playbooks/autopilot-stack.md` and the selected forge provider.
 - Project-scale program: `playbooks/orchestrate.md` and the `eng_orch` tool. Work one agent could finish inside the session budget is Autonomous run, not Orchestrate. Do not use OMP's `orchestrate` magic keyword; it supplies no scheduler or transport.
 - Large planned program without active execution: `playbooks/multi-phase-plan.md`.
 - Recent workspace context: `recall`; one known session uses `playbooks/session-pickup.md`.
@@ -87,7 +89,7 @@ The decision is auditable on-disk validation, not model self-report. `setup-eng-
 - Product web behavior the project verification contract maps uses `verify-project`: its own driver, its own isolated allocation, and its startup/reset and first-state health gate. Do not attach OMP `browser` to a harness-owned private Chromium. A failed health gate, unmapped path, shared dev stack, or wrong surface is `INCONCLUSIVE`. Missing or unconfigured verification is an `eng_orch contracts` outcome, never a license to substitute browser proof. Other web UI uses OMP `browser`. Runtime state uses `debug` or the relevant profiler. Symbol work uses `lsp`. CLI/TUI work runs the actual program through a managed process when interactive.
 - Tests follow the project test law `project-standards` names. Use `tdd` only when a cheap red test represents an uncovered observable contract at a correct public seam.
 - Read the stack-specific skills `project-standards` names before changing code they govern.
-- Before commit or handoff, run the pre-commit pass `project-standards` names, then `omp commit`. Before review, run `no-comments`. Review-automation findings use the Babysit playbook's review-agent loop and the triage reference `project-standards` indexes. Never merge while that loop is unfinished. Use the Standards + Spec review skill `project-standards` names; use `interrogate` when independent adversarial pressure is warranted.
+- Before commit or handoff, run the pre-commit pass `project-standards` names, then use `git commit`. Before review, run `no-comments`. Review-automation findings use the Babysit playbook's review-agent loop and the triage reference `project-standards` indexes. Never merge while that loop is unfinished. Use the Standards + Spec review skill `project-standards` names; use `interrogate` when independent adversarial pressure is warranted.
 - Green CI is evidence, not a behavioral verdict.
 
 ## Autonomy

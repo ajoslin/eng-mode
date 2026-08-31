@@ -15,10 +15,10 @@ Workers never run `gt`. One stacker per stack.
 
 ## Commits
 
-Commit with `omp commit`, never `git commit` / `git commit -m`. Stage first only when the index must exclude unrelated dirty files; an empty index makes `omp commit` stage everything. Pass `-c` for intent the diff does not show. `--no-changelog` when the layer must not touch changelogs. `--push` is not stack submit. Do not use `gt create -m` (that commits with git).
+Stage the intended paths and commit with plain Git:
 
-```
-omp commit -c "<why this layer>"
+```sh
+git commit -m "<message>"
 ```
 
 ## Non-interactive commands
@@ -41,10 +41,10 @@ SHA via `git rev-parse`. After submit, `gh pr edit` titles and bodies; apply **u
 ```
 gt --no-interactive create layer-one
 # work
-omp commit -c "..."
+git commit -m "layer one"
 gt --no-interactive create layer-two
 # work
-omp commit -c "..."
+git commit -m "layer two"
 gt submit --no-interactive
 gt --no-interactive log short --stack --reverse
 ```

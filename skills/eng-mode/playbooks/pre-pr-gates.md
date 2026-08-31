@@ -4,7 +4,7 @@
 
 Opening a PR hard-stops unless a synthesis receipt exists at `.omp/pre-pr-gates/<sha>/synthesis.json` for the SHA the panel froze. Feature, Bug fix, Refactoring, and Autopilot one-shots inherit this because they open through Opening a PR.
 
-1. Freeze `sha=$(git rev-parse HEAD)`. Seats review this SHA only. Do not call `github` or `pr://` open.
+1. Freeze `sha=$(git rev-parse HEAD)`. Seats review this SHA only. Do not invoke a forge open.
 2. Dispatch **one** `task` batch of three seats, same frozen SHA, same diff: `pre-pr-swarm`, `meaningful-contribution`, `thermo-nuclear-pre-pr`. No serial order. No remediating between seats. No harsh-rerun loop. If a seat drops, continue and record the dropout.
 3. Browser work lives on the `pre-pr-swarm` seat and runs only when the diff is UI. Otherwise that seat reports `browser: not-ui` and still reviews colocated logic. Do not attach OMP `browser` to a harness-owned private Chromium.
 4. After the batch settles, the lead synthesizes every finding into Interrogate buckets. Deduplicate. Do not rerun the panel.

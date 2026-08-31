@@ -15,8 +15,8 @@ Eng Mode uses OMP's built-in tools instead of recreating their behavior:
 
 - `todo` for the active finite work list;
 - `task` and `hub` for typed agents, parallel work, and coordination;
-- LSP, debugger, browser, and GitHub CLI surfaces for grounded code and runtime evidence;
-- `omp commit` for commits; `graphite` (`gt`) for stacked PR parentage and landing;
+- LSP, debugger, browser, and repository-selected forge surfaces for grounded code and runtime evidence;
+- plain `git commit` for commits and one repository-selected provider skill for all forge and PR work;
 - OMP's native `goal` runtime, wrapped with a minimum token budget of 1,000,000;
 - plugin discovery for skills and agents, plus `eng_orch` for repository contracts and durable orchestration state.
 
@@ -46,8 +46,10 @@ To update, run the install command again, restart OMP, and rerun `setup-eng-mode
 
 Eng Mode supplies the reusable workflow. Each repository owns:
 
-- `.omp/skills/project-standards/SKILL.md` — repository law and selected tooling;
+- `.omp/skills/project-standards/SKILL.md` — repository law and selected tooling; optional `forge-provider` frontmatter selects `github-graphite` or `pr-cockpit`, defaulting to `github-graphite` when absent;
 - `.omp/skills/verify-project/SKILL.md` — the real product-verification surface.
+
+`eng_orch contracts` returns that selection as `forgeProvider`. Read that skill once and use only its documented interface for every forge and PR operation. If the skill does not document an operation, stop; never fall back to another provider.
 
 `setup-eng-mode` validates both contracts.
 
