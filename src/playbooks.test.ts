@@ -28,11 +28,51 @@ describe("babysit playbook merge default", () => {
   it("opening-a-pr still refuses to merge from that playbook", async () => {
     const opening = await read("skills/eng-mode/playbooks/opening-a-pr.md");
     expect(opening).toContain("Do not merge from this playbook");
+    expect(opening).not.toContain("meaningful-contribution");
   });
 
   it("autopilot-stack still forbids merge", async () => {
     const stack = await read("skills/eng-mode/playbooks/autopilot-stack.md");
     expect(stack).toContain("Never merge or arm auto-merge");
     expect(stack).toContain("Babysit in `check` mode");
+  });
+});
+
+describe("thermo-nuclear stays explicit-only", () => {
+  it("Opening a PR no longer auto-runs thermo-nuclear; the explicit skill remains", async () => {
+    const gates = await read("skills/eng-mode/playbooks/pre-pr-gates.md");
+    expect(gates).toContain("`pre-pr-swarm`");
+    expect(gates).not.toContain("two seats");
+    expect(gates).not.toContain("three seats");
+    expect(gates).toContain('"pre-pr-swarm": "ran"');
+    expect(gates).not.toContain("meaningful-contribution");
+
+    const rubric = await read("skills/thermo-nuclear-code-quality-review/SKILL.md");
+    expect(rubric).toContain("disable-model-invocation: true");
+
+    const contribution = await read("skills/meaningful-contribution/SKILL.md");
+    expect(contribution).toContain("disable-model-invocation: true");
+
+    const skill = await read("skills/eng-mode/SKILL.md");
+    expect(skill).toContain(
+      "Harsh maintainability review, explicit only: the `thermo-nuclear-code-quality-review` skill directly",
+    );
+    expect(skill).toContain(
+      "Proven-working-code bar, explicit only: the `meaningful-contribution` skill directly",
+    );
+
+    const opening = await read("skills/eng-mode/playbooks/opening-a-pr.md");
+    const autopilotFull = await read("skills/eng-mode/playbooks/autopilot-full.md");
+    const autopilotStack = await read("skills/eng-mode/playbooks/autopilot-stack.md");
+    expect(opening).not.toContain("meaningful-contribution");
+    expect(autopilotFull).not.toContain("meaningful-contribution");
+    expect(autopilotStack).not.toContain("meaningful-contribution");
+
+    const { skillNames } = await import("./manifest.ts");
+    expect(skillNames).toContain("thermo-nuclear-code-quality-review");
+    expect(skillNames).toContain("meaningful-contribution");
+    expect(skillNames.filter((name) => name.startsWith("thermo-nuclear-"))).toEqual([
+      "thermo-nuclear-code-quality-review",
+    ]);
   });
 });
