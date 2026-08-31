@@ -1,12 +1,12 @@
 ---
 name: meaningful-contribution
-description: Pre-PR panel seat. Proven working code, revert-fail proof, honest names. Use for meaningful-contribution, the Pre-PR contribution seat, or the bdsqqq meaningful contribution bar.
+description: Review whether a change is proven working code with seen-it-work evidence, revert-fail proof, and honest names. Use for a meaningful-contribution review or the bdsqqq meaningful contribution bar.
 disable-model-invocation: true
 ---
 
 # Meaningful contribution
 
-One seat in the **Pre-PR gates** panel. Review the frozen SHA. Do not edit. Do not open a PR. Do not remediate. Do not add tests during the panel; flag missing proof so the lead can Act on the synthesized set after the batch.
+Explicit only. Feature, Opening a PR, and Autopilot must not auto-run this skill.
 
 Source bar: [bdsqqq meaningful contribution](https://gist.github.com/bdsqqq/1e7e6f454271d5f856a1176d0e800d89). A contribution is proven working code, not a patch that happens to compile.
 
@@ -25,4 +25,4 @@ Source bar: [bdsqqq meaningful contribution](https://gist.github.com/bdsqqq/1e7e
 - PR-shaped summaries with no observed run
 - Shifting proof burden onto reviewers
 
-Return findings only. The lead synthesizes Interrogate buckets after the batch. This seat does not write receipts.
+Return findings only. Do not edit. Do not open a PR. Do not remediate. Do not add tests during this review; flag missing proof.
