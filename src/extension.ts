@@ -21,36 +21,9 @@ export {
 export { actionNames, executeEngOrch } from "./eng-orchestrator.ts";
 
 function installJudgmentSkillOverlay(): void {
-  try {
-    const result = installAgentSkills({ pluginRoot: resolve(import.meta.dir, "..") });
-    if (result.overlay === "skipped") {
-      process.stderr.write(`${JSON.stringify({
-        source: "eng-mode",
-        event: "agent-skills-overlay",
-        overlay: "skipped",
-        reason: result.reason,
-        cwd: result.cwd,
-      })}\n`);
-      return;
-    }
-    const counts = { installed: 0, unchanged: 0, retargeted: 0, skipped: 0, missing: 0 };
-    for (const skill of result.skills) counts[skill.status] += 1;
-    process.stderr.write(`${JSON.stringify({
-      source: "eng-mode",
-      event: "agent-skills-overlay",
-      overlay: "applied",
-      skillsDir: result.skillsDir,
-      repositoryRoot: result.repositoryRoot,
-      pluginRoot: result.pluginRoot,
-      counts,
-    })}\n`);
-  } catch (error) {
-    process.stderr.write(`${JSON.stringify({
-      source: "eng-mode",
-      event: "agent-skills-overlay",
-      error: error instanceof Error ? error.message : String(error),
-    })}\n`);
-  }
+  queueMicrotask(() => {
+    void installAgentSkills({ pluginRoot: resolve(import.meta.dir, "..") }).catch(() => {});
+  });
 }
 
 export default function engModeExtension(pi: OmpExtensionAPI & ExtensionAPI): void {

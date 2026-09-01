@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "./extension-types.ts";
 
-const MINIMUM_GOAL_TOKEN_BUDGET = 500_000_000;
+export const MINIMUM_GOAL_TOKEN_BUDGET = 500_000_000;
 
 export function registerGoalTool(pi: ExtensionAPI): void {
   const z = pi.zod;
@@ -11,7 +11,7 @@ export function registerGoalTool(pi: ExtensionAPI): void {
     parameters: z.object({
       op: z.enum(["create", "get", "complete", "resume", "drop"]),
       objective: z.string().optional(),
-      token_budget: z.number().int().positive().optional(),
+      token_budget: z.number().int().min(MINIMUM_GOAL_TOKEN_BUDGET).optional(),
     }),
     strict: true,
     loadMode: "essential",

@@ -9,6 +9,7 @@ import engModeExtension, {
   EXPERT_DECISION_GUIDANCE,
   parsePromptClassification,
 } from "./extension.ts";
+import { MINIMUM_GOAL_TOKEN_BUDGET } from "./goal-tool.ts";
 
 const roots: string[] = [];
 
@@ -148,9 +149,14 @@ describe("eng_orch executable entrypoint", () => {
     const registered = new Map<string, RegisteredTool>();
     const commands = new Map<string, unknown>();
     const renderers = new Map<string, unknown>();
+    let tokenBudgetMinimum: number | undefined;
     const chain = {
       optional: () => chain,
       int: () => chain,
+      min: (value: number) => {
+        tokenBudgetMinimum = value;
+        return chain;
+      },
       positive: () => chain,
       nonnegative: () => chain,
     };
@@ -210,9 +216,7 @@ describe("eng_orch executable entrypoint", () => {
         sendMessage: () => {},
         registerTool: (tool: RegisteredTool) => registered.set(tool.name, tool),
       } as unknown as Parameters<typeof engModeExtension>[0]);
-      expect(realpathSync(join(repositoryRoot, ".agents", "skills", "how"))).toBe(
-        realpathSync(join(import.meta.dir, "..", "skills", "how")),
-      );
+      expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
       expect(existsSync(join(homeDir, ".agents"))).toBeFalse();
     });
     expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
@@ -241,6 +245,7 @@ describe("eng_orch executable entrypoint", () => {
     expect(engOrch).toBeDefined();
     if (!goal || !engOrch) throw new Error("Eng Mode tools were not registered");
     expect(goal).toMatchObject({ strict: true, loadMode: "essential" });
+    expect(tokenBudgetMinimum).toBe(MINIMUM_GOAL_TOKEN_BUDGET);
     const signal = new AbortController().signal;
     const onUpdate = () => {};
     const invokeTool = async (params: Record<string, unknown>, options: unknown) => ({ params, options });
@@ -249,11 +254,11 @@ describe("eng_orch executable entrypoint", () => {
       options: { signal, onUpdate },
     });
     await expect(goal.execute("call-default", { op: "create", objective: "ship" }, undefined, undefined, { invokeTool })).resolves.toEqual({
-      params: { op: "create", objective: "ship", token_budget: 500_000_000 },
+      params: { op: "create", objective: "ship", token_budget: MINIMUM_GOAL_TOKEN_BUDGET },
       options: {},
     });
     await expect(goal.execute("call-low", { op: "create", objective: "ship", token_budget: 42 }, undefined, undefined, { invokeTool })).resolves.toEqual({
-      params: { op: "create", objective: "ship", token_budget: 500_000_000 },
+      params: { op: "create", objective: "ship", token_budget: MINIMUM_GOAL_TOKEN_BUDGET },
       options: {},
     });
     await expect(goal.execute("call-high", { op: "create", objective: "ship", token_budget: 600_000_000 }, undefined, undefined, { invokeTool })).resolves.toEqual({
@@ -283,6 +288,7 @@ describe("eng_orch executable entrypoint", () => {
     const chain = {
       optional: () => chain,
       int: () => chain,
+      min: () => chain,
       positive: () => chain,
       nonnegative: () => chain,
     };

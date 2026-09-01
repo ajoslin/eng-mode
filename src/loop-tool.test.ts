@@ -58,7 +58,7 @@ class FakeInteractiveMode {
 
 function register(InteractiveMode: unknown = FakeInteractiveMode): ToolDefinition {
   let tool: ToolDefinition | undefined;
-  const chain = { optional: () => chain, int: () => chain, positive: () => chain, nonnegative: () => chain };
+  const chain = { optional: () => chain, int: () => chain, min: () => chain, positive: () => chain, nonnegative: () => chain };
   class Text {
     constructor(readonly text: string, readonly paddingX: number, readonly paddingY: number) {}
   }

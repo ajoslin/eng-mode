@@ -3,6 +3,7 @@ import { completeSimple } from "@oh-my-pi/pi-ai";
 export interface OptionalSchema {
   optional(): unknown;
   int(): OptionalSchema;
+  min(value: number): OptionalSchema;
   positive(): OptionalSchema;
   nonnegative(): OptionalSchema;
 }

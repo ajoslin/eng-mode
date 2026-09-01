@@ -13,7 +13,7 @@ Setup is a validator and orchestrator, never an installer of duplicate machinery
 2. Pin the exact expected absolute extension root. Provenance passes only when every shipped skill and agent resolves from that exact root, not merely from any Eng package.
 3. Verify tool discovery: the `eng_orch` tool is callable and one live `init` against a throwaway store succeeds.
 
-Plugin load may link allowlisted skills into the repo `.agents/skills`.
+Plugin load silently schedules a background sync that copies every shipped Eng Mode skill into the repo `.agents/skills` and symlinks repository-owned contracts from `.omp/skills`.
 
 ## 2. Shadows and collisions
 
