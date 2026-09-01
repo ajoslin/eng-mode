@@ -15,11 +15,12 @@ Setup is a validator and orchestrator, never an installer of duplicate machinery
 
 ## 2. Shadows and collisions
 
-Observed skill precedence: native project/user `.omp/skills` (project before user), then the Eng extension through `omp-plugins`, then Claude-provider skills, then `.agents/skills`. Observed agent precedence: project `.omp/agents`, user agents, extension agents, then bundled.
+Observed skill precedence: native project/user `.omp/skills` (project before user), then the Eng extension through `omp-plugins` (priority 90), then Claude-provider skills, then `.agents/skills` (Codex/OpenCode home, also loaded by OMP's agents provider at priority 70). Observed agent precedence: project `.omp/agents`, user agents, extension agents, then bundled.
 
-1. Report the full intersection of the extension's exact `skillNames` with the host repository's `.agents/skills` and `.claude/skills` in both directions. Extension-wins overrides are intentional but require operator visibility; never replace silently.
+1. Report the full intersection of the extension's exact `skillNames` with the host repository's `.agents/skills` and `.claude/skills` in both directions. Extension-wins overrides are intentional but require operator visibility; never replace silently. Do not write into the host repository's `.agents/skills`.
 2. Any user-native `.omp/skills` or user-agent shadow of an exact `skillNames`/`agentNames` entry is an error. Report it by name; quarantining a shadow is an explicit operator-approved setup action with a rollback record, never a silent move.
-3. Repository duplicates matching the extension manifests are deleted at the repository's hard cut, not by setup.
+3. User-home `~/.agents/skills` copies of the exported `agentSkillsAllowlist` (judgment-layer skills plus every `principle-*` in `skillNames`) are an intentional Codex/OpenCode overlay, not a forbidden skillNames shadow. Do not report those overlay dests as the user-native `.omp/skills` shadow error. Operator/OMP-spine skills are not part of this overlay.
+4. Repository duplicates matching the extension manifests are deleted at the repository's hard cut, not by setup.
 
 ## 3. Model roles
 
@@ -46,6 +47,10 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 
 Run `bun src/eng-advisor.ts <plugin-root>` and report each installed file and status.
 
+## Codex/OpenCode skill overlay
+
+The extension installs this overlay on load. `/setup-eng-mode` is not required for Codex or OpenCode to see the allowlist. From the exact extension root, run `bun src/eng-agent-skills.ts <plugin-root>` and report the overlay `skillsDir`, plugin root, and each allowlisted skill's dest, source, and status (`installed`, `unchanged`, `retargeted`, `skipped`, `missing`). Re-running is idempotent: owned dests already pointing at the current plugin skill stay unchanged; owned dests pointing at a stale plugin `skills/<name>` path are retargeted; dests that exist and are not a symlink we own are skipped and never clobbered. Missing plugin skill directories are reported, not linked. Never write into the host repository's `.agents/skills`.
+
 ## 7. Runtime validation
 
 OMP does not discover WATCHDOG files from plugin roots. From the exact extension root, run `bun src/eng-advisor.ts`; it installs the shipped `WATCHDOG.md` and `WATCHDOG.yml` into the active agent directory. Re-running is idempotent and refreshes stale copies. Do not create or edit `config.yml`; OMP owns advisor enablement and model selection.
@@ -59,4 +64,4 @@ OMP does not discover WATCHDOG files from plugin roots. From the exact extension
 
 ## 8. Report
 
-Report installation state, provider enablement, exact source root, shadow inventory in both directions, role migration stage results with conflicts and fallbacks, advisor install paths and per-file status, per-agent resolved models, contract decisions with source paths, isolation, `goal`, `loop`, commit capability, the selected forge provider's documented prerequisite results, and every unavailable capability. Refuse to report a capability as present without observing it.
+Report installation state, provider enablement, exact source root, shadow inventory in both directions (with `~/.agents/skills` allowlist dests reported as the Codex/OpenCode overlay, not as `.omp/skills` shadow errors), role migration stage results with conflicts and fallbacks, advisor install paths and per-file status, overlay paths and per-skill status (`installed`/`unchanged`/`retargeted`/`skipped`/`missing`), per-agent resolved models, contract decisions with source paths, isolation, `goal`, `loop`, commit capability, the selected forge provider's documented prerequisite results, and every unavailable capability. Refuse to report a capability as present without observing it.

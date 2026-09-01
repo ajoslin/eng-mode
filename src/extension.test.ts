@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
+import { realpathSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,6 +20,18 @@ async function root(): Promise<string> {
   const value = await mkdtemp(join(tmpdir(), "eng-mode-extension-"));
   roots.push(value);
   return value;
+}
+
+async function withHome<T>(fn: (homeDir: string) => Promise<T> | T): Promise<T> {
+  const homeDir = await root();
+  const previous = process.env.HOME;
+  process.env.HOME = homeDir;
+  try {
+    return await fn(homeDir);
+  } finally {
+    if (previous === undefined) delete process.env.HOME;
+    else process.env.HOME = previous;
+  }
 }
 
 async function contract(
@@ -170,18 +183,23 @@ describe("eng_orch executable entrypoint", () => {
       pauseLoop(): void {}
       disableLoopMode(): void {}
     }
-    engModeExtension({
-      pi: { Text: TestText, InteractiveMode: TestInteractiveMode },
-      registerMessageRenderer: (_customType, renderer) => {
-        expertRenderer = renderer;
-      },
-      zod,
-      on: (event, handler) => {
-        if (event === "before_agent_start") {
-          beforeAgentStartHandler = handler as BeforeAgentStartHandler;
-        }
-      },
-      registerTool: (tool) => registered.set(tool.name, tool),
+    await withHome(async (homeDir) => {
+      engModeExtension({
+        pi: { Text: TestText, InteractiveMode: TestInteractiveMode },
+        registerMessageRenderer: (_customType, renderer) => {
+          expertRenderer = renderer;
+        },
+        zod,
+        on: (event, handler) => {
+          if (event === "before_agent_start") {
+            beforeAgentStartHandler = handler as BeforeAgentStartHandler;
+          }
+        },
+        registerTool: (tool) => registered.set(tool.name, tool),
+      });
+      expect(realpathSync(join(homeDir, ".agents", "skills", "how"))).toBe(
+        realpathSync(join(import.meta.dir, "..", "skills", "how")),
+      );
     });
     expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
     expect(registered.get("loop")).toMatchObject({ strict: true, loadMode: "essential" });
@@ -236,5 +254,43 @@ describe("eng_orch executable entrypoint", () => {
       mode: "code-producing",
     });
     expect(output).toMatchObject({ details: { decision: "proceed" } });
+  });
+
+  it("still registers tools when the agent-skills overlay cannot write home", async () => {
+    const blocked = await root();
+    await writeFile(blocked, "not a directory\n");
+    const previous = process.env.HOME;
+    process.env.HOME = blocked;
+    const registered = new Map<string, string>();
+    const chain = {
+      optional: () => chain,
+      int: () => chain,
+      positive: () => chain,
+      nonnegative: () => chain,
+    };
+    try {
+      engModeExtension({
+        pi: {
+          Text: class {
+            constructor(readonly text: string, readonly paddingX: number, readonly paddingY: number) {}
+          },
+        },
+        registerMessageRenderer: () => {},
+        zod: {
+          object: () => ({}),
+          enum: () => chain,
+          string: () => chain,
+          number: () => chain,
+          boolean: () => chain,
+          array: () => chain,
+        },
+        on: () => {},
+        registerTool: (tool) => registered.set(tool.name, tool.name),
+      });
+    } finally {
+      if (previous === undefined) delete process.env.HOME;
+      else process.env.HOME = previous;
+    }
+    expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
   });
 });
