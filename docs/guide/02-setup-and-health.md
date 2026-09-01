@@ -1,6 +1,6 @@
 # Setup and runtime health
 
-Install Eng Mode, restart OMP, then run `setup-eng-mode` in every repository. Plugin load already exposes the judgment-layer allowlist at `~/.agents/skills` as symlinks into the plugin; setup reports that overlay and does not treat those dests as `.omp/skills` shadows. It validates exact plugin provenance, shadows, model-role fallbacks, `goal`, `loop`, repository contracts, and task isolation.
+Install Eng Mode, restart OMP, then run `setup-eng-mode` in every repository. Plugin load already exposes the judgment-layer allowlist at `<repo>/.agents/skills` as symlinks into the plugin, plus a relative `verify-project` contract link when that file exists; setup reports that overlay and does not treat those dests as `.omp/skills` shadows. Precedence stays `.omp/skills` 100, `omp-plugins` 90, agents 70. It validates exact plugin provenance, shadows, model-role fallbacks, `goal`, `loop`, repository contracts, and task isolation.
 
 Repositories provide:
 

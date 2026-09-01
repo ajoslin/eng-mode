@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { realpathSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -22,15 +22,20 @@ async function root(): Promise<string> {
   return value;
 }
 
-async function withHome<T>(fn: (homeDir: string) => Promise<T> | T): Promise<T> {
+async function withRepo<T>(fn: (repositoryRoot: string, homeDir: string) => Promise<T> | T): Promise<T> {
+  const repositoryRoot = await root();
   const homeDir = await root();
-  const previous = process.env.HOME;
+  await mkdir(join(repositoryRoot, ".git"));
+  const previousCwd = process.cwd();
+  const previousHome = process.env.HOME;
+  process.chdir(repositoryRoot);
   process.env.HOME = homeDir;
   try {
-    return await fn(homeDir);
+    return await fn(repositoryRoot, homeDir);
   } finally {
-    if (previous === undefined) delete process.env.HOME;
-    else process.env.HOME = previous;
+    process.chdir(previousCwd);
+    if (previousHome === undefined) delete process.env.HOME;
+    else process.env.HOME = previousHome;
   }
 }
 
@@ -183,7 +188,7 @@ describe("eng_orch executable entrypoint", () => {
       pauseLoop(): void {}
       disableLoopMode(): void {}
     }
-    await withHome(async (homeDir) => {
+    await withRepo(async (repositoryRoot, homeDir) => {
       engModeExtension({
         pi: { Text: TestText, InteractiveMode: TestInteractiveMode },
         registerMessageRenderer: (_customType, renderer) => {
@@ -197,9 +202,10 @@ describe("eng_orch executable entrypoint", () => {
         },
         registerTool: (tool) => registered.set(tool.name, tool),
       });
-      expect(realpathSync(join(homeDir, ".agents", "skills", "how"))).toBe(
+      expect(realpathSync(join(repositoryRoot, ".agents", "skills", "how"))).toBe(
         realpathSync(join(import.meta.dir, "..", "skills", "how")),
       );
+      expect(existsSync(join(homeDir, ".agents"))).toBeFalse();
     });
     expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
     expect(registered.get("loop")).toMatchObject({ strict: true, loadMode: "essential" });
@@ -256,12 +262,13 @@ describe("eng_orch executable entrypoint", () => {
     expect(output).toMatchObject({ details: { decision: "proceed" } });
   });
 
-  it("still registers tools when the agent-skills overlay cannot write home", async () => {
-    const blockedParent = await root();
-    const blocked = join(blockedParent, "not-a-home");
-    await writeFile(blocked, "not a directory\n");
-    const previous = process.env.HOME;
-    process.env.HOME = blocked;
+  it("still registers tools when the agent-skills overlay cannot write the repo dest", async () => {
+    const repositoryRoot = await root();
+    await mkdir(join(repositoryRoot, ".git"));
+    await mkdir(join(repositoryRoot, ".agents"));
+    await writeFile(join(repositoryRoot, ".agents", "skills"), "not a directory\n");
+    const previousCwd = process.cwd();
+    process.chdir(repositoryRoot);
     const registered = new Map<string, string>();
     const chain = {
       optional: () => chain,
@@ -289,8 +296,7 @@ describe("eng_orch executable entrypoint", () => {
         registerTool: (tool) => registered.set(tool.name, tool.name),
       });
     } finally {
-      if (previous === undefined) delete process.env.HOME;
-      else process.env.HOME = previous;
+      process.chdir(previousCwd);
     }
     expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
   });
