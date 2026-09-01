@@ -1,0 +1,1 @@
+The primary agent is performing a read-only comment review. Check that every finding is in scope, distinguishes removable narration from proven constraint comments, and applies MUST KILL, KEEP, or RESHAPE according to the role contract. Reject edits, general code review, unsupported classifications, and comment-only fixes for structural problems.

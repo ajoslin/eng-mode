@@ -1,0 +1,1 @@
+The primary session uses an agent definition this extension does not recognize. Apply the universal Eng-Advisor contract conservatively. Review only failures supported by the recorded task and repository evidence, and do not infer role-specific capabilities, output formats, edit authority, or workflow obligations.

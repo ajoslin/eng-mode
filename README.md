@@ -37,7 +37,9 @@ Restart OMP. Load also links a few skills into the repo `.agents/skills` for Cod
 setup-eng-mode
 ```
 
-**Run `setup-eng-mode` in every repository.** It checks the plugin, model roles, agent chains, worktree isolation, that repository's standards and verification contracts, and installs the shipped watchdog advisor into the active OMP agent directory.
+**Run `setup-eng-mode` in every repository.** It checks the plugin, model roles, agent chains, worktree isolation, that repository's standards and verification contracts, and the extension-owned Eng-Advisor runtime. Eng Mode ships short role lenses in `.eng-advisor/{role}.md`; repositories may add files at the same path to layer local review guidance after those defaults.
+
+Keep advisor role files focused on review intent, characteristic failure modes, and authority limits. Do not copy principle bodies or skill routing maps into them; the primary agent's Eng Mode workflow owns those instructions.
 
 To update, run the install command again, restart OMP, and rerun `setup-eng-mode` in each repository.
 
@@ -80,6 +82,6 @@ The thin extension entrypoint, `src/extension.ts`, registers independent modules
 - `goal-tool.ts` registers `goal`;
 - `loop-tool.ts` registers `loop`;
 - `eng-orchestrator.ts` registers the repository-contract gate and durable orchestration store;
-- `eng-advisor.ts` idempotently installs the shipped OMP `WATCHDOG.md` and `WATCHDOG.yml` into the active agent directory.
+- `advisor/` registers the in-process Eng-Advisor runtime, selects `.eng-advisor/{role}.md` from authoritative subagent session metadata, layers package defaults plus ancestor-to-workspace repository guidance, and owns transcript filtering, evidence policy, durable findings, and `/eng-advisor` controls;
 
 Do not install duplicate `goal` or `loop` tools alongside this plugin.

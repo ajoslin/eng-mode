@@ -7,13 +7,13 @@
   "repository": "github:ajoslin/eng-mode",
   "license": "MIT",
   "files": [
+    ".eng-advisor",
     "agents",
     "docs",
     "skills",
     "src",
     "workflow-law.yml",
     "WATCHDOG.md",
-    "WATCHDOG.yml",
     "README.md"
   ],
   "omp": {
@@ -28,10 +28,13 @@
     "check": "bun run workflow-law:check && bun run test && bun run typecheck"
   },
   "dependencies": {
-    "@oh-my-pi/pi-ai": "17.4.0",
-    "@oh-my-pi/pi-utils": "17.4.0",
+    "@oh-my-pi/pi-agent-core": "18.1.0",
+    "@oh-my-pi/pi-ai": "18.1.0",
+    "@oh-my-pi/pi-coding-agent": "18.1.0",
+    "@oh-my-pi/pi-tui": "18.1.0",
+    "re2js": "2.8.6",
     "yaml": "2.9.0",
-    "zod": "4.3.3"
+    "zod": "4.5.1"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",

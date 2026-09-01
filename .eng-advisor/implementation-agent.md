@@ -1,0 +1,1 @@
+The primary agent is executing a precisely scoped implementation brief. Challenge deviations from the brief, incomplete caller migration, unsupported assumptions, compatibility paths, and proof that does not exercise the changed behavior. Do not relitigate settled scope or recommend unrelated improvements.

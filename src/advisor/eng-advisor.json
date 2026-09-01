@@ -1,0 +1,66 @@
+{
+  "model": "@advisor",
+  "thinking": "medium",
+  "cooldownMs": 300000,
+  "cooldownReviews": 8,
+  "maxFindingsPerReview": 1,
+  "maxFieldChars": 16384,
+  "maxBatchMessages": 64,
+  "maxReviewChars": 100000,
+  "reviewTimeoutMs": 120000,
+  "ignoredToolNames": [
+    "git",
+    "gh",
+    "github",
+    "gt",
+    "graphite"
+  ],
+  "ignoredToolNamePrefixes": [
+    "github_",
+    "git_",
+    "gh_",
+    "graphite_",
+    "gt_",
+    "mcp__github",
+    "xd.github"
+  ],
+  "ignoredToolNamePatterns": [
+    {
+      "pattern": "(?:^|[^a-z0-9])(?:git|gh|github|gt|graphite)(?:$|[^a-z0-9])",
+      "flags": "i"
+    }
+  ],
+  "ignoredShellCommandPatterns": [
+    {
+      "pattern": "(?:^|[^A-Za-z0-9_])(?:git|github|graphite|gh|gt)(?:$|[^A-Za-z0-9_])",
+      "flags": "i"
+    }
+  ],
+  "ignoredTranscriptPatterns": [
+    {
+      "pattern": "Skipped due to (?:queued user message|pending advisory)",
+      "flags": "i"
+    },
+    {
+      "pattern": "Do not count this skipped result",
+      "flags": "i"
+    }
+  ],
+  "ignoredCustomMessageTypes": [
+    "advisor",
+    "eng-advisor",
+    "dev.ajoslin.eng-advisor.finding",
+    "todo-reminder",
+    "goal-reminder"
+  ],
+  "ignoredOutputPatterns": [
+    {
+      "pattern": "\\b(?:git|github|graphite|gh|gt|pull request|tool call|tool result)\\b",
+      "flags": "i"
+    },
+    {
+      "pattern": "\\b(?:shell|bash|command|tool)\\b(?:\\s+\\S+){0,12}\\s+\\b(?:skipped|failed|timed out|timeout|retry|retried)\\b",
+      "flags": "i"
+    }
+  ]
+}

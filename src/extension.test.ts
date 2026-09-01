@@ -53,6 +53,7 @@ async function contract(
 }
 
 describe("eng_orch executable entrypoint", () => {
+  type RegisteredTool = Parameters<Parameters<typeof engModeExtension>[0]["registerTool"]>[0];
   it("returns the repository contract decision with the default forge provider", async () => {
     const repositoryRoot = await root();
     await contract(repositoryRoot, "project-standards");
@@ -131,7 +132,6 @@ describe("eng_orch executable entrypoint", () => {
     const repositoryRoot = await root();
     await contract(repositoryRoot, "project-standards");
     await contract(repositoryRoot, "verify-project");
-    type RegisteredTool = Parameters<Parameters<typeof engModeExtension>[0]["registerTool"]>[0];
     type BeforeAgentStartHandler = (
       event: { prompt: string },
       context: typeof unavailableClassifier,
@@ -146,6 +146,8 @@ describe("eng_orch executable entrypoint", () => {
     let beforeAgentStartHandler: BeforeAgentStartHandler | undefined;
     let expertRenderer: ((_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown) | undefined;
     const registered = new Map<string, RegisteredTool>();
+    const commands = new Map<string, unknown>();
+    const renderers = new Map<string, unknown>();
     const chain = {
       optional: () => chain,
       int: () => chain,
@@ -191,23 +193,31 @@ describe("eng_orch executable entrypoint", () => {
     await withRepo(async (repositoryRoot, homeDir) => {
       engModeExtension({
         pi: { Text: TestText, InteractiveMode: TestInteractiveMode },
-        registerMessageRenderer: (_customType, renderer) => {
-          expertRenderer = renderer;
+        registerMessageRenderer: (customType: string, renderer: unknown) => {
+          renderers.set(customType, renderer);
+          if (customType === "eng-mode-expert-decision-guidance") {
+            expertRenderer = renderer as typeof expertRenderer;
+          }
         },
         zod,
-        on: (event, handler) => {
+        on: (event: string, handler: unknown) => {
           if (event === "before_agent_start") {
             beforeAgentStartHandler = handler as BeforeAgentStartHandler;
           }
         },
-        registerTool: (tool) => registered.set(tool.name, tool),
-      });
+        registerCommand: (name: string, command: unknown) => commands.set(name, command),
+        appendEntry: () => {},
+        sendMessage: () => {},
+        registerTool: (tool: RegisteredTool) => registered.set(tool.name, tool),
+      } as unknown as Parameters<typeof engModeExtension>[0]);
       expect(realpathSync(join(repositoryRoot, ".agents", "skills", "how"))).toBe(
         realpathSync(join(import.meta.dir, "..", "skills", "how")),
       );
       expect(existsSync(join(homeDir, ".agents"))).toBeFalse();
     });
     expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
+    expect(commands.has("eng-advisor")).toBeTrue();
+    expect(renderers.has("dev.ajoslin.eng-advisor.finding")).toBeTrue();
     expect(registered.get("loop")).toMatchObject({ strict: true, loadMode: "essential" });
     expect(beforeAgentStartHandler).toBeDefined();
     await expect(beforeAgentStartHandler?.({ prompt: "Explore these files and report findings" }, unavailableClassifier)).resolves.toEqual({});
@@ -284,6 +294,9 @@ describe("eng_orch executable entrypoint", () => {
           },
         },
         registerMessageRenderer: () => {},
+        registerCommand: () => {},
+        appendEntry: () => {},
+        sendMessage: () => {},
         zod: {
           object: () => ({}),
           enum: () => chain,
@@ -293,8 +306,8 @@ describe("eng_orch executable entrypoint", () => {
           array: () => chain,
         },
         on: () => {},
-        registerTool: (tool) => registered.set(tool.name, tool.name),
-      });
+        registerTool: (tool: RegisteredTool) => registered.set(tool.name, tool.name),
+      } as unknown as Parameters<typeof engModeExtension>[0]);
     } finally {
       process.chdir(previousCwd);
     }
