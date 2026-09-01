@@ -218,6 +218,7 @@ describe("eng_orch executable entrypoint", () => {
       } as unknown as Parameters<typeof engModeExtension>[0]);
       expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
       expect(existsSync(join(homeDir, ".agents"))).toBeFalse();
+      expect(existsSync(join(repositoryRoot, ".agents"))).toBeFalse();
     });
     expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
     expect(commands.has("eng-advisor")).toBeTrue();
@@ -277,46 +278,4 @@ describe("eng_orch executable entrypoint", () => {
     expect(output).toMatchObject({ details: { decision: "proceed" } });
   });
 
-  it("still registers tools when the agent-skills overlay cannot write the repo dest", async () => {
-    const repositoryRoot = await root();
-    await mkdir(join(repositoryRoot, ".git"));
-    await mkdir(join(repositoryRoot, ".agents"));
-    await writeFile(join(repositoryRoot, ".agents", "skills"), "not a directory\n");
-    const previousCwd = process.cwd();
-    process.chdir(repositoryRoot);
-    const registered = new Map<string, string>();
-    const chain = {
-      optional: () => chain,
-      int: () => chain,
-      min: () => chain,
-      positive: () => chain,
-      nonnegative: () => chain,
-    };
-    try {
-      engModeExtension({
-        pi: {
-          Text: class {
-            constructor(readonly text: string, readonly paddingX: number, readonly paddingY: number) {}
-          },
-        },
-        registerMessageRenderer: () => {},
-        registerCommand: () => {},
-        appendEntry: () => {},
-        sendMessage: () => {},
-        zod: {
-          object: () => ({}),
-          enum: () => chain,
-          string: () => chain,
-          number: () => chain,
-          boolean: () => chain,
-          array: () => chain,
-        },
-        on: () => {},
-        registerTool: (tool: RegisteredTool) => registered.set(tool.name, tool.name),
-      } as unknown as Parameters<typeof engModeExtension>[0]);
-    } finally {
-      process.chdir(previousCwd);
-    }
-    expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
-  });
 });

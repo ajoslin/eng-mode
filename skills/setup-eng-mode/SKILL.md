@@ -13,8 +13,6 @@ Setup is a validator and orchestrator, never an installer of duplicate machinery
 2. Pin the exact expected absolute extension root. Provenance passes only when every shipped skill and agent resolves from that exact root, not merely from any Eng package.
 3. Verify tool discovery: the `eng_orch` tool is callable and one live `init` against a throwaway store succeeds.
 
-Plugin load silently schedules a background sync that copies every shipped Eng Mode skill into the repo `.agents/skills` and symlinks repository-owned contracts from `.omp/skills`.
-
 ## 2. Shadows and collisions
 
 Observed skill precedence: native project/user `.omp/skills` (project before user), then the Eng extension through `omp-plugins`, then Claude-provider skills, then `.agents/skills`. Observed agent precedence: project `.omp/agents`, user agents, extension agents, then bundled.

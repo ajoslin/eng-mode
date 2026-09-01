@@ -31,7 +31,7 @@ Start with the [Eng Mode operator guide](docs/guide/README.md). It explains the 
 omp plugin install github:ajoslin/eng-mode
 ```
 
-Restart OMP. Load silently schedules a background sync that copies every shipped Eng Mode skill into the repo `.agents/skills` for Codex/OpenCode and symlinks repository-owned contracts from `.omp/skills`. Then open every repository where you use Eng Mode and run:
+Restart OMP. Then open every repository where you use Eng Mode and run:
 
 ```text
 setup-eng-mode
