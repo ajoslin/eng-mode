@@ -31,7 +31,7 @@ Start with the [Eng Mode operator guide](docs/guide/README.md). It explains the 
 omp plugin install github:ajoslin/eng-mode
 ```
 
-Restart OMP. Then open every repository where you use Eng Mode and run:
+Restart OMP. Load also links a few skills into the repo `.agents/skills` for Codex/OpenCode. Then open every repository where you use Eng Mode and run:
 
 ```text
 setup-eng-mode

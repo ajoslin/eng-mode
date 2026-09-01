@@ -71,6 +71,30 @@ export const agentNames = [
 export type SkillName = (typeof skillNames)[number];
 export type AgentName = (typeof agentNames)[number];
 
+const judgmentLayerSkillNames = [
+  "how",
+  "why",
+  "diagnosing-bugs",
+  "domain-modeling",
+  "codebase-design",
+  "blast-radius",
+  "typescript-best-practices",
+  "tdd",
+  "no-comments",
+  "unslop",
+  "technical-writing",
+  "thermo-nuclear-code-quality-review",
+  "meaningful-contribution",
+  "show-me-your-work",
+  "create-verification-skill",
+  "maintain-verification-skill",
+] as const satisfies readonly SkillName[];
+
+export const agentSkillsAllowlist: readonly SkillName[] = [
+  ...judgmentLayerSkillNames,
+  ...skillNames.filter((name) => name.startsWith("principle-")),
+];
+
 export const agentModelChains: Readonly<Record<AgentName, readonly string[]>> = {
   "implementation-agent": ["@code", "@judgment", "@smol"],
   "judgment-agent": ["@judgment", "@code", "@smol"],
@@ -115,4 +139,5 @@ export const manifest = {
   agentNames,
   agentModelChains,
   playbookNames,
+  agentSkillsAllowlist,
 } as const;

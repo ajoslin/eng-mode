@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
+import { existsSync, realpathSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,6 +20,23 @@ async function root(): Promise<string> {
   const value = await mkdtemp(join(tmpdir(), "eng-mode-extension-"));
   roots.push(value);
   return value;
+}
+
+async function withRepo<T>(fn: (repositoryRoot: string, homeDir: string) => Promise<T> | T): Promise<T> {
+  const repositoryRoot = await root();
+  const homeDir = await root();
+  await mkdir(join(repositoryRoot, ".git"));
+  const previousCwd = process.cwd();
+  const previousHome = process.env.HOME;
+  process.chdir(repositoryRoot);
+  process.env.HOME = homeDir;
+  try {
+    return await fn(repositoryRoot, homeDir);
+  } finally {
+    process.chdir(previousCwd);
+    if (previousHome === undefined) delete process.env.HOME;
+    else process.env.HOME = previousHome;
+  }
 }
 
 async function contract(
@@ -170,18 +188,24 @@ describe("eng_orch executable entrypoint", () => {
       pauseLoop(): void {}
       disableLoopMode(): void {}
     }
-    engModeExtension({
-      pi: { Text: TestText, InteractiveMode: TestInteractiveMode },
-      registerMessageRenderer: (_customType, renderer) => {
-        expertRenderer = renderer;
-      },
-      zod,
-      on: (event, handler) => {
-        if (event === "before_agent_start") {
-          beforeAgentStartHandler = handler as BeforeAgentStartHandler;
-        }
-      },
-      registerTool: (tool) => registered.set(tool.name, tool),
+    await withRepo(async (repositoryRoot, homeDir) => {
+      engModeExtension({
+        pi: { Text: TestText, InteractiveMode: TestInteractiveMode },
+        registerMessageRenderer: (_customType, renderer) => {
+          expertRenderer = renderer;
+        },
+        zod,
+        on: (event, handler) => {
+          if (event === "before_agent_start") {
+            beforeAgentStartHandler = handler as BeforeAgentStartHandler;
+          }
+        },
+        registerTool: (tool) => registered.set(tool.name, tool),
+      });
+      expect(realpathSync(join(repositoryRoot, ".agents", "skills", "how"))).toBe(
+        realpathSync(join(import.meta.dir, "..", "skills", "how")),
+      );
+      expect(existsSync(join(homeDir, ".agents"))).toBeFalse();
     });
     expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
     expect(registered.get("loop")).toMatchObject({ strict: true, loadMode: "essential" });
@@ -236,5 +260,44 @@ describe("eng_orch executable entrypoint", () => {
       mode: "code-producing",
     });
     expect(output).toMatchObject({ details: { decision: "proceed" } });
+  });
+
+  it("still registers tools when the agent-skills overlay cannot write the repo dest", async () => {
+    const repositoryRoot = await root();
+    await mkdir(join(repositoryRoot, ".git"));
+    await mkdir(join(repositoryRoot, ".agents"));
+    await writeFile(join(repositoryRoot, ".agents", "skills"), "not a directory\n");
+    const previousCwd = process.cwd();
+    process.chdir(repositoryRoot);
+    const registered = new Map<string, string>();
+    const chain = {
+      optional: () => chain,
+      int: () => chain,
+      positive: () => chain,
+      nonnegative: () => chain,
+    };
+    try {
+      engModeExtension({
+        pi: {
+          Text: class {
+            constructor(readonly text: string, readonly paddingX: number, readonly paddingY: number) {}
+          },
+        },
+        registerMessageRenderer: () => {},
+        zod: {
+          object: () => ({}),
+          enum: () => chain,
+          string: () => chain,
+          number: () => chain,
+          boolean: () => chain,
+          array: () => chain,
+        },
+        on: () => {},
+        registerTool: (tool) => registered.set(tool.name, tool.name),
+      });
+    } finally {
+      process.chdir(previousCwd);
+    }
+    expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
   });
 });
