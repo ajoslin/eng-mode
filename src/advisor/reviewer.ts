@@ -1,4 +1,5 @@
-import { Agent, AppendOnlyContextManager, ThinkingLevel } from "@oh-my-pi/pi-agent-core";
+import { Agent, type AgentOptions, AppendOnlyContextManager, ThinkingLevel } from "@oh-my-pi/pi-agent-core";
+import type { ApiKey, Model } from "@oh-my-pi/pi-ai";
 import type { ExtensionContext } from "@oh-my-pi/pi-coding-agent";
 import {
 	resolveThinkingLevelForModel,
@@ -62,6 +63,19 @@ function configuredThinking(config: CompiledEngAdvisorConfig): ThinkingLevel {
 	return levels[config.thinking];
 }
 
+interface AdvisorCredentialRegistry {
+	resolver(model: Model, sessionId?: string): ApiKey;
+}
+
+export function advisorCredentialOptions(
+	modelRegistry: AdvisorCredentialRegistry,
+	providerSessionId: string,
+): Pick<AgentOptions, "getApiKey"> {
+	return {
+		getApiKey: model => modelRegistry.resolver(model, providerSessionId),
+	};
+}
+
 export class InProcessReviewer {
 	readonly #agent: Agent;
 	readonly #reporter: FindingReporter;
@@ -94,6 +108,7 @@ export class InProcessReviewer {
 			sessionId: providerSessionId,
 			promptCacheKey: providerSessionId,
 			getToolChoice: () => this.#reporter.requirement(this.#reviewTurns >= MAX_TOOL_TURNS - 1),
+			...advisorCredentialOptions(options.ctx.modelRegistry, providerSessionId),
 			cwdResolver: () => options.ctx.cwd,
 			intentTracing: false,
 		});

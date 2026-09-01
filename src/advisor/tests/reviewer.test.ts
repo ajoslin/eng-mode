@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import type { Model } from "@oh-my-pi/pi-ai";
 import { zod } from "@oh-my-pi/pi-coding-agent";
+import { advisorCredentialOptions } from "../reviewer";
 import { createFindingReporter } from "../finding-reporter";
 
 const firstReport = [
@@ -19,6 +21,25 @@ const firstReport = [
 		status: "open" as const,
 	},
 ];
+
+test("routes child agent credentials through the parent model registry", async () => {
+	const model = { provider: "openrouter", id: "advisor-model" } as Model;
+	const credential = () => "oauth-token";
+	const calls: Array<{ model: Model; sessionId: string | undefined }> = [];
+	const options = advisorCredentialOptions(
+		{
+			resolver: (requestModel: Model, sessionId?: string) => {
+				calls.push({ model: requestModel, sessionId });
+				return credential;
+			},
+		},
+		"primary-eng-advisor",
+	);
+
+	expect(options.getApiKey).toBeDefined();
+	expect(await options.getApiKey?.(model)).toBe(credential);
+	expect(calls).toEqual([{ model, sessionId: "primary-eng-advisor" }]);
+});
 
 describe("finding reporter", () => {
 	test("keeps the first valid report when the model calls the tool again", async () => {
