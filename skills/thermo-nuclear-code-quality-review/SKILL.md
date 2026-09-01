@@ -92,7 +92,7 @@ Escalate findings when you see:
 
 - A complicated implementation where a cleaner reframing could delete whole categories of complexity.
 - Refactors that move code around but fail to reduce the number of concepts a reader must hold in their head.
-- A file crossing 1000 lines due to the PR, especially if the new code could be split out.
+- A file crossing 1000 lines due to the PR.
 - New conditionals bolted onto unrelated code paths.
 - One-off booleans, nullable modes, or flags that complicate existing control flow.
 - Feature-specific logic leaking into general-purpose modules.
@@ -110,7 +110,7 @@ Escalate findings when you see:
 
 ## Preferred Remedies
 
-Preferred remedies delete complexity. Narrow the instance. Reuse a pattern this stack already has. New helpers, queues, guards, or adapters only if this stack already does that for a named exclusive resource. If the honest remedy extends the change — new durable state, schema, subsystem, or extra surface — escalate; do not prescribe it as the fix.
+Preferred remedies delete complexity — fewer statements and fewer branches; packing control flow to shrink loc is the same fail as extracting to drop CC. Narrow the instance. Reuse a pattern this stack already has. New helpers, queues, guards, or adapters only if this stack already does that for a named exclusive resource. If the honest remedy extends the change — new durable state, schema, subsystem, or extra surface — escalate; do not prescribe it as the fix.
 
 When you identify a code-quality problem, prefer suggestions like:
 

@@ -28,7 +28,7 @@ You are reviewing whether the code achieves this intent well. Do NOT question th
 
 ## Instructions
 
-Review the code through every lens in the rubric and the code-quality lens above that you find relevant. Do not force lenses that don't apply. A simple bug fix does not need paragraphs about architectural integrity. Suggest the narrow correction already in scope. If the honest remedy extends the change — new durable state, schema, subsystem, or extra surface — stop and ask; do not enlarge the work.
+Review the code through every lens in the rubric and the code-quality lens above that you find relevant. Do not force lenses that don't apply. A simple bug fix does not need paragraphs about architectural integrity. Suggest the narrow correction already in scope — fewer statements and fewer branches; packing control flow to shrink loc is the same fail as extracting to drop CC. If the honest remedy extends the change — new durable state, schema, subsystem, or extra surface — stop and ask; do not enlarge the work.
 
 For each finding, provide:
 
