@@ -31,7 +31,7 @@ Start with the [Eng Mode operator guide](docs/guide/README.md). It explains the 
 omp plugin install github:ajoslin/eng-mode
 ```
 
-Restart OMP. Plugin load also installs an allowlisted judgment-layer overlay into the current repository's `.agents/skills` (symlinks into the plugin package, plus a relative `verify-project` link to the repo contract) so Codex and OpenCode can load those skills without cloning this repo. Then open every repository where you use Eng Mode and run:
+Restart OMP. Load also links a few skills into the repo `.agents/skills` for Codex/OpenCode. Then open every repository where you use Eng Mode and run:
 
 ```text
 setup-eng-mode
@@ -80,7 +80,6 @@ The thin extension entrypoint, `src/extension.ts`, registers independent modules
 - `goal-tool.ts` registers `goal`;
 - `loop-tool.ts` registers `loop`;
 - `eng-orchestrator.ts` registers the repository-contract gate and durable orchestration store;
-- `eng-advisor.ts` idempotently installs the shipped OMP `WATCHDOG.md` and `WATCHDOG.yml` into the active agent directory;
-- `eng-agent-skills.ts` idempotently exposes the judgment-layer `agentSkillsAllowlist` at `<repo>/.agents/skills/<name>` as directory symlinks into the installed plugin, and links `verify-project` to the repository contract when present. OMP precedence is unchanged (`.omp/skills` 100, `omp-plugins` 90, agents 70), so the overlay cannot beat native `.omp` skills. It never writes `$HOME/.agents/skills` and never clones this repo into another worktree.
+- `eng-advisor.ts` idempotently installs the shipped OMP `WATCHDOG.md` and `WATCHDOG.yml` into the active agent directory.
 
 Do not install duplicate `goal` or `loop` tools alongside this plugin.
