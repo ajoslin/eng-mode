@@ -1,0 +1,242 @@
+version: 1
+sourceRefs:
+  - id: eng-mode
+    path: skills/eng-mode/SKILL.md
+    heading: Eng Mode
+  - id: babysit
+    path: skills/eng-mode/playbooks/babysit.md
+    heading: Babysit
+  - id: shipping
+    path: skills/eng-mode/playbooks/shipping.md
+    heading: Shipping
+  - id: autopilot-full
+    path: skills/eng-mode/playbooks/autopilot-full.md
+    heading: Autopilot-full
+  - id: autopilot-stack
+    path: skills/eng-mode/playbooks/autopilot-stack.md
+    heading: Autopilot-stack
+  - id: orchestrate
+    path: skills/eng-mode/playbooks/orchestrate.md
+    heading: Orchestrate
+  - id: github-graphite
+    path: skills/github-graphite/SKILL.md
+    heading: GitHub and Graphite
+  - id: pr-cockpit
+    path: skills/pr-cockpit/SKILL.md
+    heading: PR Cockpit forge adapter
+  - id: graphite
+    path: skills/graphite/SKILL.md
+    heading: Graphite
+actors:
+  - id: operator
+  - id: lead
+  - id: coordinator
+  - id: pr-owner
+  - id: gate-verifier
+  - id: live-verifier
+  - id: audit-verifier
+  - id: babysitter
+  - id: shipping
+  - id: topology-owner
+  - id: provider
+states:
+  - id: pending
+  - id: building
+  - id: merge-ready
+  - id: verified
+  - id: stack-ready
+  - id: waiting
+  - id: paused
+    resumable: true
+  - id: landed
+    terminal: true
+  - id: completed
+    terminal: true
+  - id: failed
+    terminal: true
+  - id: abandoned
+    terminal: true
+tools:
+  - id: goal
+  - id: loop
+  - id: eng_orch
+evidence:
+  - id: head-sha
+  - id: base-sha
+  - id: repository-gates
+  - id: live-surface
+  - id: receipts-diff
+  - id: patch-identity
+  - id: babysit-merge-ready
+  - id: pr-posted-verdict
+  - id: topology-append-receipt
+  - id: root-countersign
+  - id: provider-snapshot
+  - id: provider-arm-confirmation
+  - id: provider-watch-event
+mutations:
+  - id: implement
+    owner: pr-owner
+  - id: canonical-store-write
+    owner: coordinator
+  - id: topology-append
+    owner: topology-owner
+  - id: merge
+    owner: shipping
+authorities:
+  - id: merge-authority
+    actor: shipping
+    mutation: merge
+verification:
+  implementationActor: pr-owner
+  headEvidence: head-sha
+  baseEvidence: base-sha
+  patchIdentityEvidence: patch-identity
+  lanes:
+    - actor: gate-verifier
+      evidence: repository-gates
+    - actor: live-verifier
+      evidence: live-surface
+    - actor: audit-verifier
+      evidence: receipts-diff
+stackReady:
+  state: stack-ready
+  requiredEvidence:
+    - head-sha
+    - repository-gates
+    - live-surface
+    - receipts-diff
+    - babysit-merge-ready
+    - pr-posted-verdict
+    - topology-append-receipt
+    - root-countersign
+  requiredMutation: topology-append
+babysit:
+  actor: babysitter
+  forbiddenMutations:
+    - merge
+    - topology-append
+  forbiddenCapabilities:
+    - merge-when-ready-request
+    - force-push
+    - restack
+providers:
+  - id: github-graphite
+    sourceRef: github-graphite
+    capabilities:
+      - id: snapshot
+        owner: external-skill
+        delegatesTo: better-github-skill
+        external: true
+        confirmationEvidence: [provider-snapshot]
+      - id: watch
+        owner: external-skill
+        delegatesTo: better-github-skill
+        external: true
+        confirmationEvidence: [provider-watch-event]
+      - id: rearm
+        owner: external-skill
+        delegatesTo: better-github-skill
+        external: true
+        confirmationEvidence: [provider-watch-event]
+      - id: frozen-queue
+        owner: provider
+        confirmationEvidence: [provider-snapshot]
+      - id: arm-confirmation
+        owner: graphite
+        confirmationEvidence: [provider-arm-confirmation]
+      - id: topology
+        owner: graphite
+        confirmationEvidence: [topology-append-receipt]
+      - id: merge-when-ready-request
+        owner: graphite
+        confirmationEvidence: [provider-arm-confirmation]
+      - id: disarm
+        owner: graphite
+        confirmationEvidence: [provider-snapshot]
+      - id: compare-head-base
+        owner: external-skill
+        delegatesTo: better-github-skill
+        external: true
+        confirmationEvidence: [head-sha, base-sha]
+    requirements: [snapshot, watch, rearm, frozen-queue, arm-confirmation, topology, merge-when-ready-request, disarm, compare-head-base]
+  - id: pr-cockpit
+    sourceRef: pr-cockpit
+    capabilities:
+      - id: snapshot
+        owner: provider
+        confirmationEvidence: [provider-snapshot]
+      - id: watch
+        owner: provider
+        confirmationEvidence: [provider-watch-event]
+      - id: rearm
+        owner: provider
+        confirmationEvidence: [provider-watch-event]
+      - id: frozen-queue
+        owner: provider
+        confirmationEvidence: [provider-snapshot]
+      - id: arm-confirmation
+        owner: graphite
+        confirmationEvidence: [provider-arm-confirmation]
+      - id: topology
+        owner: graphite
+        confirmationEvidence: [topology-append-receipt]
+      - id: merge-when-ready-request
+        owner: graphite
+        confirmationEvidence: [provider-arm-confirmation]
+      - id: disarm
+        owner: graphite
+        confirmationEvidence: [provider-snapshot]
+      - id: compare-head-base
+        owner: provider
+        confirmationEvidence: [head-sha, base-sha]
+    requirements: [snapshot, watch, rearm, frozen-queue, arm-confirmation, topology, merge-when-ready-request, disarm, compare-head-base]
+references:
+  skills: [eng-mode, github-graphite, pr-cockpit, graphite, better-github-skill]
+  agents: [implementation-agent, judgment-agent]
+  playbooks: [babysit, shipping, autopilot-full, autopilot-stack, orchestrate]
+  tools: [goal, loop, eng_orch]
+transitions:
+  - id: start-build
+    from: pending
+    to: building
+    actor: pr-owner
+    mutation: implement
+  - id: declare-merge-ready
+    from: building
+    to: merge-ready
+    actor: babysitter
+    evidence: [babysit-merge-ready, head-sha, base-sha]
+  - id: verify-head
+    from: merge-ready
+    to: verified
+    actor: lead
+    evidence: [head-sha, base-sha, repository-gates, live-surface, receipts-diff]
+  - id: append-stack
+    from: verified
+    to: stack-ready
+    actor: topology-owner
+    mutation: topology-append
+    evidence: [head-sha, repository-gates, live-surface, receipts-diff, babysit-merge-ready, pr-posted-verdict, topology-append-receipt, root-countersign]
+  - id: land-independent
+    from: verified
+    to: landed
+    actor: shipping
+    mutation: merge
+    authority: merge-authority
+    evidence: [head-sha, base-sha, repository-gates, live-surface, receipts-diff, provider-arm-confirmation]
+  - id: land-stack
+    from: stack-ready
+    to: landed
+    actor: shipping
+    mutation: merge
+    authority: merge-authority
+    evidence: [head-sha, base-sha, repository-gates, live-surface, receipts-diff, babysit-merge-ready, pr-posted-verdict, topology-append-receipt, root-countersign, provider-arm-confirmation]
+  - id: pause-build
+    from: building
+    to: paused
+    actor: lead
+  - id: resume-build
+    from: paused
+    to: building
+    actor: lead

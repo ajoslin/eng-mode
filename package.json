@@ -11,6 +11,7 @@
     "docs",
     "skills",
     "src",
+    "workflow-law.yml",
     "WATCHDOG.md",
     "WATCHDOG.yml",
     "README.md"
@@ -21,9 +22,10 @@
     ]
   },
   "scripts": {
+    "workflow-law:check": "bun src/workflow-law-check.ts",
     "test": "bun test ./src",
     "typecheck": "bunx tsgo -p tsconfig.json",
-    "check": "bun run test && bun run typecheck"
+    "check": "bun run workflow-law:check && bun run test && bun run typecheck"
   },
   "dependencies": {
     "@oh-my-pi/pi-ai": "17.4.0",

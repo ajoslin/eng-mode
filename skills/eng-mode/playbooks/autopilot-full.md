@@ -1,13 +1,14 @@
 ### Autopilot-full
 
-**Drive independent PRs through verified merge when the user grants merge authority.**
+**Drive a queue of independent PRs through verified landing when the operator grants merge authority. The root owns verdicts and coordination, never a PR.**
 
-1. Mark operator-owned items. They stop at merge-ready. Execution begins only after an explicit go.
-2. Run independent writers in true parallel. Each one-shot writer owns one exclusive branch, then yields.
-3. The root verifies each yielded head, opens its PR, runs Babysit, and merges it when authorized. Unrelated writers continue.
-4. A new head invalidates its verdict unless patch identity is unchanged. Corrections use a fresh writer, then re-verification.
-5. The root owns the queue. After a merge, or when an operator-owned PR reaches merge-ready, it gives the next independent item to a fresh writer. Dependent changes route to Autopilot-stack.
-6. Merge only with full-autonomy authority, a clean current-head verdict, and a quiet Babysit review-agent loop. Operator-owned items wait.
-7. For requested watching, keep the objective in `goal`. When no blocking provider wait owns the event, invoke `loop` with a prompt and limit. Each turn audits ownership, protocol, and trails; stop `loop` when its predicate passes. User stop sends immediate zero-writes instructions through `hub` and stops `loop`.
+1. Mark operator-owned items; they stop at merge-ready. State the protocol and wait when asked for a plan. Begin writes only after an explicit go, then keep the falsifiable program objective in `goal` and the finite queue in `todo`.
+2. Assign every PR one persistent accountable owner on an exclusive branch. That owner, or a named successor on the same branch, owns build, provider registration and PR creation through **Opening a PR**, proof on the real surface through `verify-project`, triage, cleanup, the decision trail, and Babysit to merge-ready. It also owns any fix-forward and repeats those stages for the new head. The root never implements or babysits a PR.
+3. Run self-contained owners in parallel from the correct base. Serialize only genuinely overlapping writes. Route dependent work to **Autopilot-stack**; do not manufacture a stack for independent work.
+4. At each merge-ready head, the root commissions three independent lanes and aggregates `VERIFIED(<sha>)`: repository gates, live real-surface proof, and receipts-plus-diff audit that distrusts the PR body. Each lane returns `PASS`, `PASS+NOTES`, or `FAIL`, pinned to that exact SHA. Any `FAIL` blocks; retain notes in the aggregate verdict. The root never serves as a lane. Post the verdict on the PR and return findings to its owner. A new SHA voids the verdict unless `git patch-id` proves identity; otherwise run all three lanes again.
+5. The root countersigns the current `VERIFIED(<sha>)` and keeps the queue, ownership, liveness, replacements, and any new pinned gate or budget raise. The PR owner may land only by running **Shipping** with explicit merge authority, that countersign, and Babysit merge-ready at the same SHA. Babysit never merges. The root never merges. Operator-owned items remain waiting for the operator.
+6. Use only the selected provider for PR state and watching. Its documented watcher event schema, rearm operation, `READY` / `WAITING` / `ADVANCE` / `COMPLETE` states, arming confirmation, merge-when-ready request and disarm, and current-head/base comparison are authoritative; if an operation is missing, stop rather than fall back. Prefer its blocking wait. When repeated audit turns are required, the main session uses `loop` against the active goal, with an event-driven wake or a 30-minute maximum audit cadence.
+7. On every wake, probe each owner, reconcile provider events, verdict SHA, Babysit state, and decision trail. Count only side effects—commits, pushes, PR/check/thread changes, proof receipts, or trail records—as progress. Replace a stuck owner immediately with a named successor on the same exclusive branch; do not leave the PR ownerless. After batched merges, run a retrospective and post-merge review-comment sweep.
+8. On an operator hold or stop, immediately send every owner a zero-write instruction, stop the loop, and preserve branches, briefs, trails, watcher state, and queue placement for resumption.
 
-Report writer, PR, head SHA, verdict, merges, gates, and trail paths.
+**Reply:** for each item, report owner or successor, PR, current head SHA, `READY` / `WAITING` / `ADVANCE` / `COMPLETE`, Babysit gate, `VERIFIED` verdict and lane receipts, countersign, merge or next action, operator gates, and decision-trail location.

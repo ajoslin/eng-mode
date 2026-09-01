@@ -18,7 +18,7 @@ Open a todo of the playbook steps. An active goal owns the durable program objec
 
 #### Roles and placement
 
-- **Coordinator (this chat).** Local. Frames, authors briefs, drains the inbox, owns the human report, makes judgment calls. It never authors or edits product code: conflicted merges, restacks, and code changes are always tasks. Mechanically landing a verified unit (fast-forward or clean cherry-pick of a worker's commit, then push) is bookkeeping the coordinator may do itself on repos where local git is cheap; queueing finished work behind an idle stacker is how a deadline harvests nothing. The loop is agentic end to end. Agents are spawned, resumed, and drained only through the `task` tool and `hub`. State reads and writes go through the `eng_orch` tool at drain points, one call in and one line out, to conserve context. The tool never spawns, waits, or wakes anything.
+- **Coordinator (this chat).** Local. Frames, authors briefs, drains the inbox, owns the human report, makes judgment calls, and is the only actor that appends `overview.md` or mutates canonical program state through `eng_orch`. It never authors or edits product code: conflicted merges, restacks, and code changes are always tasks. Mechanically landing a verified unit (fast-forward or clean cherry-pick of a worker's commit, then push) is bookkeeping the coordinator may do itself on repos where local git is cheap; queueing finished work behind an idle stacker is how a deadline harvests nothing. The loop is agentic end to end. Agents are spawned, resumed, and drained only through the `task` tool and `hub`. The coordinator applies store mutations only at drain points. The tool never spawns, waits, or wakes agents.
 - **Sub-coordinator.** Always local, durable, one per track, and only when the program exceeds what one coordinator's drains can manage. A track the coordinator can drain itself needs no middle layer: each nested layer re-pays a full orientation preamble, and a blocking sub-coordinator hides its children while the parent idles. Owns its track's units and boards, authors its workers' briefs, spawns its own workers and verifiers. Rolls up aggregates at wave boundaries; never forwards raw child reports. Cap in-flight children at what one drain can process, roughly ten, as a rolling window; never as blocking batches, which cost the slowest child of every batch.
 - **Worker / verifier.** One writer per exclusive git branch. Do not use `isolated: true` for PR-owning units: OMP isolated tasks apply completed output onto the parent tree and cannot be revived. Independent PR owners are one-shot non-isolated `implementation-agent` (or `judgment-agent`) workers, each on a branch the coordinator already checked out or that the worker creates and pushes before it yields. Competing design candidates stay on `local://` artifacts, never isolated writer workspaces. Run a unit's verifier on a different model family from its worker. Web proof mapped by the project verification contract is parent-sequential `verify-project`; workers return non-browser evidence so the coordinator can run that surface.
 
@@ -28,16 +28,16 @@ Exactly one top-level session coordinates a program. Other sessions may inspect 
 
 #### Store layout
 
-Create `.audit/orchestrate/<project-slug>/` (gitignored). That path is the `store` argument of every `eng_orch` call. Run `eng_orch init`, record its returned session id in the first standing order, and pass that literal value as `session` on every session-scoped call; every worker brief receives the literal value rather than relying on inherited environment. Every file has exactly one writer; owners publish facts, readers aggregate at read time. Use `eng_orch` for bookkeeping, while its canonical plain TSV and JSON stay readable without the tool.
+Create `.audit/orchestrate/<project-slug>/` (gitignored). That path is the `store` argument of every `eng_orch` call. Run `eng_orch init`, record its returned session id in the first standing order, and pass that literal value as `session` on every session-scoped call; every worker brief receives the literal value rather than relying on inherited environment. Use `eng_orch` for bookkeeping, while its canonical plain TSV and JSON stay readable without the tool. Write authority is structural: each worker or verifier may only publish its own immutable completion pointer with `inbox_push`, once per attempt; its report points to an immutable receipt or artifact. It never edits canonical files or another actor's pointer. The coordinator alone claims and acknowledges pointers, appends `overview.md`, and applies `eng_orch`-managed canonical mutations at drain points. Other sessions and agents are readers.
 
 - `preferences.md` is the standing-orders register: numbered lines, one constraint each (model policy, stack shape and count, verification bar, forbidden paths, escalation policy). Paste it verbatim into every spawn and every resume; directives decay across resumes, and each dropped one costs a human turn. When you catch yourself restating an instruction, append the line before you act (`principle-encode-lessons-in-structure`).
-- `overview.md` is the durable PR and issue DB.
-- `units.tsv` has one row per unit: id, track, state, branch, PR, head SHA, brief path.
-- `frontier.json` is the computed merge frontier, per Stack safety. Recompute through the selected forge provider, never from narrative.
-- `ledger.tsv` is the verification ledger, per Verification.
-- `inbox/` holds unclaimed completion pointers. `inbox-claimed/<claim-id>/` holds crash-recoverable batches until their derived rows are committed and acknowledged. `gates.md` parks human gates (question, options, default on no answer) so a completion flood cannot wipe Ask state.
+- `overview.md` is the durable PR and issue event log. At a drain, the coordinator appends one line for each accepted pointer; it never edits or replaces prior lines.
+- `units.tsv` has one row per unit: id, track, state, branch, PR, head SHA, brief path. Create a row with `unit_add`, then update that row in place with `unit_set`; never append a second current-state row for the same unit.
+- `frontier.json` is derived provider-owned topology. The coordinator replaces it with `frontier_set` after the selected provider reports authoritative state; nobody hand-edits it.
+- `ledger.tsv` is the append-only verification ledger, per Verification.
+- `inbox/` holds immutable, unclaimed completion pointers. `inbox-claimed/<claim-id>/` holds crash-recoverable batches until the coordinator commits their derived rows and acknowledges them. `gates.md` parks human gates (question, options, default on no answer) so a completion flood cannot wipe Ask state.
 - `decisions.tsv` is the trail via the show-me-your-work skill.
-- `status.md` is derived from `units.tsv` and `ledger.tsv` at each drain.
+- `status.md` is derived from `units.tsv`, `ledger.tsv`, gates, and frontier. Regenerate it with `status` at each drain; never maintain it by hand.
 
 `local://` is session-scoped bulk context. `.audit/orchestrate/<slug>/` is restart-surviving program state. `goal` owns the program outcome, `loop` owns bounded drain or audit repetition when no blocking wait exists, and `todo` owns the finite graph. None replaces the store.
 
@@ -54,6 +54,7 @@ ACCEPTANCE   checkable criteria, one per line
 VERIFY       exact commands or the project verification contract's feature map, plus known gotchas
 TIMEBOX      rough cap on runtime; on expiry, return partial findings and stop rather than run on
 FORBIDDEN    no rebase, no force-push, no direct forge executable, no isolated PR owners,
+             no fixes outside SCOPE, and no provider or stack-topology mutation
 REPORT       status, branch, head SHA, PRs, verdict, what you actually ran, deviations,
              suggested follow-ups
 STANDING     <preferences.md pasted verbatim>
@@ -81,10 +82,10 @@ A dependency is a context relay, not just ordering: undeclared upstream context 
 
 #### Queue and drain
 
-- A worker or verifier externalizes its outcome before yielding by pushing an inbox pointer. The pointer is the completion record. Native task results and hub messages only wake the coordinator; never derive a unit transition from which transcript received them.
-- Collect after every native completion wake and after a bounded wait. Begin one pass with `eng_orch inbox_claim`. A null claim means no work for this coordinator. Arrivals during a claim remain in `inbox/` for the next pass.
-- Classify every claimed pointer (landed, needs-verify, failed, zombie, noise), write the resulting rows through `eng_orch` `unit_add`, `unit_set`, and `ledger_record`, and only then run `eng_orch inbox_ack` with the claim id. Never acknowledge first. A failed turn leaves the claim durable.
-- Finish the pass with `eng_orch status`, then spawn the next wave in one message. Never deep-review inline; review work becomes a verifier unit, and diffs are not reviewed during collection.
+- A worker or verifier externalizes its outcome before yielding with `eng_orch inbox_push`. This immutable pointer report is its only store write. Native task results and hub messages only wake the coordinator; never derive a unit transition from which transcript received them.
+- Drain in batches at exactly four triggers: after the coordinator finishes a critical section, at a track rollup, on a frontier watcher wake, and before a human report. Critical sections are brief authoring, a stack operation, a conflict decision, writing a gate, or updating ledger or frontier. A bounded watcher heartbeat may produce the frontier-wake trigger, but elapsed time alone does not create another trigger.
+- At each trigger, begin one transaction with `eng_orch inbox_claim`. A null claim means no work for this coordinator. Arrivals during a claim remain in `inbox/` for the next pass. Classify every claimed pointer (landed, needs-verify, failed, zombie, noise), append its accepted event to `overview.md`, then apply the derived canonical changes through `eng_orch` with `unit_add`, `unit_set`, `ledger_record`, `gate_park`, or `frontier_set` as required. Run `eng_orch status` to regenerate derived status. Only after every mutation succeeds may the coordinator call `inbox_ack` with the claim id. Never acknowledge first; a failed turn leaves the claim durable for recovery.
+- After acknowledgment, spawn the next wave in one message. Never deep-review inline; review work becomes a verifier unit, and diffs are not reviewed during collection.
 - Account for every spawned child at its track's rollup: claimed, respawned, or its scope explicitly absorbed. Silently redoing a missing child's work hides both the wasted spend and the coverage gap its result existed to close.
 - A collection turn ends with the three lines from `eng_orch status`: counts against the states, what changed, gates open. Detail lives in `status.md`; the full reply contract applies at checkpoints and close.
 
@@ -107,17 +108,17 @@ Write ledger rows with `eng_orch ledger_record`. Check the current PR and head S
 
 CI green is an input to a verdict, not a verdict. Behavioral work needs better than `type-check-only`. `verifier-blocked` is not a pass; respawn when the environment heals. `verifier-failed` gets a fix unit, not a re-verify. `INCONCLUSIVE` from `verify-project` is `verifier-blocked`. A worker may self-report; a verifier overrides it on the same key. A new head SHA voids the row, so re-verify after restack. The ledger answers "was this verified", not memory and not the transcript.
 
-A unit is not done until its output is externalized the moment it lands, never batched to the end of the run: a worker pushes its branch and inbox pointer, a verifier writes its ledger row and inbox pointer, and receipts land in the store before either yields. Work that exists only in a transcript or on one VM when it dies was never done.
+A unit is not done until its output is externalized before its owner yields. A worker or verifier pushes one immutable inbox pointer for that attempt, including the branch, exact head SHA, verdict, and receipt or report location. At the next drain, the coordinator records any accepted ledger row and derived unit state before acknowledging the claim. Work that exists only in a transcript or on one VM when it dies was never done.
 
 #### Liveness and failure
 
 - Never resume an agent to check on it; a resume restarts an idle agent. Probe read-only: the ledger, `units.tsv`, selected-provider PR state, pushed branches, and `hub` job status. Transcript mtime is not liveness. `hub send` wakes parked agents, so never send a "status?" ping.
 - Several children going silent together, or an unrelated agent appearing in this session's `hub` roster, is a session-collision signature. First suspect another top-level OMP session opening or closing. Stop spawning; continue collecting store pointers, and park the routing failure as a gate.
 - A silent death gets a synthetic postmortem pointer (unit, failure mode, last evidence, options). Replan on evidence as it arrives; never wait for full quiescence.
-- Retry by failure mode, then abandon the unit and replan around it.
+- Classify a failed attempt before retrying. Capacity or out-of-memory failure gets a smaller-scope brief. Network failure retries the same brief. Tool or runtime failure gets a different typed-agent route appropriate to that failure, without prompt-level model or provider selection. Unknown failure gets one unchanged retry; if that fails, park a gate instead of guessing. Allow no more than two retries per unit across all classes. After the second retry fails, mark the unit abandoned and replan around it; neither a rewritten brief nor a new agent id resets the count.
 - A zombie that returns hours late reconciles against the current frontier and ledger before anything is accepted; the world moved while it slept. Salvage unique findings through a fresh unit, never a blind merge.
 - When continued spawning would produce garbage tree-wide (bad upstream output, broken acceptance, dead infra), write a stop line at the top of the standing orders, let in-flight work finish, fix the cause, clear it.
-- Bound your own infra retries the same way you bound a child's. After a few consecutive tool aborts, stop retrying: write a terminal handoff to durable state (what is done, where it lives, the exact command to resume) and end the run.
+- Bound coordinator infrastructure retries to exactly two as well. Classify and route them by the same taxonomy; after the second failure, write a terminal handoff to durable state (what is done, where it lives, the exact operation to resume) and end the run.
 - After a restart, local agents are dead. Recover the session from the store. Reattach work by PR and branch, not agent id, then collect.
 
 #### Escalation
