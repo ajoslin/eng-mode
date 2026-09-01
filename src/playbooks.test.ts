@@ -8,33 +8,31 @@ async function read(relative: string): Promise<string> {
   return readFile(join(root, relative), "utf8");
 }
 
-describe("babysit playbook merge default", () => {
-  it("squash-merges once green and approved, and does not stop at merge-ready", async () => {
+describe("delivery authority", () => {
+  it("Babysit stops at merge-ready and never lands", async () => {
     const babysit = await read("skills/eng-mode/playbooks/babysit.md");
-    expect(babysit).toContain(
-      "`drive` (the undeclared default) squash-merges once CI is green, required approvals are in, the review-agent loop is quiet, and there is no blocking change-request.",
-    );
-    expect(babysit).toContain("Skip merge only if the operator explicitly says not to merge.");
-    expect(babysit).toContain("Do not merge while parked.");
-    expect(babysit).not.toContain("Never merge");
-    expect(babysit).not.toContain("The lead stops at merge-ready");
+    expect(babysit).toContain("Babysit never mutates stack topology.");
+    expect(babysit).toContain("Every mode stops and reports at merge-ready or at a blocker");
+    expect(babysit).toContain("none merges, auto-merges, force-pushes, restacks, or changes stack topology");
+    expect(babysit).toContain("Shipping, which alone may land with explicit authority");
+    expect(babysit).not.toContain("squash-merges once");
   });
 
-  it("router names the default squash-merge", async () => {
+  it("routes PR health to Babysit and landing to Shipping", async () => {
     const skill = await read("skills/eng-mode/SKILL.md");
-    expect(skill).toContain("PR health through squash-merge when green and approved");
+    expect(skill).toContain("Babysit ends at merge-ready and never merges; landing belongs to Shipping.");
   });
 
-  it("opening-a-pr still refuses to merge from that playbook", async () => {
+  it("Opening a PR hands off without merging", async () => {
     const opening = await read("skills/eng-mode/playbooks/opening-a-pr.md");
-    expect(opening).toContain("Do not merge from this playbook");
+    expect(opening).toContain("A one-shot opener never babysits, watches, merges, or changes stack topology.");
     expect(opening).not.toContain("meaningful-contribution");
   });
 
-  it("autopilot-stack still forbids merge", async () => {
+  it("Autopilot-stack leaves landing to the operator through Shipping", async () => {
     const stack = await read("skills/eng-mode/playbooks/autopilot-stack.md");
-    expect(stack).toContain("Never merge or arm auto-merge");
-    expect(stack).toContain("Babysit in `check` mode");
+    expect(stack).toContain("The operator lands through **Shipping**.");
+    expect(stack).toContain("Nothing in this playbook merges, closes, or arms auto-merge.");
   });
 });
 
@@ -86,7 +84,7 @@ describe("goal and loop ownership", () => {
 
     expect(skill).toContain("`goal` owns the durable objective.");
     expect(skill).toContain("`loop` owns bounded repetition.");
-    expect(autonomous).toContain("invoke `loop` with a prompt and limit");
+    expect(autonomous).toContain("invoke `loop` with a fixed heartbeat");
     expect(autonomous).toContain("stop `loop`, then complete `goal`");
   });
 });

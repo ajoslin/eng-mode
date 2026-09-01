@@ -13,6 +13,16 @@ If `gt` is missing or `gt --no-interactive auth` fails, stop and report. Do not 
 
 Workers never run `gt`. One stacker per stack.
 
+## Delivery interface
+
+The named stacker is the topology owner. Freeze bottom-to-top order with `gt --no-interactive log short --stack --reverse`; inspect each tracked branch with `gt --no-interactive info <branch>`. Only that stacker may append with `gt track -p <parent>` followed by `gt submit --no-interactive`, or sync, restack, arm, and disarm landing. If these commands cannot establish parentage, stop; GitHub base refs are not a topology fallback.
+
+Before requesting merge-when-ready, record every PR's current head SHA and base from the selected forge provider. Request it with `gt submit --merge-when-ready --always --update-only --no-interactive`. Confirm arming with a fresh provider snapshot of every affected PR: each head must still equal the recorded SHA and each PR must report an active merge-when-ready request. Command success is not confirmation. If confirmation fails or the head/base changes, disarm every affected PR with `gh pr merge <n> --disable-auto`, confirm each request is absent in a fresh provider snapshot, and stop. This disarm is recovery for Graphite's request, not permission to arm GitHub auto-merge directly.
+
+During the frozen drain, use the selected provider's watcher and its `WAITING`, `READY`, `ADVANCE`, and terminal `COMPLETE` events; Graphite does not replace PR-state watching. After each `ADVANCE`, compare the next PR's current head/base with its frozen snapshot and rearm the provider watcher. Never append a newly discovered PR to the frozen queue.
+
+If a required topology, arming, disarming, snapshot, comparison, or watcher operation is undocumented, stop. Never substitute another provider or invent a command.
+
 ## Commits
 
 Stage the intended paths and commit with plain Git:

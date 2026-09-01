@@ -1,9 +1,14 @@
 ### Bug fix
 
-1. Read `diagnosing-bugs`. For web symptoms the project verification contract maps, reproduce through the mapped `verify-project` suite after its same-allocation health gate passes; otherwise use OMP `browser`, `debug`, or the real CLI/TUI process.
-2. Trace the mechanism before proposing fixes. Use `how`, `why`, ADRs, LSP, and `debug`. For a stubborn falsifiable search, keep the bug outcome in `goal` and invoke `loop` with a prompt and limit. Never edit the ruler.
-3. Name the data shape and root cause. Run `architect` for a changed module interface and `domain-modeling` for changed terminology.
-4. Implement the smallest vertical slice. Follow the project test law `project-standards` names; use `tdd` only when a cheap red test represents an uncovered observable contract at the correct seam. Read the stack-specific skills `project-standards` names before changing code they govern.
-5. Verify the original reproduction on the same surface. Failed health gate, unmapped path, shared-stack, or wrong-surface evidence is `INCONCLUSIVE`. Then run narrow applicable checks.
-6. Run the pre-commit pass `project-standards` names, then the project review skill or `interrogate` when risk warrants. If delivery includes a PR, run **Opening a PR**.
-7. Report repro, mechanism, fix, evidence, and exact checks.
+**The lead owns the task: plan, review, and verify.** Delegate bounded investigation and implementation, but inspect the evidence and diff yourself; reviewers independently judge the result.
+
+Be scientific. Reproduce the exact symptom on its real surface before fixing it. Every shipped line must follow from runtime evidence. A belt-and-suspenders change that “might help” is a hypothesis, not a fix: reject it, or revert it when evidence refutes the hypothesis. Ship only the smallest change justified by the surviving mechanism.
+
+1. Read `diagnosing-bugs` and build its red-capable feedback loop. For mapped web symptoms, drive the mapped `verify-project` suite only after its same-allocation health gate passes; otherwise use OMP `browser`, `debug`, or the real CLI/TUI process. A passing health gate does not reproduce the symptom. If the health gate fails, the path is unmapped, the stack is shared, or the surface is wrong, evidence is `INCONCLUSIVE`, never a pass.
+2. Reproduce and minimize before proposing a fix. Record the exact failing invocation and output. Stage the failing reproduction or earned regression test before the fix so the delivery is a sequence of verifiable units; follow the project test law `project-standards` names.
+3. Rank falsifiable hypotheses and test them through `diagnosing-bugs`. When subsystem mechanics or regression history are unclear, fan out `how` and `why` investigation in parallel, then use ADRs, LSP, `debug`, and high-information probes that split the remaining hypothesis space as nearly in half as possible. Confirm the surviving causal mechanism with runtime evidence before any architecture fan-out. Do not guess or design around a plausible but unconfirmed cause.
+4. Name the data shape and root cause. Use `domain-modeling` for changed terminology. If the fix changes a module interface, run `architect` only after the mechanism is confirmed.
+5. Delegate a specifically scoped implementation when useful, then review its diff. Implement the smallest evidence-backed vertical slice. Read the stack-specific skills `project-standards` names before changing governed code.
+6. Verify the original reproduction on the same surface and capture its passing output. A unit test proves branch behavior, not absence of the reported symptom; neither a passing unit test nor a passing health gate authorizes the fix without causal evidence and same-surface red-to-green proof. Run narrow applicable checks afterward.
+7. Run the pre-commit pass `project-standards` names, then the project review skill or `interrogate` when risk warrants. If delivery includes a PR, run **Opening a PR**.
+8. Report what was broken, the surviving mechanism, the fix, lead/delegate/reviewer ownership, and exact checks. Paste the failing-then-passing reproduction output verbatim.

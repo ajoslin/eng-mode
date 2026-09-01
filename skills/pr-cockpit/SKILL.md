@@ -25,6 +25,25 @@ Before the first forge operation in a session, run `pr-cockpit --help`. If the c
 
 This is explicit composition inside one selected provider. It is not permission to substitute tools. Use `gh` and `gt` only for the operations assigned to them below. Return to PR Cockpit for observation after every GitHub or Graphite mutation.
 
+## Delivery interface
+
+Use `pr-cockpit REF --json` as the authoritative snapshot of head SHA, base ref/SHA, checks, threads, and merge state; use `pr-cockpit REF --diff` for the receipts-and-diff audit. Re-read `--json` immediately before a decision and compare its current head and base with the pinned pair used for verification. A changed head or base invalidates the snapshot. Missing fields or cached data stop the operation; they never mean absent or ready.
+
+Before watching a stack or queue, freeze its ordered PR references and head SHAs. The watcher record is `{ event, ref, head, base, reason }`, where `event` is exactly one of:
+
+- `WAITING`: the frozen frontier is unchanged and `pr-cockpit listen REF` is armed.
+- `READY`: a fresh JSON snapshot shows that frontier merge-ready at `head`.
+- `ADVANCE`: the frozen frontier merged; move to the next frozen PR and snapshot it before rearming.
+- `COMPLETE`: every PR in the frozen queue is merged. This is the only terminal event.
+
+After `listen` returns, re-read full JSON and classify the event; watcher exit alone proves nothing. Rearm after `READY`, any mutation or reconnect, and `ADVANCE`, unless the result is `COMPLETE` or a blocker. Do not add PRs discovered after the queue was frozen; use a new watch.
+
+For independent merge-when-ready, Shipping requests GitHub auto-merge with `pr-cockpit auto-merge REF enable`. Confirm arming only when a fresh JSON snapshot still names the requested head and reports GitHub auto-merge active. Disarm with `pr-cockpit auto-merge REF disable` and confirm it absent at the same head. `cockpit-auto-merge` is separate local automation, not this merge-when-ready operation. Command success or stale cached state is not confirmation.
+
+For dependent stacks, one named stack owner is the topology owner. Only that owner runs Graphite's documented topology, append, merge-when-ready, or disarm operations. Freeze order through Graphite, then observe every affected PR through Cockpit. Confirm Graphite arming only when fresh Cockpit JSON at each recorded head reports the request active; confirm disarming reports it absent. After each `ADVANCE`, compare the next PR's current head/base with its frozen snapshot before rearming `listen`.
+
+If this skill or `graphite` does not document a required operation, stop. A failed or unsupported operation never authorizes another provider or an improvised command.
+
 ## Read
 
 ```sh
