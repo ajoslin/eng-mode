@@ -83,9 +83,16 @@ function installSkill(name: string, pluginRoot: string, skillsDir: string): Agen
   return { status: "skipped", name, dest, source: resolvedSource, reason: "destination exists and is not a symlink we own" };
 }
 
+function resolveHomeDir(homeDir: string | undefined): string {
+  if (homeDir !== undefined && homeDir.length > 0) return resolve(homeDir);
+  const fromEnv = process.env.HOME;
+  if (fromEnv !== undefined && fromEnv.length > 0) return resolve(fromEnv);
+  return resolve(homedir());
+}
+
 export function installAgentSkills(input: InstallAgentSkillsInput): InstallAgentSkillsResult {
   const pluginRoot = resolve(input.pluginRoot);
-  const homeDir = resolve(input.homeDir ?? homedir());
+  const homeDir = resolveHomeDir(input.homeDir);
   const skillsDir = join(homeDir, ".agents", "skills");
   mkdirSync(skillsDir, { recursive: true });
   return {

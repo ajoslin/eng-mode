@@ -257,7 +257,8 @@ describe("eng_orch executable entrypoint", () => {
   });
 
   it("still registers tools when the agent-skills overlay cannot write home", async () => {
-    const blocked = await root();
+    const blockedParent = await root();
+    const blocked = join(blockedParent, "not-a-home");
     await writeFile(blocked, "not a directory\n");
     const previous = process.env.HOME;
     process.env.HOME = blocked;
