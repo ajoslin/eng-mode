@@ -70,7 +70,7 @@ describe("workflow law", () => {
     expect(validateTransition(law, "land-independent", {
       actor: "shipping",
       authorities: ["merge-authority"],
-      evidence: ["head-sha", "base-sha", "repository-gates", "live-surface", "receipts-diff", "provider-arm-confirmation"],
+      evidence: ["head-sha", "base-sha", "repository-gates", "live-surface", "receipts-diff", "babysit-merge-ready", "pr-posted-verdict", "root-countersign", "provider-arm-confirmation"],
       previousHead: "old",
       currentHead: "new",
       patchIdentityProven: true,
@@ -124,6 +124,29 @@ describe("workflow law", () => {
     const snapshot = provider.capabilities.find((item) => item.id === "snapshot");
     if (snapshot) snapshot.confirmationEvidence = [];
     expect(codes(unsafe)).toEqual(expect.arrayContaining(["provider-capability-missing", "provider-confirmation-missing"]));
+  });
+
+  it("rejects unknown provider delegate skills", async () => {
+    const law = await validLaw();
+    const unsafe = structuredClone(law);
+    const provider = unsafe.providers[0];
+    const capability = provider?.capabilities.find((item) => item.delegatesTo !== undefined);
+    if (!capability) throw new Error("delegated capability fixture missing");
+    capability.delegatesTo = "missing-skill";
+    expect(codes(unsafe)).toContain("provider-delegate-undefined");
+  });
+
+  it("requires independent landing readiness evidence", async () => {
+    const law = await validLaw();
+    const result = validateTransition(law, "land-independent", {
+      actor: "shipping",
+      authorities: ["merge-authority"],
+      evidence: ["head-sha", "base-sha", "repository-gates", "live-surface", "receipts-diff", "provider-arm-confirmation"],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.diagnostics.map((item) => item.code)).toEqual([
+      "transition-evidence-missing", "transition-evidence-missing", "transition-evidence-missing",
+    ]);
   });
 
   it("rejects missing source paths and exact headings", async () => {

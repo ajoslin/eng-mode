@@ -244,6 +244,9 @@ export function validateWorkflowLaw(law: WorkflowLaw, inventory: SourceInventory
       for (const evidence of capability.confirmationEvidence) requireDeclared("evidence", evidence, evidenceIds, `provider ${provider.id} capability ${capability.id}`);
       if (capability.external && capability.owner !== "external-skill") diagnostics.push(diagnostic("provider-external-owner-invalid", `provider ${provider.id} capability ${capability.id} is external but not owned by external-skill`));
       if (capability.owner === "external-skill" && !capability.delegatesTo) diagnostics.push(diagnostic("provider-delegate-missing", `provider ${provider.id} capability ${capability.id} must name delegatesTo`));
+      if (capability.delegatesTo && !inventory.skills.has(capability.delegatesTo)) {
+        diagnostics.push(diagnostic("provider-delegate-undefined", `provider ${provider.id} capability ${capability.id} delegates to unknown skill ${capability.delegatesTo}`));
+      }
     }
     for (const required of requiredProviderCapabilities) {
       if (!provider.requirements.includes(required) || !capabilities.has(required)) diagnostics.push(diagnostic("provider-capability-missing", `provider ${provider.id} is missing required capability ${required}`));
