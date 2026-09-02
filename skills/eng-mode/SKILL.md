@@ -23,7 +23,7 @@ Eng procedure is global; the repository owns standards, forge workflow selection
 
 At Eng Mode entry, call the `eng_orch` tool's `contracts` action before repository mutation or behavioral claims, and obey its structured decision:
 
-- `proceed` — both repository-owned `.omp/skills` contract files are present and valid; the result includes one `forgeProvider` skill name.
+- `proceed` — both repository-owned contract files are present and valid under `.agents/skills` or the backwards-compatible `.omp/skills` fallback; the result includes one `forgeProvider` skill name.
 - `standards-unavailable-read-only` — read-only investigation may proceed but makes no policy-compliance claim.
 - `blocked-standards` — code-producing work stops before any edit, write, or writer delegation; this includes an unknown forge provider.
 - `inconclusive-verification` — behavioral claims on the product surface are `INCONCLUSIVE`; never substitute OMP `browser` for an unknown or private project driver.

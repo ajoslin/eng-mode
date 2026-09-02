@@ -47,8 +47,10 @@ To update, run the install command again, restart OMP, and rerun `setup-eng-mode
 
 Eng Mode supplies the reusable workflow. Each repository owns:
 
-- `.omp/skills/project-standards/SKILL.md` — repository law and selected tooling; optional `forge-provider` frontmatter selects `github-graphite` or `pr-cockpit`, defaulting to `github-graphite` when absent;
-- `.omp/skills/verify-project/SKILL.md` — the real product-verification surface.
+- `.agents/skills/project-standards/SKILL.md` — repository law and selected tooling; optional `forge-provider` frontmatter selects `github-graphite` or `pr-cockpit`, defaulting to `github-graphite` when absent;
+- `.agents/skills/verify-project/SKILL.md` — the real product-verification surface.
+
+Legacy repositories may keep these contracts under `.omp/skills`; new and migrated repositories use `.agents/skills`.
 
 `eng_orch contracts` returns that selection as `forgeProvider`. Read that skill once and use only its documented interface for every forge and PR operation. If the skill does not document an operation, stop; never fall back to another provider.
 

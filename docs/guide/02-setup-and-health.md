@@ -4,8 +4,10 @@ Install Eng Mode, restart OMP, then run `setup-eng-mode` in every repository. It
 
 Repositories provide:
 
-- `.omp/skills/project-standards/SKILL.md`: law and selected tools.
-- `.omp/skills/verify-project/SKILL.md`: real Launch, Doctor, Drive, Evidence, Cleanup, and a user-facing feature map.
+- `.agents/skills/project-standards/SKILL.md`: law and selected tools.
+- `.agents/skills/verify-project/SKILL.md`: real Launch, Doctor, Drive, Evidence, Cleanup, and a user-facing feature map.
+
+`.omp/skills` remains a backwards-compatible fallback for existing repositories.
 
 Declarations do not prove runtime availability. Inspect settings with `omp config get <key> --json`; restart after registry changes.
 

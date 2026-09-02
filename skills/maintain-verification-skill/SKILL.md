@@ -22,7 +22,7 @@ Only edit the verification skill's own directory (its SKILL.md, features/, and a
 
 ## Pass
 
-0. **Locate the target.** Find the verification skill to maintain through the project's contracts: the native `verify-project` contract that `project-standards` indexes (under the project's `.omp/skills/`), or another project-local verification skill the standards contract names. Several candidates → ask which one; none → stop and point at `/create-verification-skill` instead of inventing a target.
+0. **Locate the target.** Find the verification skill to maintain through the project's contracts: the native `verify-project` contract that `project-standards` indexes (normally under the project's `.agents/skills/`, with `.omp/skills/` accepted for backwards compatibility), or another project-local verification skill the standards contract names. Several candidates → ask which one; none → stop and point at `/create-verification-skill` instead of inventing a target.
 
 1. **Index hygiene.** Read the feature map README and glob its sibling files. Fix missing, extra, duplicate, or dead entries. Lightweight; no generated inventory.
 

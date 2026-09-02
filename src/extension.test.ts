@@ -44,8 +44,9 @@ async function contract(
   repository: string,
   name: "project-standards" | "verify-project",
   forgeProvider?: string,
+  skillsRoot = ".agents",
 ): Promise<void> {
-  const directory = join(repository, ".omp", "skills", name);
+  const directory = join(repository, skillsRoot, "skills", name);
   await mkdir(directory, { recursive: true });
   const provider = name === "project-standards" && forgeProvider !== undefined
     ? `forge-provider: ${forgeProvider}\n`
@@ -64,6 +65,36 @@ describe("eng_orch executable entrypoint", () => {
       decision: "proceed",
       mode: "code-producing",
       forgeProvider: "github-graphite",
+    });
+  });
+
+  it("prefers canonical project skills and falls back to legacy OMP skills", async () => {
+    const canonicalRepository = await root();
+    await contract(canonicalRepository, "project-standards", "pr-cockpit");
+    await contract(canonicalRepository, "verify-project");
+    await contract(canonicalRepository, "project-standards", "github-graphite", ".omp");
+    await contract(canonicalRepository, "verify-project", undefined, ".omp");
+
+    const canonical = await executeEngOrch({ action: "contracts", repositoryRoot: canonicalRepository });
+    expect(canonical).toMatchObject({
+      decision: "proceed",
+      forgeProvider: "pr-cockpit",
+      contracts: [
+        { expectedPath: join(canonicalRepository, ".agents", "skills", "project-standards", "SKILL.md") },
+        { expectedPath: join(canonicalRepository, ".agents", "skills", "verify-project", "SKILL.md") },
+      ],
+    });
+
+    const legacyRepository = await root();
+    await contract(legacyRepository, "project-standards", undefined, ".omp");
+    await contract(legacyRepository, "verify-project", undefined, ".omp");
+    const legacy = await executeEngOrch({ action: "contracts", repositoryRoot: legacyRepository });
+    expect(legacy).toMatchObject({
+      decision: "proceed",
+      contracts: [
+        { expectedPath: join(legacyRepository, ".omp", "skills", "project-standards", "SKILL.md") },
+        { expectedPath: join(legacyRepository, ".omp", "skills", "verify-project", "SKILL.md") },
+      ],
     });
   });
 
@@ -96,13 +127,13 @@ describe("eng_orch executable entrypoint", () => {
     expect(result).toHaveProperty("contracts.0", {
       name: "project-standards",
       parse: "malformed",
-      expectedPath: join(malformedRepository, ".omp", "skills", "project-standards", "SKILL.md"),
+      expectedPath: join(malformedRepository, ".agents", "skills", "project-standards", "SKILL.md"),
     });
   });
 
   it("keeps an explicit sentinel distinct from missing and unreadable contracts", async () => {
     const repositoryRoot = await root();
-    const standardsDirectory = join(repositoryRoot, ".omp", "skills", "project-standards");
+    const standardsDirectory = join(repositoryRoot, ".agents", "skills", "project-standards");
     await mkdir(standardsDirectory, { recursive: true });
     await writeFile(join(standardsDirectory, "SKILL.md"), "UNCONFIGURED\n");
     await contract(repositoryRoot, "verify-project");

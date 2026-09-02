@@ -52,7 +52,7 @@ function observedContract(input: RepositoryContractsInput, name: ContractName): 
 }
 
 export function expectedContractPath(repositoryRoot: string, name: ContractName): string {
-  return join(resolve(repositoryRoot), ".omp", "skills", name, "SKILL.md");
+  return join(resolve(repositoryRoot), ".agents", "skills", name, "SKILL.md");
 }
 
 export function decideRepositoryContracts(
@@ -108,24 +108,30 @@ export function decideRepositoryContracts(
   }
 
   return done("proceed", [
-    "both project contracts are valid repository-owned .omp/skills files",
+    "both project contracts are valid repository-owned skills",
     `forge provider ${forgeProvider} selected`,
   ]);
 }
 
 export function observeRepositoryContracts(repositoryRoot: string): ContractObservation[] {
   return contractNames.map((name) => {
-    const expectedPath = expectedContractPath(repositoryRoot, name);
+    const canonicalPath = expectedContractPath(repositoryRoot, name);
+    const legacyPath = join(resolve(repositoryRoot), ".omp", "skills", name, "SKILL.md");
+    let expectedPath = canonicalPath;
     let text: string;
     try {
-      text = readFileSync(expectedPath, "utf8");
-    } catch (error) {
-      const missing = (error as NodeJS.ErrnoException).code === "ENOENT";
-      return {
-        name,
-        expectedPath,
-        parse: missing ? ("missing" as const) : ("unreadable" as const),
-      };
+      text = readFileSync(canonicalPath, "utf8");
+    } catch (canonicalError) {
+      if ((canonicalError as NodeJS.ErrnoException).code !== "ENOENT") {
+        return { name, expectedPath, parse: "unreadable" as const };
+      }
+      expectedPath = legacyPath;
+      try {
+        text = readFileSync(legacyPath, "utf8");
+      } catch (legacyError) {
+        const missing = (legacyError as NodeJS.ErrnoException).code === "ENOENT";
+        return { name, expectedPath: canonicalPath, parse: missing ? ("missing" as const) : ("unreadable" as const) };
+      }
     }
     if (text.trim() === UNCONFIGURED_SENTINEL) {
       return { name, expectedPath, parse: "unconfigured" as const };

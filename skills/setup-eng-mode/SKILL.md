@@ -15,7 +15,7 @@ Setup is a validator and orchestrator, never an installer of duplicate machinery
 
 ## 2. Shadows and collisions
 
-Observed skill precedence: native project/user `.omp/skills` (project before user), then the Eng extension through `omp-plugins`, then Claude-provider skills, then `.agents/skills`. Observed agent precedence: project `.omp/agents`, user agents, extension agents, then bundled.
+Observed skill precedence: native project `.agents/skills`, legacy project/user `.omp/skills` (project before user), then the Eng extension through `omp-plugins`, then Claude-provider skills. Observed agent precedence: project `.omp/agents`, user agents, extension agents, then bundled.
 
 1. Report the full intersection of the extension's exact `skillNames` with the host repository's `.agents/skills` and `.claude/skills` in both directions. Extension-wins overrides are intentional but require operator visibility; never replace silently.
 2. Any user-native `.omp/skills` or user-agent shadow of an exact `skillNames`/`agentNames` entry is an error. Report it by name; quarantining a shadow is an explicit operator-approved setup action with a rollback record, never a silent move.
@@ -39,8 +39,8 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 ## 5. Project contracts
 
 1. Run `eng_orch contracts` and report the structured decision, per-contract source paths, and returned `forgeProvider` skill name.
-2. Validate existing `project-standards` and `verify-project` contracts; never overwrite them. Unknown `forge-provider` values are blocking errors. Missing selection deliberately resolves to `github-graphite` for existing repositories.
-3. After explicit repository inspection, setup may create only an `UNCONFIGURED` sentinel (`SKILL.md` whose body is the single line `UNCONFIGURED`) for an absent contract, so the gap is explicit tool output rather than silence. It never infers a verification contract from package scripts; real contract authoring routes through `create-verification-skill` and the repository owners.
+2. Validate existing `project-standards` and `verify-project` contracts from canonical `.agents/skills` or the backwards-compatible `.omp/skills` fallback; never overwrite them. Unknown `forge-provider` values are blocking errors. Missing selection deliberately resolves to `github-graphite` for existing repositories.
+3. After explicit repository inspection, setup may create only an `UNCONFIGURED` sentinel (`SKILL.md` whose body is the single line `UNCONFIGURED`) under canonical `.agents/skills` for an absent contract, so the gap is explicit tool output rather than silence. It never infers a verification contract from package scripts; real contract authoring routes through `create-verification-skill` and the repository owners.
 
 ## 6. Advisor runtime
 
