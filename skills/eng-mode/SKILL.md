@@ -10,7 +10,7 @@ Correctness first. Smallest coherent change. Prove the real behavior. OMP only. 
 ## Start
 
 1. Match exactly one primary playbook before editing.
-2. In the main session, multi-step work initializes `todo` with the playbook's finite steps. The first item is to read every applicable principle leaf in full. Delegates report requested transitions to the lead and never mutate parent state. For an inapplicable item, record `skip: <reason>` in the final report, then drop the task using its exact original content.
+2. In the main session, multi-step work initializes `todo` with the playbook's finite steps. The first item is to read every applicable `principle-*` skill in full. Delegates report requested transitions to the lead and never mutate parent state. For an inapplicable item, record `skip: <reason>` in the final report, then drop the task using its exact original content.
 3. Apply only principles that govern a decision. In the reply, name each applied principle and the specific choice it changed. A citation without a decision is decorative and means its leaf was not applied.
 4. Read the project's `project-standards` contract for repository law, domain vocabulary sources, and the repository-selected specialized skills. Read `CONTEXT.md` for domain vocabulary and nearby ADRs for settled decisions when the project keeps them. `CONTEXT.md` is never a spec.
 
