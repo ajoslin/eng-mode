@@ -6,6 +6,7 @@ import type { AgentMessage } from "@oh-my-pi/pi-agent-core";
 import type { SessionEntry } from "@oh-my-pi/pi-coding-agent";
 import { renderEngAdvisorCard } from "../card";
 import { loadEngAdvisorConfig } from "../config";
+import { advisorReviewIsDue } from "../index";
 import { findingIdentityKey } from "../finding-identity";
 import { applyFindingPolicy } from "../policy";
 import { filterReviewBatch } from "../transcript";
@@ -102,13 +103,35 @@ describe("configuration", () => {
 	test("defaults to a bounded review deadline", async () => {
 		const emptyDir = await fs.mkdtemp(path.join(tmpdir(), "eng-advisor-config-"));
 		try {
-			expect((await loadEngAdvisorConfig(emptyDir)).reviewTimeoutMs).toBe(120_000);
+			expect((await loadEngAdvisorConfig(emptyDir)).reviewTimeoutMs).toBe(60_000);
 			expect(config.model).toBe("@advisor");
+			expect(config.reviewEveryTurns).toBe(4);
+			expect(config.thinking).toBe("low");
+			expect(config.reviewFinalAfterTurns).toBe(1);
+			expect(config.maxBatchMessages).toBe(32);
+			expect(config.maxReviewChars).toBe(32_768);
+			expect(config.maxFieldChars).toBe(8_192);
+			expect(config.reviewTimeoutMs).toBe(60_000);
 		} finally {
 			await fs.rm(emptyDir, { recursive: true, force: true });
 		}
 	});
 });
+
+	test("reduces eight in-progress turns to two reviews and preserves final review", () => {
+		const cadence = { reviewEveryTurns: 4, reviewFinalAfterTurns: 1 };
+		let turnsSinceReview = 0;
+		const dueTurns: number[] = [];
+		for (let turn = 1; turn <= 8; turn++) {
+			turnsSinceReview++;
+			if (!advisorReviewIsDue({ ...cadence, turnsSinceReview, wip: true })) continue;
+			dueTurns.push(turn);
+			turnsSinceReview = 0;
+		}
+		expect(dueTurns).toEqual([4, 8]);
+		expect(advisorReviewIsDue({ ...cadence, turnsSinceReview: 1, wip: false })).toBeTrue();
+		expect(advisorReviewIsDue({ ...cadence, turnsSinceReview: 0, wip: true, force: true })).toBeTrue();
+	});
 
 describe("operational input transforms", () => {
 	test("drops a blacklisted call message and every paired result", () => {

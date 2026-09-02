@@ -35,6 +35,19 @@ const FAILURE_BACKOFF_MS = 60_000;
 function isWorkInProgress(message: AgentMessage): boolean {
 	return message.role === "assistant" && message.content.some(block => block.type === "toolCall");
 }
+export function advisorReviewIsDue(options: {
+	turnsSinceReview: number;
+	wip: boolean;
+	reviewEveryTurns: number;
+	reviewFinalAfterTurns: number;
+	force?: boolean;
+}): boolean {
+	return (
+		options.force === true ||
+		options.turnsSinceReview >= options.reviewEveryTurns ||
+		(!options.wip && options.turnsSinceReview >= options.reviewFinalAfterTurns)
+	);
+}
 
 function openFindings(state: EngAdvisorState) {
 	return state.findings.filter(finding => finding.status === "open");
@@ -56,12 +69,12 @@ function formatStatus(options: {
 		`Cursor: ${options.state.cursor}; reviews: ${options.state.reviewSequence}`,
 		`Open findings: ${openFindings(options.state).length}`,
 	];
-	lines.push(`Role: ${advisorRoleLabel(options.role)}`);
 	for (const source of options.roleSources) lines.push(`Role prompt: ${source}`);
 	if (options.config) {
 		lines.push(
 			`Model: ${options.config.model}:${options.config.thinking}`,
 			`Cooldown: ${options.config.cooldownMs}ms and ${options.config.cooldownReviews} reviews; timeout: ${options.config.reviewTimeoutMs}ms`,
+			`Review cadence: every ${options.config.reviewEveryTurns} in-progress turns; completed after ${options.config.reviewFinalAfterTurns} turn(s)`,
 		);
 	}
 	if (options.lastReviewAt) lines.push(`Last review: ${new Date(options.lastReviewAt).toISOString()}`);
@@ -88,6 +101,8 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 	let scheduled = false;
 	let pending = false;
 	let latestWip = false;
+	let turnsSinceReview = 0;
+	let forceReview = false;
 	let lastReviewAt = 0;
 	let lastError: string | undefined;
 	let failureUntil = 0;
@@ -136,6 +151,8 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 		queuedContext = ctx;
 		state = restoreState(ctx.sessionManager.getBranch());
 		hiddenCallIds.clear();
+		turnsSinceReview = 0;
+		forceReview = false;
 		try {
 			const nextConfig = await loadEngAdvisorConfig(import.meta.dir);
 			const nextRole = resolveAdvisorRole(ctx.sessionManager.getBranch());
@@ -189,6 +206,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 			() => controller.abort(new Error(`Eng-Advisor review exceeded ${reviewTimeoutMs}ms`)),
 			reviewTimeoutMs,
 		);
+		const reviewedTurns = turnsSinceReview;
 		let proposals: ProposedFinding[];
 		try {
 			proposals = await reviewer.review({
@@ -215,6 +233,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 		state.prefixDigest = digestMessagePrefix(entries, targetCursor);
 		lastReviewAt = Date.now();
 		lastError = undefined;
+		turnsSinceReview = Math.max(0, turnsSinceReview - reviewedTurns);
 		persistCursor();
 		for (const decision of decisions) {
 			persistFinding(decision.finding);
@@ -249,10 +268,24 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 		}
 	}
 
-	function schedule(ctx: ExtensionContext, wip: boolean): void {
+	function schedule(ctx: ExtensionContext, wip: boolean, force = false): void {
 		queuedContext = ctx;
 		latestWip = wip;
-		if (!enabled) return;
+		if (!enabled || !config) return;
+		if (!force) turnsSinceReview++;
+		forceReview ||= force;
+		if (
+			!advisorReviewIsDue({
+				turnsSinceReview,
+				wip,
+				reviewEveryTurns: config.reviewEveryTurns,
+				reviewFinalAfterTurns: config.reviewFinalAfterTurns,
+				force: forceReview,
+			})
+		) {
+			return;
+		}
+		forceReview = false;
 		if (running) {
 			pending = true;
 			return;
@@ -288,7 +321,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 				if (!reviewer) await initialize(ctx);
 				if (!reviewer) return;
 				ctx.ui.notify("Eng-Advisor enabled", "info");
-				schedule(ctx, false);
+				schedule(ctx, false, true);
 				return;
 			}
 			if (command === "reload") {
@@ -317,7 +350,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 				failureUntil = 0;
 				lastError = undefined;
 				ctx.ui.notify("Eng-Advisor configuration reloaded", "info");
-				schedule(ctx, false);
+				schedule(ctx, false, true);
 				return;
 			}
 			if (command === "dismiss") {
@@ -345,7 +378,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 				state.prefixDigest = digestMessagePrefix(entries, retained);
 				forceReemit = true;
 				failureUntil = 0;
-				schedule(ctx, false);
+				schedule(ctx, false, true);
 				ctx.ui.notify("Eng-Advisor refresh scheduled", "info");
 				return;
 			}

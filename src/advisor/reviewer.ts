@@ -12,8 +12,8 @@ import { createFindingReporter, type FindingReporter } from "./finding-reporter"
 import { createInspectionTools } from "./workspace";
 import { type DurableFinding, FINDING_CATEGORIES, type ProposedFinding, type ReviewBatch } from "./types";
 
-const MAX_REVIEWER_MESSAGES = 128;
-const MAX_TOOL_TURNS = 8;
+const MAX_REVIEWER_MESSAGES = 32;
+const MAX_TOOL_TURNS = 4;
 const SYSTEM_PROMPT = `You are Eng-Advisor, an independent peer shadowing a coding agent's stream.
 
 Your role is broader than code review: sharpen strategy, problem-solving, design, execution, and verification. Identify concrete technical risks early. Prefer silence when the agent is on track.

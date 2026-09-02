@@ -18,6 +18,8 @@ const ConfigSchema = z.object({
 	thinking: ThinkingSchema.optional(),
 	cooldownMs: z.number().int().min(0).max(86_400_000).optional(),
 	cooldownReviews: z.number().int().min(0).max(10_000).optional(),
+	reviewEveryTurns: z.number().int().min(1).max(100).optional(),
+	reviewFinalAfterTurns: z.number().int().min(1).max(100).optional(),
 	maxBatchMessages: z.number().int().min(1).max(1_000).optional(),
 	maxReviewChars: z.number().int().min(4_096).max(1_000_000).optional(),
 	reviewTimeoutMs: z
@@ -47,6 +49,8 @@ export interface EngAdvisorConfig {
 	thinking: z.infer<typeof ThinkingSchema>;
 	cooldownMs: number;
 	cooldownReviews: number;
+	reviewEveryTurns: number;
+	reviewFinalAfterTurns: number;
 	maxFindingsPerReview: number;
 	reviewTimeoutMs: number;
 	maxFieldChars: number;
@@ -68,14 +72,16 @@ export interface CompiledEngAdvisorConfig extends EngAdvisorConfig {
 
 const DEFAULT_CONFIG: EngAdvisorConfig = {
 	model: "@advisor",
-	thinking: "medium",
-	maxBatchMessages: 64,
-	maxReviewChars: 100_000,
-	reviewTimeoutMs: 2 * 60_000,
+	thinking: "low",
+	maxBatchMessages: 32,
+	maxReviewChars: 32_768,
+	reviewTimeoutMs: 60_000,
 	cooldownMs: 5 * 60_000,
 	cooldownReviews: 8,
+	reviewEveryTurns: 4,
+	reviewFinalAfterTurns: 1,
 	maxFindingsPerReview: 1,
-	maxFieldChars: 16_384,
+	maxFieldChars: 8_192,
 	ignoredToolNames: ["git", "gh", "github", "gt", "graphite"],
 	ignoredToolNamePrefixes: ["github_", "git_", "gh_", "graphite_", "gt_", "mcp__github", "xd.github"],
 	ignoredToolNamePatterns: [{ pattern: "(?:^|[^a-z0-9])(?:git|gh|github|gt|graphite)(?:$|[^a-z0-9])", flags: "i" }],
@@ -135,6 +141,8 @@ export async function loadEngAdvisorConfig(extensionDir: string): Promise<Compil
 		reviewTimeoutMs: input.reviewTimeoutMs ?? DEFAULT_CONFIG.reviewTimeoutMs,
 		cooldownMs: input.cooldownMs ?? DEFAULT_CONFIG.cooldownMs,
 		cooldownReviews: input.cooldownReviews ?? DEFAULT_CONFIG.cooldownReviews,
+		reviewEveryTurns: input.reviewEveryTurns ?? DEFAULT_CONFIG.reviewEveryTurns,
+		reviewFinalAfterTurns: input.reviewFinalAfterTurns ?? DEFAULT_CONFIG.reviewFinalAfterTurns,
 		maxFindingsPerReview: input.maxFindingsPerReview ?? DEFAULT_CONFIG.maxFindingsPerReview,
 		maxFieldChars: input.maxFieldChars ?? DEFAULT_CONFIG.maxFieldChars,
 		ignoredToolNames: input.ignoredToolNames ?? DEFAULT_CONFIG.ignoredToolNames,
