@@ -10,8 +10,8 @@ Correctness first. Smallest coherent change. Prove the real behavior. OMP only. 
 ## Start
 
 1. Match exactly one primary playbook before editing.
-2. In the main session, multi-step work initializes `todo` with the playbook's finite steps. The first item is to read every applicable principle leaf in full. Delegates report requested transitions to the lead and never mutate parent state. For an inapplicable item, record `skip: <reason>` in the final report, then drop the task using its exact original content.
-3. Apply only principles that govern a decision. In the reply, name each applied principle and the specific choice it changed. A citation without a decision is decorative and means its leaf was not applied.
+2. In the main session, multi-step work initializes `todo` with the playbook's finite steps. The first item is to read every applicable `principle-*` skill in full. Delegates report requested transitions to the lead and never mutate parent state. For an inapplicable item, record `skip: <reason>` in the final report, then drop the task using its exact original content.
+3. Apply only principles that govern a decision. In the reply, name each applied principle and the specific choice it changed. A citation without a decision is decorative and means the skill was not applied.
 4. Read the project's `project-standards` contract for repository law, domain vocabulary sources, and the repository-selected specialized skills. Read `CONTEXT.md` for domain vocabulary and nearby ADRs for settled decisions when the project keeps them. `CONTEXT.md` is never a spec.
 
 ## Repository contracts
@@ -105,7 +105,7 @@ Proceed on reversible work without asking. Pause before irreversible writes such
 
 ## Principles
 
-Read each applicable leaf in full. These descriptions decide applicability; the category labels are only an index.
+Read each applicable `principle-*` skill in full. These descriptions decide applicability; the category labels are only an index.
 
 - Simplicity: `principle-laziness-protocol` when refactoring, sizing a diff, or tempted to add abstraction, layers, or signal threading; `principle-subtract-before-you-add` when sequencing an addition, refactor, or rewrite; `principle-minimize-reader-load` when code is hard to trace or hides state behind layers; `principle-build-the-lever` for nontrivial work where a tool, script, generator, or codemod can do or prove the work.
 - Foundations: `principle-foundational-thinking` before choosing core types, data structures, scaffold order, or shared state; `principle-redesign-from-first-principles` when integrating a new requirement into an existing design; `principle-experience-first` for product, UX, or feature-scope tradeoffs; `principle-exhaust-the-design-space` for novel interactions or architectural decisions without precedent.
