@@ -22,13 +22,24 @@ Declarations do not prove runtime availability. Inspect settings with `omp confi
 
 Agents select semantic roles, not provider IDs. Actual models matter when claiming vendor diversity. Isolation is terminal; use ordinary tasks when later hub steering is required.
 
-## Advisor alternatives
+## Advisor commands and alternatives
 
-`/eng-advisor`, `/eng-advisor status`, and `/eng-advisor show` display the same status without starting a review.
+| Command | Effect |
+|---|---|
+| `/eng-advisor`, `/eng-advisor status`, `/eng-advisor show` | Show status, active role and prompt sources, model and effort, and open finding keys. |
+| `/eng-advisor on` | Resume automatic review and check pending material. Retry initialization if it previously failed. |
+| `/eng-advisor off` | Pause automatic review and cancel active or queued reviews, including manual requests. |
+| `/eng-advisor review` | Review unreviewed material once on the selected model. |
+| `/eng-advisor refresh` | Review the recent `maxBatchMessages` window again and allow unchanged open findings to re-emit. |
+| `/eng-advisor primary`, `/eng-advisor fallback` | Select the configured primary or fallback for this session. |
+| `/eng-advisor reload` | Reload configuration and guidance, retrying the primary preference. Keep pause state and findings. |
+| `/eng-advisor dismiss <key-prefix>` | Dismiss one uniquely matched open finding using a key from status. Persist the dismissal in this session's history. |
 
 Use `/eng-advisor review` for a one-shot review of unreviewed material on the currently selected model. It bypasses automatic cadence and failure backoff for that request and works while automatic review is paused, without unpausing it. Completion, failure, and empty or filtered input are reported explicitly. The command does not rewind history or force findings to re-emit; use `/eng-advisor refresh` to revisit recent material.
 
-Requests made during a running review coalesce into one queued review of any remaining unreviewed material. `/eng-advisor off` cancels active and queued manual work. A model switch carries unfinished manual review to the new reviewer while preserving pause state.
+Refresh is also a one-shot request while paused, with explicit completion, failure, or empty-input feedback. It preserves transcript filtering and does not revive dismissed findings with unchanged evidence. It can re-emit an open finding even during its normal cooldown.
+
+Requests made during a running review coalesce into one queued pass; a queued refresh takes precedence over a request for only unreviewed material. The recent window is selected when that pass starts. `/eng-advisor off` cancels active and queued manual work. A model switch or reload carries unfinished manual work to the new reviewer while preserving pause state. Cancelled results are discarded even when repository evidence is still being validated; dismissals made during that validation are preserved.
 
 Eng-Advisor prefers `@advisor` and resolves optional `@advisor_fallback` through the same OMP model resolver used by agent alternatives. Choose the fallback model in the workstation's OMP role configuration. Eng Mode does not assign a model or provider, and setup does not create or require the optional role.
 

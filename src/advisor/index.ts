@@ -31,6 +31,18 @@ export type AdvisorExtensionAPI = Pick<
 >;
 
 const FAILURE_BACKOFF_MS = 60_000;
+type ManualReviewKind = "review" | "refresh";
+
+function mergeManualRequests(
+	current: ManualReviewKind | undefined,
+	next: ManualReviewKind | undefined,
+): ManualReviewKind | undefined {
+	return current === "refresh" || next === "refresh" ? "refresh" : current ?? next;
+}
+
+function manualReviewLabel(kind: ManualReviewKind): string {
+	return kind === "refresh" ? "refresh" : "manual review";
+}
 
 function isWorkInProgress(message: AgentMessage): boolean {
 	return message.role === "assistant" && message.content.some(block => block.type === "toolCall");
@@ -68,6 +80,7 @@ function formatStatus(options: {
 	const lines = [
 		`Eng-Advisor: ${options.enabled ? "enabled" : "paused"}${options.running ? ", reviewing" : ""}`,
 		`Runtime transcription: OMP ${TRANSCRIBED_OMP_VERSION}`,
+		`Role: ${advisorRoleLabel(options.role)}`,
 		`Cursor: ${options.state.cursor}; reviews: ${options.state.reviewSequence}`,
 		`Open findings: ${openFindings(options.state).length}`,
 	];
@@ -107,12 +120,11 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 	let latestWip = false;
 	let turnsSinceReview = 0;
 	let forceReview = false;
-	let manualReviewRequested = false;
-	let manualReviewActive = false;
+	let manualReviewRequested: ManualReviewKind | undefined;
+	let manualReviewActive: ManualReviewKind | undefined;
 	let lastReviewAt = 0;
 	let lastError: string | undefined;
 	let failureUntil = 0;
-	let forceReemit = false;
 	let generation = 0;
 	let queuedContext: ExtensionContext | undefined;
 	let reviewAbort: AbortController | undefined;
@@ -159,7 +171,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 		hiddenCallIds.clear();
 		turnsSinceReview = 0;
 		forceReview = false;
-		manualReviewRequested = false;
+		manualReviewRequested = undefined;
 		try {
 			const nextConfig = await loadEngAdvisorConfig(import.meta.dir);
 			const nextRole = resolveAdvisorRole(ctx.sessionManager.getBranch());
@@ -189,20 +201,23 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 		}
 	}
 
-	async function reviewOnce(ctx: ExtensionContext, expectedGeneration: number, manual = false): Promise<void> {
+	async function reviewOnce(ctx: ExtensionContext, expectedGeneration: number, manual?: ManualReviewKind): Promise<void> {
 		if ((!enabled && !manual) || !config || !reviewer || (!manual && Date.now() < failureUntil)) return;
 		const entries = messageEntries(ctx.sessionManager.getBranch());
-		if (state.cursor > entries.length || digestMessagePrefix(entries, state.cursor) !== state.prefixDigest) {
-			state.cursor = 0;
-			state.prefixDigest = digestMessagePrefix(entries, 0);
+		let startCursor = state.cursor;
+		if (startCursor > entries.length || digestMessagePrefix(entries, startCursor) !== state.prefixDigest) {
+			startCursor = 0;
+		}
+		if (manual === "refresh") {
+			startCursor = Math.max(0, entries.length - config.maxBatchMessages);
 		}
 		const targetCursor = entries.length;
-		if (targetCursor === state.cursor) {
-			if (manual) ctx.ui.notify("Eng-Advisor: no unreviewed messages; use refresh to revisit recent material", "info");
+		if (targetCursor === startCursor) {
+			if (manual) ctx.ui.notify(manual === "refresh" ? "Eng-Advisor: no messages to refresh" : "Eng-Advisor: no unreviewed messages; use refresh to revisit recent material", "info");
 			return;
 		}
-		const messages = entries.slice(state.cursor).map(entry => entry.message);
-		const batch = filterReviewBatch(messages, state.cursor, latestWip, config, hiddenCallIds);
+		const messages = entries.slice(startCursor).map(entry => entry.message);
+		const batch = filterReviewBatch(messages, startCursor, latestWip, config, hiddenCallIds);
 		if (!batch) {
 			state.cursor = targetCursor;
 			state.prefixDigest = digestMessagePrefix(entries, targetCursor);
@@ -230,16 +245,25 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 			clearTimeout(timeout);
 		}
 		if (expectedGeneration !== generation) return;
-		state.reviewSequence++;
+		const nextState = structuredClone(state);
+		const alreadyDismissed = new Set(nextState.findings.filter(finding => finding.status === "dismissed").map(finding => finding.key));
+		nextState.reviewSequence++;
 		const decisions = await applyFindingPolicy({
-			state,
+			state: nextState,
 			proposals,
 			batch,
 			config,
 			cwd: ctx.cwd,
-			force: forceReemit,
+			force: manual === "refresh",
 		});
-		forceReemit = false;
+		if (expectedGeneration !== generation) return;
+		// Evidence validation is asynchronous; cancellation must discard its changes,
+		// and an explicit dismissal made during validation must survive the commit.
+		const newDismissals = new Map(state.findings
+			.filter(finding => finding.status === "dismissed" && !alreadyDismissed.has(finding.key))
+			.map(finding => [finding.key, finding]));
+		nextState.findings = nextState.findings.map(finding => newDismissals.get(finding.key) ?? finding);
+		state = nextState;
 		state.cursor = targetCursor;
 		state.prefixDigest = digestMessagePrefix(entries, targetCursor);
 		lastReviewAt = Date.now();
@@ -248,10 +272,11 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 		turnsSinceReview = Math.max(0, turnsSinceReview - reviewedTurns);
 		persistCursor();
 		for (const decision of decisions) {
+			if (newDismissals.has(decision.finding.key)) continue;
 			persistFinding(decision.finding);
 			if (decision.kind === "emit") deliverFinding(decision.finding);
 		}
-		if (manual) ctx.ui.notify(`Eng-Advisor manual review completed. Open findings: ${openFindings(state).length}`, "info");
+		if (manual) ctx.ui.notify(`Eng-Advisor ${manualReviewLabel(manual)} completed. Open findings: ${openFindings(state).length}`, "info");
 	}
 
 	async function drain(): Promise<void> {
@@ -267,7 +292,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 				if (!ctx) break;
 				const expectedGeneration = generation;
 				const manual = manualReviewRequested;
-				manualReviewRequested = false;
+				manualReviewRequested = undefined;
 				manualReviewActive = manual;
 				try {
 					await reviewOnce(ctx, expectedGeneration, manual);
@@ -276,9 +301,9 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 					if (!enabled && !manual) continue;
 					lastError = error instanceof Error ? error.message : String(error);
 					failureUntil = Date.now() + FAILURE_BACKOFF_MS;
-					ctx.ui.notify(manual ? `Eng-Advisor manual review failed: ${lastError}` : `Eng-Advisor review failed; retrying after cooldown: ${lastError}`, "warning");
+					ctx.ui.notify(manual ? `Eng-Advisor ${manualReviewLabel(manual)} failed: ${lastError}` : `Eng-Advisor review failed; retrying after cooldown: ${lastError}`, "warning");
 				} finally {
-					manualReviewActive = false;
+					manualReviewActive = undefined;
 				}
 			} while (pending && (enabled || manualReviewRequested));
 		} finally {
@@ -328,7 +353,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 			const [command = "status", value] = (args.trim() || "status").split(/\s+/, 2);
 			if (command === "off") {
 				enabled = false;
-				manualReviewRequested = false;
+				manualReviewRequested = undefined;
 				generation++;
 				reviewAbort?.abort("Eng-Advisor paused");
 				ctx.ui.notify("Eng-Advisor paused", "info");
@@ -343,19 +368,19 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 				schedule(ctx, false, true);
 				return;
 			}
-			if (command === "review") {
+			if (command === "review" || command === "refresh") {
 				if (!reviewer || !config) await initialize(ctx);
 				if (!reviewer || !config) return;
-				manualReviewRequested = true;
+				const requested = manualReviewRequested === "refresh" ? "refresh" : command;
+				manualReviewRequested = requested;
 				failureUntil = 0;
 				const busy = running || scheduled;
 				schedule(ctx, false, true);
-				ctx.ui.notify(`Eng-Advisor manual review ${busy ? "queued" : "scheduled"}${enabled ? "" : "; automatic review remains paused"}`, "info");
+				ctx.ui.notify(`Eng-Advisor ${manualReviewLabel(requested)} ${busy ? "queued" : "scheduled"}${enabled ? "" : "; automatic review remains paused"}`, "info");
 				return;
 			}
 			if (command === "reload" || command === "primary" || command === "fallback") {
 				const expectedGeneration = generation;
-				const retryManual = manualReviewActive || manualReviewRequested;
 				try {
 					const nextConfig = await loadEngAdvisorConfig(import.meta.dir);
 					const nextRole = resolveAdvisorRole(ctx.sessionManager.getBranch());
@@ -378,7 +403,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 						ctx.ui.notify("Eng-Advisor selection cancelled because the session changed", "warning");
 						return;
 					}
-					manualReviewRequested ||= retryManual;
+					manualReviewRequested = mergeManualRequests(manualReviewRequested, manualReviewActive);
 					generation++;
 					reviewAbort?.abort("Eng-Advisor reviewer replaced");
 					roleSources = roleInstructions.sources;
@@ -413,17 +438,6 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 				ctx.ui.notify(`Dismissed ${finding.key.slice(0, 12)}`, "info");
 				return;
 			}
-			if (command === "refresh") {
-				const entries = messageEntries(ctx.sessionManager.getBranch());
-				const retained = Math.max(0, entries.length - (config?.maxBatchMessages ?? 64));
-				state.cursor = retained;
-				state.prefixDigest = digestMessagePrefix(entries, retained);
-				forceReemit = true;
-				failureUntil = 0;
-				schedule(ctx, false, true);
-				ctx.ui.notify("Eng-Advisor refresh scheduled", "info");
-				return;
-			}
 			if (command !== "status" && command !== "show") {
 				ctx.ui.notify(`Unknown Eng-Advisor command: ${command}`, "warning");
 				return;
@@ -445,7 +459,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 		reviewer?.dispose();
 		reviewer = undefined;
 		queuedContext = undefined;
-		manualReviewRequested = false;
+		manualReviewRequested = undefined;
 		enabled = false;
 	});
 }
