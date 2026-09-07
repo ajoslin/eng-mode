@@ -12,6 +12,7 @@ function selectionCommands() {
   const callbacks: Array<() => Promise<void>> = [];
   const persisted: string[] = [];
   const entries: SessionEntry[] = [];
+  const events = new Map<string, (event: unknown, ctx: ExtensionContext) => unknown>();
   const available = {primary: true, fallback: true, duplicate: false};
   const model = (id: string) => ({
     id, provider: `test-${id}`, name: id, api: "openai-responses", baseUrl: "https://example.invalid",
@@ -20,7 +21,7 @@ function selectionCommands() {
   } as unknown as Model);
   registerEngAdvisor({
     registerCommand: (_name: string, command: {handler: typeof handler}) => {handler = command.handler;},
-    registerMessageRenderer: () => {}, on: () => {}, zod,
+    registerMessageRenderer: () => {}, on: (name: string, handler: (event: unknown, ctx: ExtensionContext) => unknown) => events.set(name, handler), zod,
     pi: {getAgentDir: () => path.join(tmpdir(), "eng-advisor-selection-no-profile")},
     appendEntry: (name: string) => persisted.push(name),
     sendMessage: () => {throw new Error("No findings expected");},
@@ -39,6 +40,7 @@ function selectionCommands() {
   } as unknown as ExtensionContext;
   return {
     run: (args: string) => handler(args, ctx), notices, callbacks, available, persisted, entries,
+    emit: (name: string, event: unknown) => events.get(name)?.(event, ctx),
     flush: async () => {while (callbacks.length) await callbacks.shift()!();},
   };
 }
@@ -99,7 +101,7 @@ test("an unavailable primary keeps the active fallback", async () => {
   expect(c.notices.at(-1)?.message).toContain("Active model: test-fallback/fallback:");
 });
 
-test("switching an in-flight review cancels it and retries the unconsumed batch", async () => {
+test.each([false, true])("switching an in-flight review retries its batch, paused=%s", async paused => {
   const c = selectionCommands();
   c.entries.push({type: "message", id: "request", parentId: null, timestamp: new Date().toISOString(), message: {role: "user", content: [{type: "text", text: "Inspect the unchecked external value before marking the change complete."}], timestamp: Date.now()}} as SessionEntry);
   const models: string[] = [];
@@ -117,7 +119,9 @@ test("switching an in-flight review cancels it and retries the unconsumed batch"
     return [];
   });
   try {
+    if (paused) await c.run("off");
     await c.run("primary");
+    if (paused) await c.run("review");
     const pending = c.flush();
     await firstStarted;
     await c.run("fallback");
@@ -131,5 +135,150 @@ test("switching an in-flight review cancels it and retries the unconsumed batch"
     expect(c.notices.some(n => n.message.includes("review failed"))).toBe(false);
     await c.run("status");
     expect(c.notices.at(-1)?.message).toContain("reviews: 1");
+  } finally {review.mockRestore();}
+});
+
+
+function reviewEntry(text = "Inspect the unchecked external value."): SessionEntry {
+  return {type: "message", id: `request-${text}`, parentId: null, timestamp: new Date().toISOString(), message: {role: "user", content: [{type: "text", text}], timestamp: Date.now()}} as SessionEntry;
+}
+
+test("manual review bypasses cadence and does not rereview consumed messages", async () => {
+  const c = selectionCommands();
+  const review = spyOn(InProcessReviewer.prototype, "review").mockResolvedValue([]);
+  try {
+    await c.run("primary");
+    await c.flush();
+    c.entries.push(reviewEntry());
+    c.emit("turn_end", {message: {role: "assistant", content: [{type: "toolCall", id: "read", name: "read", arguments: {}}]}});
+    expect(c.callbacks).toHaveLength(0);
+    await c.run("review");
+    await c.flush();
+    expect(review).toHaveBeenCalledTimes(1);
+    expect(c.notices.at(-1)?.message).toContain("manual review completed");
+    await c.run("review");
+    await c.flush();
+    expect(review).toHaveBeenCalledTimes(1);
+    expect(c.notices.at(-1)?.message).toContain("no unreviewed messages");
+    expect(c.persisted).toHaveLength(1);
+  } finally {review.mockRestore();}
+});
+
+test("manual review uses the selected fallback once while automatic review stays paused", async () => {
+  const c = selectionCommands();
+  const models: string[] = [];
+  const review = spyOn(InProcessReviewer.prototype, "review").mockImplementation(async function(this: InProcessReviewer) {models.push(this.modelStatus);return [];});
+  try {
+    await c.run("off");
+    await c.run("fallback");
+    c.entries.push(reviewEntry());
+    await c.run("review");
+    await c.flush();
+    expect(models).toHaveLength(1);
+    expect(models[0]).toContain("test-fallback/fallback");
+    await c.run("status");
+    expect(c.notices.at(-1)?.message).toStartWith("Eng-Advisor: paused");
+    c.entries.push(reviewEntry("A later update"));
+    c.emit("turn_end", {message: {role: "assistant", content: [{type: "text", text: "Updated"}]}});
+    expect(c.callbacks).toHaveLength(0);
+  } finally {review.mockRestore();}
+});
+
+test("manual review reports empty and filtered input without invoking a reviewer", async () => {
+  const c = selectionCommands();
+  const review = spyOn(InProcessReviewer.prototype, "review").mockResolvedValue([]);
+  try {
+    await c.run("review");
+    await c.flush();
+    expect(c.notices.at(-1)?.message).toContain("no unreviewed messages");
+    c.entries.push({type: "message", id: "ignored", parentId: null, timestamp: new Date().toISOString(), message: {role: "assistant", content: [{type: "toolCall", id: "git", name: "git", arguments: {}}]}} as SessionEntry);
+    await c.run("review");
+    await c.flush();
+    expect(c.notices.at(-1)?.message).toContain("no reviewable messages after filtering");
+    expect(review).not.toHaveBeenCalled();
+  } finally {review.mockRestore();}
+});
+
+test("a failed manual review stays visible while paused and can be explicitly retried", async () => {
+  const c = selectionCommands();
+  const review = spyOn(InProcessReviewer.prototype, "review").mockRejectedValueOnce(new Error("Synthetic failure")).mockResolvedValue([]);
+  try {
+    await c.run("off");
+    await c.run("primary");
+    c.entries.push(reviewEntry());
+    await c.run("review");
+    await c.flush();
+    expect(c.notices.at(-1)).toEqual({message: "Eng-Advisor manual review failed: Synthetic failure", level: "warning"});
+    expect(c.persisted).toHaveLength(0);
+    await c.run("status");
+    expect(c.notices.at(-1)?.message).toContain("Last error: Synthetic failure");
+    await c.run("review");
+    await c.flush();
+    expect(review).toHaveBeenCalledTimes(2);
+    expect(c.notices.at(-1)?.message).toContain("manual review completed");
+    await c.run("status");
+    expect(c.notices.at(-1)?.message).toStartWith("Eng-Advisor: paused");
+    expect(c.notices.at(-1)?.message).not.toContain("Last error:");
+  } finally {review.mockRestore();}
+});
+
+test("repeated manual requests during a review coalesce into one subsequent batch", async () => {
+  const c = selectionCommands();
+  let started!: () => void;
+  let release!: () => void;
+  const firstStarted = new Promise<void>(resolve => {started = resolve;});
+  const firstRelease = new Promise<void>(resolve => {release = resolve;});
+  let count = 0;
+  let active = 0;
+  let peak = 0;
+  const review = spyOn(InProcessReviewer.prototype, "review").mockImplementation(async () => {
+    count++;active++;peak = Math.max(peak, active);
+    if (count === 1) {started();await firstRelease;}
+    active--;return [];
+  });
+  try {
+    await c.run("off");
+    await c.run("primary");
+    c.entries.push(reviewEntry());
+    await c.run("review");
+    const pending = c.flush();
+    await firstStarted;
+    c.entries.push(reviewEntry("A new unreviewed update"));
+    await c.run("review");
+    await c.run("review");
+    release();
+    await pending;
+    expect(count).toBe(2);
+    expect(peak).toBe(1);
+    expect(c.persisted).toHaveLength(2);
+    await c.run("status");
+    expect(c.notices.at(-1)?.message).toStartWith("Eng-Advisor: paused");
+    expect(c.notices.at(-1)?.message).toContain("reviews: 2");
+  } finally {release();review.mockRestore();}
+});
+
+test("off cancels an active manual review and its queued request", async () => {
+  const c = selectionCommands();
+  let started!: () => void;
+  const firstStarted = new Promise<void>(resolve => {started = resolve;});
+  const review = spyOn(InProcessReviewer.prototype, "review").mockImplementation(async options => {
+    started();
+    return await new Promise((_, reject) => options.signal?.addEventListener("abort", () => reject(options.signal?.reason), {once: true}));
+  });
+  try {
+    await c.run("off");
+    await c.run("primary");
+    c.entries.push(reviewEntry());
+    await c.run("review");
+    const pending = c.flush();
+    await firstStarted;
+    await c.run("review");
+    await c.run("off");
+    await pending;
+    expect(review).toHaveBeenCalledTimes(1);
+    expect(c.persisted).toHaveLength(0);
+    expect(c.notices.some(n => n.message.includes("manual review completed"))).toBe(false);
+    await c.run("status");
+    expect(c.notices.at(-1)?.message).toStartWith("Eng-Advisor: paused");
   } finally {review.mockRestore();}
 });

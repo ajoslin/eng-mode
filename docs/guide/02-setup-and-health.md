@@ -26,6 +26,10 @@ Agents select semantic roles, not provider IDs. Actual models matter when claimi
 
 `/eng-advisor`, `/eng-advisor status`, and `/eng-advisor show` display the same status without starting a review.
 
+Use `/eng-advisor review` for a one-shot review of unreviewed material on the currently selected model. It bypasses automatic cadence and failure backoff for that request and works while automatic review is paused, without unpausing it. Completion, failure, and empty or filtered input are reported explicitly. The command does not rewind history or force findings to re-emit; use `/eng-advisor refresh` to revisit recent material.
+
+Requests made during a running review coalesce into one queued review of any remaining unreviewed material. `/eng-advisor off` cancels active and queued manual work. A model switch carries unfinished manual review to the new reviewer while preserving pause state.
+
 Eng-Advisor prefers `@advisor` and resolves optional `@advisor_fallback` through the same OMP model resolver used by agent alternatives. Choose the fallback model in the workstation's OMP role configuration. Eng Mode does not assign a model or provider, and setup does not create or require the optional role.
 
 If the primary cannot resolve at initialization, a resolvable fallback starts the advisor. After a primary usage/rate-limit or authentication error, the reviewer discards the failed attempt and retries the same batch once on the fallback within the existing review deadline. Missing or duplicate alternatives are skipped. Cancellation, content-policy blocks, context overflow, and unrelated errors do not trigger a switch. A failed fallback remains a failed review.
