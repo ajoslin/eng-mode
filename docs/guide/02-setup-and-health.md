@@ -24,6 +24,8 @@ Agents select semantic roles, not provider IDs. Actual models matter when claimi
 
 ## Advisor alternatives
 
+`/eng-advisor`, `/eng-advisor status`, and `/eng-advisor show` display the same status without starting a review.
+
 Eng-Advisor prefers `@advisor` and resolves optional `@advisor_fallback` through the same OMP model resolver used by agent alternatives. Choose the fallback model in the workstation's OMP role configuration. Eng Mode does not assign a model or provider, and setup does not create or require the optional role.
 
 If the primary cannot resolve at initialization, a resolvable fallback starts the advisor. After a primary usage/rate-limit or authentication error, the reviewer discards the failed attempt and retries the same batch once on the fallback within the existing review deadline. Missing or duplicate alternatives are skipped. Cancellation, content-policy blocks, context overflow, and unrelated errors do not trigger a switch. A failed fallback remains a failed review.

@@ -311,7 +311,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 	pi.registerCommand("eng-advisor", {
 		description: "Show, pause, refresh, reload, or dismiss Eng-Advisor findings",
 		handler: async (args, ctx) => {
-			const [command = "status", value] = args.trim().split(/\s+/, 2);
+			const [command = "status", value] = (args.trim() || "status").split(/\s+/, 2);
 			if (command === "off") {
 				enabled = false;
 				generation++;
@@ -386,7 +386,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 				ctx.ui.notify("Eng-Advisor refresh scheduled", "info");
 				return;
 			}
-			if (command !== "status") {
+			if (command !== "status" && command !== "show") {
 				ctx.ui.notify(`Unknown Eng-Advisor command: ${command}`, "warning");
 				return;
 			}
