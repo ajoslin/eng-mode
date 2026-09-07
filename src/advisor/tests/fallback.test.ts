@@ -12,10 +12,11 @@ import { InProcessReviewer } from "../reviewer";
 import type { ReviewBatch } from "../types";
 
 const config = await loadEngAdvisorConfig(path.resolve(import.meta.dir, ".."));
-const model = (id: string): Model => ({
+type Capability = "controlled" | "uncontrolled" | "none";
+const model = (id: string, capability: Capability = "controlled"): Model => ({
   id, name: id, provider: id === "primary" ? "test-primary" : "test-alternative",
-  api: "openai-responses", baseUrl: "https://example.invalid", reasoning: true,
-  thinking: { efforts: ["medium", "max"] }, input: ["text"],
+  api: "openai-responses", baseUrl: "https://example.invalid", reasoning: capability !== "none",
+  ...(capability === "controlled" ? {thinking: {efforts: ["medium", "max"]}} : {}), input: ["text"],
   contextWindow: 1000000, maxTokens: 128000,
   cost: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0},
 } as unknown as Model);
@@ -23,11 +24,12 @@ const batch: ReviewBatch = {messages: [], text: "Review the current work.", grou
 
 function harness(outcomes: string[], {
   fallback = true, resolveFallback = true, resolvePrimary = true, duplicate = false,
-}: {fallback?: boolean; resolveFallback?: boolean; resolvePrimary?: boolean; duplicate?: boolean} = {}) {
-  const calls: Array<{id: string; effort: unknown; messages: string}> = [];
+  capability = "controlled", thinking = "medium", fallbackThinking = "max",
+}: {fallback?: boolean; resolveFallback?: boolean; resolvePrimary?: boolean; duplicate?: boolean; capability?: Capability; thinking?: "off" | "medium"; fallbackThinking?: "off" | "max"} = {}) {
+  const calls: Array<{id: string; effort: unknown; messages: string; disabled: boolean}> = [];
   const notices: string[] = [];
   const streamFn: StreamFn = (selected, context, options) => {
-    calls.push({id: selected.id, effort: options?.reasoning, messages: JSON.stringify(context.messages)});
+    calls.push({id: selected.id, effort: options?.reasoning, messages: JSON.stringify(context.messages), disabled: options?.disableReasoning === true});
     const outcome = outcomes.shift();
     if (!outcome) throw new Error("Unexpected extra provider call");
     const message: AssistantMessage = {
@@ -45,8 +47,8 @@ function harness(outcomes: string[], {
   };
   const ctx = {
     cwd: process.cwd(), models: {resolve: (name: string) => {
-      if (name === "primary") return resolvePrimary ? model("primary") : undefined;
-      if (name === "fallback" && resolveFallback) return model(duplicate ? "primary" : "fallback");
+      if (name === "primary") return resolvePrimary ? model("primary", capability) : undefined;
+      if (name === "fallback" && resolveFallback) return model(duplicate ? "primary" : "fallback", capability);
       return undefined;
     }},
     sessionManager: {getSessionId: () => "fallback-test"},
@@ -56,7 +58,7 @@ function harness(outcomes: string[], {
   const {fallback: _installedFallback, ...base} = config;
   const reviewer = new InProcessReviewer({
     pi: {zod} as AdvisorExtensionAPI, ctx, instructions: "Repository authority still applies.", streamFn,
-    config: {...base, model: "primary", thinking: "medium", ...(fallback ? {fallback: {model: "fallback", thinking: "max" as const}} : {})},
+    config: {...base, model: "primary", thinking, ...(fallback ? {fallback: {model: "fallback", thinking: fallbackThinking}} : {})},
   });
   return {reviewer, calls, notices};
 }
@@ -161,4 +163,20 @@ test("an unresolved optional role leaves a healthy primary usable", async () => 
 
 test("an unavailable primary and alternative fail during initialization", () => {
   expect(() => harness([], {resolvePrimary: false, resolveFallback: false})).toThrow("could not be resolved");
+});
+
+
+test.each([
+  {capability: "uncontrolled" as const, thinking: "medium" as const, fallbackThinking: "max" as const, label: "model default", disabled: false},
+  {capability: "none" as const, thinking: "medium" as const, fallbackThinking: "max" as const, label: "unsupported", disabled: false},
+  {capability: "controlled" as const, thinking: "off" as const, fallbackThinking: "off" as const, label: "off", disabled: true},
+])("status distinguishes $label from explicit reasoning disablement", async scenario => {
+  const {reviewer, calls} = harness(["usage_limit_reached", "report", "stop"], scenario);
+  try {
+    expect(reviewer.modelStatus).toContain(`primary:${scenario.label} (primary)`);
+    expect(reviewer.fallbackStatus).toContain(`fallback:${scenario.label}`);
+    expect(await reviewer.review({batch, openFindings: []})).toEqual([]);
+    expect(reviewer.modelStatus).toContain(`fallback:${scenario.label} (fallback`);
+    expect(calls.every(c => c.disabled === scenario.disabled)).toBe(true);
+  } finally {reviewer.dispose();}
 });

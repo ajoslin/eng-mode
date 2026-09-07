@@ -20,6 +20,12 @@ function sameModel(left: Model, right: Model | undefined): boolean {
 	return left.provider === right?.provider && left.id === right.id;
 }
 
+function effortStatus(model: Model | undefined, effort: ReturnType<typeof toReasoningEffort>, disabled: boolean): string {
+	if (disabled) return "off";
+	if (!model?.reasoning) return "unsupported";
+	return effort ?? "model default";
+}
+
 function isAdvisorLimit(error: unknown): boolean {
 	const message = error instanceof Error ? error.message : String(error);
 	return isUsageLimit(error) || parseRateLimitReason(message.replaceAll("_", " ")) === "RATE_LIMIT_EXCEEDED";
@@ -140,8 +146,8 @@ export class InProcessReviewer {
 	}
 
 	get modelStatus(): string {
-		const { model, thinkingLevel } = this.#agent.state;
-		return `${model?.provider}/${model?.id}:${thinkingLevel ?? "off"}${this.#fallbackReason ? ` (fallback: ${this.#fallbackReason}; reload to retry primary)` : " (primary)"}`;
+		const { model, thinkingLevel, disableReasoning } = this.#agent.state;
+		return `${model?.provider}/${model?.id}:${effortStatus(model, thinkingLevel, disableReasoning === true)}${this.#fallbackReason ? ` (fallback: ${this.#fallbackReason}; reload to retry primary)` : " (primary)"}`;
 	}
 
 	get fallbackStatus(): string {
@@ -151,7 +157,7 @@ export class InProcessReviewer {
 		if (!model) return `${fallback.model} (unavailable; optional)`;
 		if (sameModel(model, this.#primaryModel)) return `${fallback.model} (duplicates primary; skipped)`;
 		const thinking = resolveThinkingLevelForModel(model, configuredThinking(fallback.thinking));
-		return `${fallback.model} -> ${model.provider}/${model.id}:${toReasoningEffort(thinking) ?? "off"}`;
+		return `${fallback.model} -> ${model.provider}/${model.id}:${effortStatus(model, toReasoningEffort(thinking), shouldDisableReasoning(thinking))}`;
 	}
 
 	async review(options: {
