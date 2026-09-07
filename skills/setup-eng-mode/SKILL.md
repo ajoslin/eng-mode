@@ -46,6 +46,8 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 
 The Eng Mode extension owns and registers Eng-Advisor directly. Verify that `/eng-advisor status` reports enabled, the resolved `@advisor` model, the current runtime transcription, the active role (`main`, a shipped Eng Mode agent name, or an unknown external agent name), and every loaded role-prompt source. Eng Mode ships short defaults in `.eng-advisor/{role}.md`; repositories may add matching files at any ancestor to layer local guidance from filesystem root to current workspace. `WATCHDOG.md` remains shared cross-cutting guidance from the extension root, active agent directory, and repository ancestry. Role files are review lenses, not copies of principles or skill-routing maps. Setup does not copy files or edit OMP configuration.
 
+Eng-Advisor also resolves optional `@advisor_fallback` through OMP's model resolver. Report its actual provider/model/effort and whether it is unavailable or duplicates the primary. An absent optional role does not block a healthy primary. Never populate the role with a guessed model or add it to required role migration. Recommend a distinct provider where the workstation allows it, and report actual diversity. See the [advisor fallback controls](../../docs/guide/02-setup-and-health.md#advisor-alternatives).
+
 ## 7. Runtime validation
 
 Restart OMP after installing or updating the extension, then verify `/eng-advisor status`. The semantic `advisor` model role controls model selection; resolve and report its actual provider/model rather than editing `config.yml`.

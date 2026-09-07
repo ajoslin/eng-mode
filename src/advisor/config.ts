@@ -11,11 +11,13 @@ const RegexRuleSchema = z.object({
 		.optional(),
 });
 
-const ThinkingSchema = z.enum(["off", "minimal", "low", "medium", "high", "xhigh"]);
+const ThinkingSchema = z.enum(["off", "minimal", "low", "medium", "high", "xhigh", "max"]);
+const FallbackSchema = z.object({ model: z.string().min(1), thinking: ThinkingSchema.optional() });
 
 const ConfigSchema = z.object({
 	model: z.string().min(1).optional(),
 	thinking: ThinkingSchema.optional(),
+	fallback: FallbackSchema.nullable().optional(),
 	cooldownMs: z.number().int().min(0).max(86_400_000).optional(),
 	cooldownReviews: z.number().int().min(0).max(10_000).optional(),
 	reviewEveryTurns: z.number().int().min(1).max(100).optional(),
@@ -47,6 +49,7 @@ export interface EngAdvisorConfig {
 	maxBatchMessages: number;
 	maxReviewChars: number;
 	thinking: z.infer<typeof ThinkingSchema>;
+	fallback?: { model: string; thinking: z.infer<typeof ThinkingSchema> };
 	cooldownMs: number;
 	cooldownReviews: number;
 	reviewEveryTurns: number;
@@ -133,9 +136,12 @@ export async function loadEngAdvisorConfig(extensionDir: string): Promise<Compil
 	} catch (error) {
 		if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
 	}
+	const thinking = input.thinking ?? DEFAULT_CONFIG.thinking;
+	const fallback = input.fallback === undefined ? { model: "@advisor_fallback" } : input.fallback;
 	const config: EngAdvisorConfig = {
 		model: input.model ?? DEFAULT_CONFIG.model,
-		thinking: input.thinking ?? DEFAULT_CONFIG.thinking,
+		thinking,
+		...(fallback ? { fallback: { model: fallback.model, thinking: fallback.thinking ?? thinking } } : {}),
 		maxBatchMessages: input.maxBatchMessages ?? DEFAULT_CONFIG.maxBatchMessages,
 		maxReviewChars: input.maxReviewChars ?? DEFAULT_CONFIG.maxReviewChars,
 		reviewTimeoutMs: input.reviewTimeoutMs ?? DEFAULT_CONFIG.reviewTimeoutMs,

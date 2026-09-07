@@ -1,5 +1,6 @@
 import { Agent, type AgentOptions, AppendOnlyContextManager, ThinkingLevel } from "@oh-my-pi/pi-agent-core";
 import type { ApiKey, Model } from "@oh-my-pi/pi-ai";
+import { isUsageLimit, parseRateLimitReason } from "@oh-my-pi/pi-ai/error";
 import type { ExtensionContext } from "@oh-my-pi/pi-coding-agent";
 import {
 	resolveThinkingLevelForModel,
@@ -14,6 +15,15 @@ import { type DurableFinding, FINDING_CATEGORIES, type ProposedFinding, type Rev
 
 const MAX_REVIEWER_MESSAGES = 32;
 const MAX_TOOL_TURNS = 4;
+
+function sameModel(left: Model, right: Model | undefined): boolean {
+	return left.provider === right?.provider && left.id === right.id;
+}
+
+function isAdvisorLimit(error: unknown): boolean {
+	const message = error instanceof Error ? error.message : String(error);
+	return isUsageLimit(error) || parseRateLimitReason(message.replaceAll("_", " ")) === "RATE_LIMIT_EXCEEDED";
+}
 const SYSTEM_PROMPT = `You are Eng-Advisor, an independent peer shadowing a coding agent's stream.
 
 Your role is broader than code review: sharpen strategy, problem-solving, design, execution, and verification. Identify concrete technical risks early. Prefer silence when the agent is on track.
@@ -51,7 +61,7 @@ function existingFindingContext(findings: DurableFinding[]): string {
 	);
 }
 
-function configuredThinking(config: CompiledEngAdvisorConfig): ThinkingLevel {
+function configuredThinking(selector: CompiledEngAdvisorConfig["thinking"]): ThinkingLevel {
 	const levels: Record<CompiledEngAdvisorConfig["thinking"], ThinkingLevel> = {
 		off: ThinkingLevel.Off,
 		minimal: ThinkingLevel.Minimal,
@@ -59,8 +69,9 @@ function configuredThinking(config: CompiledEngAdvisorConfig): ThinkingLevel {
 		medium: ThinkingLevel.Medium,
 		high: ThinkingLevel.High,
 		xhigh: ThinkingLevel.XHigh,
+		max: ThinkingLevel.Max,
 	};
-	return levels[config.thinking];
+	return levels[selector];
 }
 
 interface AdvisorCredentialRegistry {
@@ -81,6 +92,9 @@ export class InProcessReviewer {
 	readonly #reporter: FindingReporter;
 	readonly #appendOnlyContext = new AppendOnlyContextManager();
 	readonly #config: CompiledEngAdvisorConfig;
+	readonly #ctx: ExtensionContext;
+	#fallbackReason: "primary unavailable" | "usage limit" | undefined;
+	readonly #primaryModel: Model | undefined;
 	#reviewTurns = 0;
 
 	constructor(options: {
@@ -88,11 +102,17 @@ export class InProcessReviewer {
 		ctx: ExtensionContext;
 		config: CompiledEngAdvisorConfig;
 		instructions: string;
+		streamFn?: AgentOptions["streamFn"];
 	}) {
-		const model = options.ctx.models.resolve(options.config.model);
-		if (!model) throw new Error(`Eng-Advisor model could not be resolved: ${options.config.model}`);
 		this.#config = options.config;
-		const thinking = resolveThinkingLevelForModel(model, configuredThinking(options.config));
+		this.#ctx = options.ctx;
+		this.#primaryModel = options.ctx.models.resolve(options.config.model);
+		const fallback = options.config.fallback;
+		const model = this.#primaryModel ?? (fallback ? options.ctx.models.resolve(fallback.model) : undefined);
+		if (!model) throw new Error(`Eng-Advisor model could not be resolved: ${options.config.model}${fallback ? ` or ${fallback.model}` : ""}`);
+		this.#fallbackReason = this.#primaryModel ? undefined : "primary unavailable";
+		const selector = this.#primaryModel ? options.config.thinking : fallback?.thinking ?? options.config.thinking;
+		const thinking = resolveThinkingLevelForModel(model, configuredThinking(selector));
 		const providerSessionId = `${options.ctx.sessionManager.getSessionId()}-eng-advisor`;
 		this.#reporter = createFindingReporter(options.pi);
 		const reasoningEffort = toReasoningEffort(thinking);
@@ -111,6 +131,7 @@ export class InProcessReviewer {
 			...advisorCredentialOptions(options.ctx.modelRegistry, providerSessionId),
 			cwdResolver: () => options.ctx.cwd,
 			intentTracing: false,
+			...(options.streamFn ? { streamFn: options.streamFn } : {}),
 		});
 		this.#agent.setDisableReasoning(shouldDisableReasoning(thinking));
 		this.#agent.setOnTurnEnd(() => {
@@ -118,11 +139,27 @@ export class InProcessReviewer {
 		});
 	}
 
+	get modelStatus(): string {
+		const { model, thinkingLevel } = this.#agent.state;
+		return `${model?.provider}/${model?.id}:${thinkingLevel ?? "off"}${this.#fallbackReason ? ` (fallback: ${this.#fallbackReason}; reload to retry primary)` : " (primary)"}`;
+	}
+
+	get fallbackStatus(): string {
+		const fallback = this.#config.fallback;
+		if (!fallback) return "disabled";
+		const model = this.#ctx.models.resolve(fallback.model);
+		if (!model) return `${fallback.model} (unavailable; optional)`;
+		if (sameModel(model, this.#primaryModel)) return `${fallback.model} (duplicates primary; skipped)`;
+		const thinking = resolveThinkingLevelForModel(model, configuredThinking(fallback.thinking));
+		return `${fallback.model} -> ${model.provider}/${model.id}:${toReasoningEffort(thinking) ?? "off"}`;
+	}
+
 	async review(options: {
 		batch: ReviewBatch;
 		openFindings: DurableFinding[];
 		signal?: AbortSignal;
 	}): Promise<ProposedFinding[]> {
+		options.signal?.throwIfAborted();
 		if (this.#agent.state.messages.length > MAX_REVIEWER_MESSAGES) {
 			this.#agent.reset();
 			this.#appendOnlyContext.resetSyncCursor();
@@ -132,14 +169,34 @@ export class InProcessReviewer {
 			`EXISTING OPEN FINDINGS: ${existingFindingContext(options.openFindings)}`,
 			options.batch.text,
 		].join("\n\n");
+		try {
+			return await this.#reviewAttempt(payload, options.signal);
+		} catch (error) {
+			const fallback = this.#config.fallback;
+			if (options.signal?.aborted || this.#fallbackReason || !fallback || !isAdvisorLimit(error)) throw error;
+			const model = this.#ctx.models.resolve(fallback.model);
+			if (!model || sameModel(model, this.#primaryModel)) throw error;
+			const thinking = resolveThinkingLevelForModel(model, configuredThinking(fallback.thinking));
+			this.#agent.setModel(model);
+			this.#agent.setThinkingLevel(toReasoningEffort(thinking));
+			this.#agent.setDisableReasoning(shouldDisableReasoning(thinking));
+			this.#appendOnlyContext.resetSyncCursor();
+			this.#fallbackReason = "usage limit";
+			this.#ctx.ui.notify(`Eng-Advisor primary reached a usage limit. Active model: ${this.modelStatus}`, "info");
+			return await this.#reviewAttempt(payload, options.signal);
+		}
+	}
+
+	async #reviewAttempt(payload: string, signal?: AbortSignal): Promise<ProposedFinding[]> {
+		signal?.throwIfAborted();
 		const startingMessageCount = this.#agent.state.messages.length;
 		this.#reviewTurns = 0;
 		this.#reporter.begin();
-		const abort = () => this.#agent.abort(options.signal?.reason);
-		options.signal?.addEventListener("abort", abort, { once: true });
+		const abort = () => this.#agent.abort(signal?.reason);
+		signal?.addEventListener("abort", abort, { once: true });
 		try {
 			await this.#agent.prompt(payload);
-			if (options.signal?.aborted) throw options.signal.reason;
+			if (signal?.aborted) throw signal.reason;
 			if (this.#agent.state.error) throw new Error(this.#agent.state.error);
 			return this.#reporter.take().slice(0, this.#config.maxFindingsPerReview);
 		} catch (error) {
@@ -148,7 +205,7 @@ export class InProcessReviewer {
 			this.#appendOnlyContext.resetSyncCursor();
 			throw error;
 		} finally {
-			options.signal?.removeEventListener("abort", abort);
+			signal?.removeEventListener("abort", abort);
 		}
 	}
 

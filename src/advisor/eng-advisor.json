@@ -1,6 +1,7 @@
 {
   "model": "@advisor",
   "thinking": "low",
+  "fallback": { "model": "@advisor_fallback" },
   "cooldownMs": 300000,
   "cooldownReviews": 8,
   "reviewEveryTurns": 4,

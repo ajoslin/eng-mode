@@ -62,6 +62,8 @@ function formatStatus(options: {
 	roleSources: readonly string[];
 	lastReviewAt: number;
 	lastError: string | undefined;
+	modelStatus: string | undefined;
+	fallbackStatus: string | undefined;
 }): string {
 	const lines = [
 		`Eng-Advisor: ${options.enabled ? "enabled" : "paused"}${options.running ? ", reviewing" : ""}`,
@@ -77,6 +79,8 @@ function formatStatus(options: {
 			`Review cadence: every ${options.config.reviewEveryTurns} in-progress turns; completed after ${options.config.reviewFinalAfterTurns} turn(s)`,
 		);
 	}
+	if (options.modelStatus) lines.push(`Active model: ${options.modelStatus}`);
+	if (options.fallbackStatus) lines.push(`Fallback: ${options.fallbackStatus}`);
 	if (options.lastReviewAt) lines.push(`Last review: ${new Date(options.lastReviewAt).toISOString()}`);
 	if (options.lastError) lines.push(`Last error: ${options.lastError}`);
 	const findings = openFindings(options.state);
@@ -387,7 +391,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 				return;
 			}
 			ctx.ui.notify(
-				formatStatus({ enabled, running, state, config, role, roleSources, lastReviewAt, lastError }),
+				formatStatus({ enabled, running, state, config, role, roleSources, lastReviewAt, lastError, modelStatus: reviewer?.modelStatus, fallbackStatus: reviewer?.fallbackStatus }),
 				lastError ? "warning" : "info",
 			);
 		},
