@@ -1,11 +1,13 @@
 import path from "node:path";
 import { tmpdir } from "node:os";
 import type { Model } from "@oh-my-pi/pi-ai";
+import type { AutocompleteItem } from "@oh-my-pi/pi-tui";
 import { zod, type ExtensionContext, type SessionEntry } from "@oh-my-pi/pi-coding-agent";
 import { registerEngAdvisor, type AdvisorExtensionAPI } from "../index";
 
 export function selectionCommands(allowFindings = false) {
   let handler: (args: string, ctx: ExtensionContext) => Promise<void>;
+  let completions: ((prefix: string) => AutocompleteItem[] | null) | undefined;
   const notices: Array<{message: string; level: string | undefined}> = [];
   const callbacks: Array<() => Promise<void>> = [];
   const persisted: string[] = [];
@@ -20,7 +22,9 @@ export function selectionCommands(allowFindings = false) {
     contextWindow: 8192, maxTokens: 1024, cost: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0},
   } as unknown as Model);
   registerEngAdvisor({
-    registerCommand: (_name: string, command: {handler: typeof handler}) => {handler = command.handler;},
+    registerCommand: (_name: string, command: {handler: typeof handler; getArgumentCompletions?: typeof completions}) => {
+      handler = command.handler;completions = command.getArgumentCompletions;
+    },
     registerMessageRenderer: () => {}, on: (name: string, handler: (event: unknown, ctx: ExtensionContext) => unknown) => events.set(name, handler), zod,
     pi: {getAgentDir: () => path.join(tmpdir(), "eng-advisor-selection-no-profile")},
     appendEntry: (name: string, data: unknown) => {
@@ -44,6 +48,7 @@ export function selectionCommands(allowFindings = false) {
   } as unknown as ExtensionContext;
   return {
     run: (args: string) => handler(args, ctx), notices, callbacks, available, persisted, entries, writes, sent,
+    complete: (prefix: string) => completions?.(prefix) ?? null,
     emit: (name: string, event: unknown) => events.get(name)?.(event, ctx),
     flush: async () => {while (callbacks.length) await callbacks.shift()!();},
   };

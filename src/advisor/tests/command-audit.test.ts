@@ -121,6 +121,21 @@ test("dismiss requires a unique prefix and persists the chosen dismissal across 
   expect(c.notices.at(-1)?.message).toContain("Open findings: 1");
 });
 
+test("dismiss completion follows restored open findings and removes dismissed choices", async () => {
+  const c = selectionCommands();
+  c.entries.push(savedFinding("fixture/first"), savedFinding("fixture/second"));
+  await c.emit("session_start", {});
+  const firstKey = findingIdentityKey(proposal("fixture/first"));
+  const choices = c.complete("dismiss ") ?? [];
+  expect(choices).toHaveLength(2);
+  expect(choices.find(item => item.value === `dismiss ${firstKey} `)?.description).toContain("Validate the external value");
+  expect(c.complete(`dismiss ${firstKey.slice(0, 8).toUpperCase()}`)?.map(item => item.value)).toEqual([`dismiss ${firstKey} `]);
+  expect(c.writes).toHaveLength(0);
+  await c.run(`dismiss ${firstKey}`);
+  expect(c.complete(`dismiss ${firstKey}`)).toBeNull();
+  expect(c.complete("dismiss ")).toHaveLength(1);
+});
+
 test("on recovers from initialization failure and resumes pending material", async () => {
   const c = selectionCommands();
   const review = spyOn(InProcessReviewer.prototype, "review").mockResolvedValue([]);

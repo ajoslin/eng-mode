@@ -2,6 +2,7 @@ import * as path from "node:path";
 import type { AgentMessage } from "@oh-my-pi/pi-agent-core";
 import type { ExtensionAPI as OmpExtensionAPI, ExtensionContext } from "@oh-my-pi/pi-coding-agent";
 import { renderEngAdvisorCard } from "./card";
+import { ADVISOR_COMMAND_HELP, advisorArgumentCompletions } from "./commands";
 import { type CompiledEngAdvisorConfig, loadEngAdvisorConfig } from "./config";
 import { applyFindingPolicy } from "./policy";
 import { filterReviewBatch } from "./transcript";
@@ -349,8 +350,13 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 
 	pi.registerCommand("eng-advisor", {
 		description: "Show status, review now, select primary/fallback, pause, refresh, reload, or dismiss findings",
+		getArgumentCompletions: prefix => advisorArgumentCompletions(prefix, state.findings),
 		handler: async (args, ctx) => {
 			const [command = "status", value] = (args.trim() || "status").split(/\s+/, 2);
+			if (command === "help" || command === "--help" || command === "-h") {
+				ctx.ui.notify(ADVISOR_COMMAND_HELP, "info");
+				return;
+			}
 			if (command === "off") {
 				enabled = false;
 				manualReviewRequested = undefined;
@@ -439,7 +445,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 				return;
 			}
 			if (command !== "status" && command !== "show") {
-				ctx.ui.notify(`Unknown Eng-Advisor command: ${command}`, "warning");
+				ctx.ui.notify(`Unknown Eng-Advisor command: ${command}. Use /eng-advisor help.`, "warning");
 				return;
 			}
 			ctx.ui.notify(

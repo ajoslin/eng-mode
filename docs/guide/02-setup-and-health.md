@@ -24,6 +24,8 @@ Agents select semantic roles, not provider IDs. Actual models matter when claimi
 
 ## Advisor commands and alternatives
 
+Type `/eng-advisor ` to see options with descriptions, then use the normal OMP autocomplete controls to select one. `/eng-advisor help` (also `--help` or `-h`) lists commands and explains their behavior. After `/eng-advisor dismiss `, autocomplete suggests open finding IDs with summaries; selecting one inserts its full key.
+
 | Command | Effect |
 |---|---|
 | `/eng-advisor`, `/eng-advisor status`, `/eng-advisor show` | Show status, active role and prompt sources, model and effort, and open finding keys. |
@@ -34,6 +36,7 @@ Agents select semantic roles, not provider IDs. Actual models matter when claimi
 | `/eng-advisor primary`, `/eng-advisor fallback` | Select the configured primary or fallback for this session. |
 | `/eng-advisor reload` | Reload configuration and guidance, retrying the primary preference. Keep pause state and findings. |
 | `/eng-advisor dismiss <key-prefix>` | Dismiss one uniquely matched open finding using a key from status. Persist the dismissal in this session's history. |
+| `/eng-advisor help` | Show command descriptions and usage without starting a review. |
 
 Use `/eng-advisor review` for a one-shot review of unreviewed material on the currently selected model. It bypasses automatic cadence and failure backoff for that request and works while automatic review is paused, without unpausing it. Completion, failure, and empty or filtered input are reported explicitly. The command does not rewind history or force findings to re-emit; use `/eng-advisor refresh` to revisit recent material.
 
