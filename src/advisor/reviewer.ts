@@ -1,6 +1,6 @@
 import { Agent, type AgentOptions, AppendOnlyContextManager, ThinkingLevel } from "@oh-my-pi/pi-agent-core";
 import type { ApiKey, Model } from "@oh-my-pi/pi-ai";
-import { isUsageLimit, parseRateLimitReason } from "@oh-my-pi/pi-ai/error";
+import { classify, Flag, is, isOAuthExpiry, parseRateLimitReason } from "@oh-my-pi/pi-ai/error";
 import type { ExtensionContext } from "@oh-my-pi/pi-coding-agent";
 import {
 	resolveThinkingLevelForModel,
@@ -26,9 +26,15 @@ function effortStatus(model: Model | undefined, effort: ReturnType<typeof toReas
 	return effort ?? "model default";
 }
 
-function isAdvisorLimit(error: unknown): boolean {
+type RecoveryReason = "usage limit" | "authentication failure";
+
+function advisorRecoveryReason(error: unknown): RecoveryReason | undefined {
 	const message = error instanceof Error ? error.message : String(error);
-	return isUsageLimit(error) || parseRateLimitReason(message.replaceAll("_", " ")) === "RATE_LIMIT_EXCEEDED";
+	const flags = classify(error);
+	if (is(flags, Flag.ContentBlocked)) return undefined;
+	if (is(flags, Flag.AuthFailed) || is(flags, Flag.OAuthExpiry) || isOAuthExpiry(message)) return "authentication failure";
+	if (is(flags, Flag.UsageLimit) || parseRateLimitReason(message.replaceAll("_", " ")) === "RATE_LIMIT_EXCEEDED") return "usage limit";
+	return undefined;
 }
 const SYSTEM_PROMPT = `You are Eng-Advisor, an independent peer shadowing a coding agent's stream.
 
@@ -99,7 +105,7 @@ export class InProcessReviewer {
 	readonly #appendOnlyContext = new AppendOnlyContextManager();
 	readonly #config: CompiledEngAdvisorConfig;
 	readonly #ctx: ExtensionContext;
-	#fallbackReason: "primary unavailable" | "usage limit" | undefined;
+	#fallbackReason: "primary unavailable" | RecoveryReason | undefined;
 	readonly #primaryModel: Model | undefined;
 	#reviewTurns = 0;
 
@@ -147,7 +153,10 @@ export class InProcessReviewer {
 
 	get modelStatus(): string {
 		const { model, thinkingLevel, disableReasoning } = this.#agent.state;
-		return `${model?.provider}/${model?.id}:${effortStatus(model, thinkingLevel, disableReasoning === true)}${this.#fallbackReason ? ` (fallback: ${this.#fallbackReason}; reload to retry primary)` : " (primary)"}`;
+		const reason = this.#fallbackReason === "authentication failure"
+			? `authentication failure on ${this.#primaryModel?.provider}/${this.#primaryModel?.id}`
+			: this.#fallbackReason;
+		return `${model?.provider}/${model?.id}:${effortStatus(model, thinkingLevel, disableReasoning === true)}${reason ? ` (fallback: ${reason}; reload to retry primary)` : " (primary)"}`;
 	}
 
 	get fallbackStatus(): string {
@@ -179,7 +188,9 @@ export class InProcessReviewer {
 			return await this.#reviewAttempt(payload, options.signal);
 		} catch (error) {
 			const fallback = this.#config.fallback;
-			if (options.signal?.aborted || this.#fallbackReason || !fallback || !isAdvisorLimit(error)) throw error;
+			if (options.signal?.aborted || this.#fallbackReason || !fallback) throw error;
+			const reason = advisorRecoveryReason(error);
+			if (!reason) throw error;
 			const model = this.#ctx.models.resolve(fallback.model);
 			if (!model || sameModel(model, this.#primaryModel)) throw error;
 			const thinking = resolveThinkingLevelForModel(model, configuredThinking(fallback.thinking));
@@ -187,8 +198,10 @@ export class InProcessReviewer {
 			this.#agent.setThinkingLevel(toReasoningEffort(thinking));
 			this.#agent.setDisableReasoning(shouldDisableReasoning(thinking));
 			this.#appendOnlyContext.resetSyncCursor();
-			this.#fallbackReason = "usage limit";
-			this.#ctx.ui.notify(`Eng-Advisor primary reached a usage limit. Active model: ${this.modelStatus}`, "info");
+			this.#fallbackReason = reason;
+			const warning = reason === "authentication failure";
+			const summary = warning ? "primary authentication failed; check the primary provider's credentials" : "primary reached a usage limit";
+			this.#ctx.ui.notify(`Eng-Advisor ${summary}. Active model: ${this.modelStatus}`, warning ? "warning" : "info");
 			return await this.#reviewAttempt(payload, options.signal);
 		}
 	}

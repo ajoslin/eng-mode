@@ -27,7 +27,7 @@ function harness(outcomes: string[], {
   capability = "controlled", thinking = "medium", fallbackThinking = "max",
 }: {fallback?: boolean; resolveFallback?: boolean; resolvePrimary?: boolean; duplicate?: boolean; capability?: Capability; thinking?: "off" | "medium"; fallbackThinking?: "off" | "max"} = {}) {
   const calls: Array<{id: string; effort: unknown; messages: string; disabled: boolean}> = [];
-  const notices: string[] = [];
+  const notices: Array<{message: string; level: string | undefined}> = [];
   const streamFn: StreamFn = (selected, context, options) => {
     calls.push({id: selected.id, effort: options?.reasoning, messages: JSON.stringify(context.messages), disabled: options?.disableReasoning === true});
     const outcome = outcomes.shift();
@@ -53,7 +53,7 @@ function harness(outcomes: string[], {
     }},
     sessionManager: {getSessionId: () => "fallback-test"},
     modelRegistry: {resolver: () => "test-only"},
-    ui: {notify: (message: string) => notices.push(message)},
+    ui: {notify: (message: string, level?: string) => notices.push({message, level})},
   } as unknown as ExtensionContext;
   const {fallback: _installedFallback, ...base} = config;
   const reviewer = new InProcessReviewer({
@@ -86,7 +86,7 @@ test("successful primary retains Medium effort and never invokes fallback", asyn
   } finally {reviewer.dispose();}
 });
 
-test.each(["Invalid API key", "maximum context length exceeded", "connection timed out", "invalid tool schema"])("does not switch providers for %s", async error => {
+test.each(["maximum context length exceeded", "connection timed out", "invalid tool schema", "content policy violation"])("does not switch providers for %s", async error => {
   const {reviewer, calls} = harness([error]);
   try {
     await expect(reviewer.review({batch, openFindings: []})).rejects.toThrow();
@@ -178,5 +178,46 @@ test.each([
     expect(await reviewer.review({batch, openFindings: []})).toEqual([]);
     expect(reviewer.modelStatus).toContain(`fallback:${scenario.label} (fallback`);
     expect(calls.every(c => c.disabled === scenario.disabled)).toBe(true);
+  } finally {reviewer.dispose();}
+});
+
+
+test.each(["Invalid API key", "401 Unauthorized", "invalid_grant: refresh token has expired"])("authentication failure stays visible while fallback completes: %s", async error => {
+  const {reviewer, calls, notices} = harness([error, "report", "stop", "report", "stop"]);
+  try {
+    expect(await reviewer.review({batch, openFindings: []})).toEqual([]);
+    expect(calls.map(c => c.id)).toEqual(["primary", "fallback", "fallback"]);
+    expect(calls[1]?.messages).not.toContain(error);
+    expect(notices).toHaveLength(1);
+    expect(notices[0]?.level).toBe("warning");
+    expect(notices[0]?.message).toContain("authentication failed");
+    expect(notices[0]?.message).toContain("test-primary/primary");
+    expect(notices[0]?.message).toContain("credentials");
+    expect(reviewer.modelStatus).toContain("fallback: authentication failure on test-primary/primary");
+    expect(await reviewer.review({batch, openFindings: []})).toEqual([]);
+    expect(calls.filter(c => c.id === "primary")).toHaveLength(1);
+    expect(notices).toHaveLength(1);
+    expect(reviewer.modelStatus).toContain("authentication failure");
+  } finally {reviewer.dispose();}
+});
+
+test("authentication warning does not echo provider error contents", async () => {
+  const sensitive = "fixture-secret-not-for-display";
+  const {reviewer, notices} = harness([`Invalid API key: ${sensitive}`, "report", "stop"]);
+  try {
+    expect(await reviewer.review({batch, openFindings: []})).toEqual([]);
+    expect(notices[0]?.message).toContain("authentication failed");
+    expect(notices[0]?.message).not.toContain(sensitive);
+    expect(reviewer.modelStatus).not.toContain(sensitive);
+  } finally {reviewer.dispose();}
+});
+
+test("authentication fallback failure remains a failure with the primary warning retained", async () => {
+  const {reviewer, calls, notices} = harness(["Invalid API key", "usage_limit_reached"]);
+  try {
+    await expect(reviewer.review({batch, openFindings: []})).rejects.toThrow();
+    expect(calls.map(c => c.id)).toEqual(["primary", "fallback"]);
+    expect(notices[0]?.level).toBe("warning");
+    expect(reviewer.modelStatus).toContain("authentication failure");
   } finally {reviewer.dispose();}
 });

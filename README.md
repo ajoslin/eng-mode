@@ -41,7 +41,7 @@ setup-eng-mode
 
 Keep advisor role files focused on review intent, characteristic failure modes, and authority limits. Do not copy principle bodies or skill routing maps into them; the primary agent's Eng Mode workflow owns those instructions.
 
-Eng-Advisor supports an optional workstation-selected `@advisor_fallback` for an unavailable primary or a usage/rate limit. No fallback model is assigned automatically. See [advisor alternatives](docs/guide/02-setup-and-health.md#advisor-alternatives) for configuration, effort, and status behavior.
+Eng-Advisor supports an optional workstation-selected `@advisor_fallback` for an unavailable primary, a usage/rate limit, or an authentication failure. No fallback model is assigned automatically. See [advisor alternatives](docs/guide/02-setup-and-health.md#advisor-alternatives) for configuration, effort, and status behavior.
 
 To update, run the install command again, restart OMP, and rerun `setup-eng-mode` in each repository.
 
