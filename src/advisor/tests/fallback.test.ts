@@ -8,7 +8,7 @@ import { createAssistantMessageEventStream } from "@oh-my-pi/pi-ai/utils/event-s
 import { zod, type ExtensionContext } from "@oh-my-pi/pi-coding-agent";
 import { loadEngAdvisorConfig } from "../config";
 import type { AdvisorExtensionAPI } from "../index";
-import { InProcessReviewer } from "../reviewer";
+import { InProcessReviewer, type AdvisorSelection } from "../reviewer";
 import type { ReviewBatch } from "../types";
 
 const config = await loadEngAdvisorConfig(path.resolve(import.meta.dir, ".."));
@@ -24,8 +24,8 @@ const batch: ReviewBatch = {messages: [], text: "Review the current work.", grou
 
 function harness(outcomes: string[], {
   fallback = true, resolveFallback = true, resolvePrimary = true, duplicate = false,
-  capability = "controlled", thinking = "medium", fallbackThinking = "max",
-}: {fallback?: boolean; resolveFallback?: boolean; resolvePrimary?: boolean; duplicate?: boolean; capability?: Capability; thinking?: "off" | "medium"; fallbackThinking?: "off" | "max"} = {}) {
+  capability = "controlled", thinking = "medium", fallbackThinking = "max", selection,
+}: {fallback?: boolean; resolveFallback?: boolean; resolvePrimary?: boolean; duplicate?: boolean; capability?: Capability; thinking?: "off" | "medium"; fallbackThinking?: "off" | "max"; selection?: AdvisorSelection} = {}) {
   const calls: Array<{id: string; effort: unknown; messages: string; disabled: boolean}> = [];
   const notices: Array<{message: string; level: string | undefined}> = [];
   const streamFn: StreamFn = (selected, context, options) => {
@@ -57,7 +57,7 @@ function harness(outcomes: string[], {
   } as unknown as ExtensionContext;
   const {fallback: _installedFallback, ...base} = config;
   const reviewer = new InProcessReviewer({
-    pi: {zod} as AdvisorExtensionAPI, ctx, instructions: "Repository authority still applies.", streamFn,
+    pi: {zod} as AdvisorExtensionAPI, ctx, instructions: "Repository authority still applies.", streamFn, ...(selection ? {selection} : {}),
     config: {...base, model: "primary", thinking, ...(fallback ? {fallback: {model: "fallback", thinking: fallbackThinking}} : {})},
   });
   return {reviewer, calls, notices};
@@ -220,4 +220,27 @@ test("authentication fallback failure remains a failure with the primary warning
     expect(notices[0]?.level).toBe("warning");
     expect(reviewer.modelStatus).toContain("authentication failure");
   } finally {reviewer.dispose();}
+});
+
+
+test("manual fallback uses its own effort even while the primary is available", async () => {
+  const {reviewer, calls} = harness(["report", "stop"], {selection: "fallback"});
+  try {
+    expect(reviewer.modelStatus).toContain("fallback:max (fallback: manual selection");
+    expect(await reviewer.review({batch, openFindings: []})).toEqual([]);
+    expect(calls.every(c => c.id === "fallback" && c.effort === "max")).toBe(true);
+  } finally {reviewer.dispose();}
+});
+
+test("manual primary selection keeps automatic recovery available", async () => {
+  const {reviewer, calls} = harness(["usage_limit_reached", "report", "stop"], {selection: "primary"});
+  try {
+    expect(reviewer.modelStatus).toContain("primary:medium (primary)");
+    expect(await reviewer.review({batch, openFindings: []})).toEqual([]);
+    expect(calls.map(c => c.id)).toEqual(["primary", "fallback", "fallback"]);
+  } finally {reviewer.dispose();}
+});
+
+test("a disabled fallback cannot be selected manually", () => {
+  expect(() => harness([], {fallback: false, selection: "fallback"})).toThrow("Fallback is disabled");
 });

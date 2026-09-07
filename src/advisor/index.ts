@@ -309,7 +309,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 	});
 
 	pi.registerCommand("eng-advisor", {
-		description: "Show, pause, refresh, reload, or dismiss Eng-Advisor findings",
+		description: "Show status, select primary/fallback, pause, refresh, reload, or dismiss Eng-Advisor findings",
 		handler: async (args, ctx) => {
 			const [command = "status", value] = (args.trim() || "status").split(/\s+/, 2);
 			if (command === "off") {
@@ -328,33 +328,44 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 				schedule(ctx, false, true);
 				return;
 			}
-			if (command === "reload") {
-				const nextConfig = await loadEngAdvisorConfig(import.meta.dir);
-				const nextRole = resolveAdvisorRole(ctx.sessionManager.getBranch());
-				const watchdog = await collectWatchdogInstructions(import.meta.dir, pi.pi.getAgentDir(), ctx.cwd);
-				const roleInstructions = await loadAdvisorRoleInstructions({
-					extensionRoot: path.resolve(import.meta.dir, "..", ".."),
-					cwd: ctx.cwd,
-					role: nextRole,
-				});
-				const nextInstructions = [watchdog, roleInstructions.text].filter(Boolean).join("\n\n");
-				const nextReviewer = new InProcessReviewer({
-					pi,
-					ctx,
-					config: nextConfig,
-					instructions: nextInstructions,
-				});
-				generation++;
-				reviewAbort?.abort("Eng-Advisor reloading");
-				roleSources = roleInstructions.sources;
-				reviewer?.dispose();
-				config = nextConfig;
-				reviewer = nextReviewer;
-				role = nextRole;
-				failureUntil = 0;
-				lastError = undefined;
-				ctx.ui.notify("Eng-Advisor configuration reloaded", "info");
-				schedule(ctx, false, true);
+			if (command === "reload" || command === "primary" || command === "fallback") {
+				const expectedGeneration = generation;
+				try {
+					const nextConfig = await loadEngAdvisorConfig(import.meta.dir);
+					const nextRole = resolveAdvisorRole(ctx.sessionManager.getBranch());
+					const watchdog = await collectWatchdogInstructions(import.meta.dir, pi.pi.getAgentDir(), ctx.cwd);
+					const roleInstructions = await loadAdvisorRoleInstructions({
+						extensionRoot: path.resolve(import.meta.dir, "..", ".."),
+						cwd: ctx.cwd,
+						role: nextRole,
+					});
+					const nextInstructions = [watchdog, roleInstructions.text].filter(Boolean).join("\n\n");
+					const nextReviewer = new InProcessReviewer({
+						pi,
+						ctx,
+						config: nextConfig,
+						instructions: nextInstructions,
+						...(command === "reload" ? {} : { selection: command }),
+					});
+					if (expectedGeneration !== generation) {
+						nextReviewer.dispose();
+						ctx.ui.notify("Eng-Advisor selection cancelled because the session changed", "warning");
+						return;
+					}
+					generation++;
+					reviewAbort?.abort("Eng-Advisor reviewer replaced");
+					roleSources = roleInstructions.sources;
+					reviewer?.dispose();
+					config = nextConfig;
+					reviewer = nextReviewer;
+					role = nextRole;
+					failureUntil = 0;
+					lastError = undefined;
+					ctx.ui.notify(command === "reload" ? "Eng-Advisor configuration reloaded" : `Eng-Advisor selected ${command}. Active model: ${nextReviewer.modelStatus}${enabled ? "" : "; paused"}`, "info");
+					schedule(ctx, false, true);
+				} catch (error) {
+					ctx.ui.notify(`Eng-Advisor ${command} failed: ${error instanceof Error ? error.message : String(error)}`, "warning");
+				}
 				return;
 			}
 			if (command === "dismiss") {

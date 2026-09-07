@@ -27,6 +27,7 @@ function effortStatus(model: Model | undefined, effort: ReturnType<typeof toReas
 }
 
 type RecoveryReason = "usage limit" | "authentication failure";
+export type AdvisorSelection = "primary" | "fallback";
 
 function advisorRecoveryReason(error: unknown): RecoveryReason | undefined {
 	const message = error instanceof Error ? error.message : String(error);
@@ -105,7 +106,7 @@ export class InProcessReviewer {
 	readonly #appendOnlyContext = new AppendOnlyContextManager();
 	readonly #config: CompiledEngAdvisorConfig;
 	readonly #ctx: ExtensionContext;
-	#fallbackReason: "primary unavailable" | RecoveryReason | undefined;
+	#fallbackReason: "primary unavailable" | "manual selection" | RecoveryReason | undefined;
 	readonly #primaryModel: Model | undefined;
 	#reviewTurns = 0;
 
@@ -115,15 +116,25 @@ export class InProcessReviewer {
 		config: CompiledEngAdvisorConfig;
 		instructions: string;
 		streamFn?: AgentOptions["streamFn"];
+		selection?: AdvisorSelection;
 	}) {
 		this.#config = options.config;
 		this.#ctx = options.ctx;
 		this.#primaryModel = options.ctx.models.resolve(options.config.model);
 		const fallback = options.config.fallback;
-		const model = this.#primaryModel ?? (fallback ? options.ctx.models.resolve(fallback.model) : undefined);
+		let model = this.#primaryModel;
+		let selector = options.config.thinking;
+		if (options.selection === "primary" && !model) throw new Error(`Primary model could not be resolved: ${options.config.model}`);
+		if (options.selection === "fallback" || !model) {
+			const alternative = fallback ? options.ctx.models.resolve(fallback.model) : undefined;
+			if (options.selection === "fallback" && !fallback) throw new Error("Fallback is disabled");
+			if (options.selection === "fallback" && !alternative) throw new Error(`Fallback model could not be resolved: ${fallback?.model}`);
+			if (options.selection === "fallback" && alternative && sameModel(alternative, this.#primaryModel)) throw new Error("Fallback resolves to the primary model");
+			model = alternative;
+			selector = fallback?.thinking ?? selector;
+			this.#fallbackReason = options.selection === "fallback" ? "manual selection" : "primary unavailable";
+		}
 		if (!model) throw new Error(`Eng-Advisor model could not be resolved: ${options.config.model}${fallback ? ` or ${fallback.model}` : ""}`);
-		this.#fallbackReason = this.#primaryModel ? undefined : "primary unavailable";
-		const selector = this.#primaryModel ? options.config.thinking : fallback?.thinking ?? options.config.thinking;
 		const thinking = resolveThinkingLevelForModel(model, configuredThinking(selector));
 		const providerSessionId = `${options.ctx.sessionManager.getSessionId()}-eng-advisor`;
 		this.#reporter = createFindingReporter(options.pi);
@@ -156,7 +167,7 @@ export class InProcessReviewer {
 		const reason = this.#fallbackReason === "authentication failure"
 			? `authentication failure on ${this.#primaryModel?.provider}/${this.#primaryModel?.id}`
 			: this.#fallbackReason;
-		return `${model?.provider}/${model?.id}:${effortStatus(model, thinkingLevel, disableReasoning === true)}${reason ? ` (fallback: ${reason}; reload to retry primary)` : " (primary)"}`;
+		return `${model?.provider}/${model?.id}:${effortStatus(model, thinkingLevel, disableReasoning === true)}${reason ? ` (fallback: ${reason}; use primary or reload to retry primary)` : " (primary)"}`;
 	}
 
 	get fallbackStatus(): string {
