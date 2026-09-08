@@ -37,14 +37,25 @@ describe("delivery authority", () => {
 });
 
 describe("thermo-nuclear stays explicit-only", () => {
-  it("Opening a PR no longer auto-runs thermo-nuclear; the explicit skill remains", async () => {
+  it("Pre-PR gates run one fresh-eyes seat with one question and no browser", async () => {
     const gates = await read("skills/eng-mode/playbooks/pre-pr-gates.md");
-    expect(gates).toContain("`pre-pr-swarm`");
+    expect(gates).toContain("`fresh-eyes`");
+    expect(gates).toContain("Name the question.");
+    expect(gates).toContain("No browser on this seat.");
+    expect(gates).toContain('"fresh-eyes": "ran"');
+    expect(gates).not.toContain("pre-pr-swarm");
     expect(gates).not.toContain("two seats");
     expect(gates).not.toContain("three seats");
-    expect(gates).toContain('"pre-pr-swarm": "ran"');
     expect(gates).not.toContain("meaningful-contribution");
 
+    const seat = await read("skills/fresh-eyes/SKILL.md");
+    expect(seat).toContain("disable-model-invocation: true");
+    expect(seat).toContain("**One question.**");
+    expect(seat).toContain("browser: not-run");
+    expect(seat).not.toContain("swarm");
+  });
+
+  it("Opening a PR no longer auto-runs thermo-nuclear; the explicit skill remains", async () => {
     const rubric = await read("skills/thermo-nuclear-code-quality-review/SKILL.md");
     expect(rubric).toContain("disable-model-invocation: true");
 

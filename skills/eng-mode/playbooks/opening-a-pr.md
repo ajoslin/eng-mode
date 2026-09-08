@@ -2,7 +2,7 @@
 
 Invoke this playbook only at the end of a code-producing playbook whose delivery includes a PR. Read-only work and local delivery do not need forge work.
 
-**Pre-PR gates.** Before opening, run **Pre-PR gates**. Hard-stop unless a synthesis receipt exists at `.omp/pre-pr-gates/<sha>/synthesis.json` for the SHA the panel froze. After that playbook remediates the synthesized Act-on set, open through the selected provider without rerunning the panel. Not Pullfrog. Not a merge gate.
+**Pre-PR gates.** Before opening, run **Pre-PR gates**. Hard-stop unless a synthesis receipt exists at `.omp/pre-pr-gates/<sha>/synthesis.json` for the SHA the seat froze. After that playbook remediates the synthesized Act-on set, open through the selected provider without rerunning the seat. Not Pullfrog. Not a merge gate.
 
 **Recover without destroying work.** Work from an exclusive branch off the correct base. Independent PR-owning writers are one-shot, non-isolated agents on that branch. Do not set `isolated: true` for them because OMP applies isolated output onto the parent tree. Use `isolated: true` only when independent writers' combined changes belong on the parent. Competing candidates use `local://`. If unrelated changes make the branch dirty, preserve them in a patch or commit, create a fresh branch or worktree from the correct base, and apply only the intended changes. If the worktree is tangled, create a clean one and redo or selectively apply the intended commits. Never reset, discard, or overwrite user work.
 

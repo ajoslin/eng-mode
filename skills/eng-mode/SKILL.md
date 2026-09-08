@@ -64,7 +64,7 @@ The contracts decision is auditable on-disk validation, not model self-report. `
 - Unattended, high-risk, or multi-phase work, including work the user will review later: the `show-me-your-work` skill for a durable decision trail.
 - Harsh maintainability review, explicit only: the `thermo-nuclear-code-quality-review` skill directly; there is no Thermo-nuclear playbook.
 - Proven-working-code bar, explicit only: the `meaningful-contribution` skill directly; there is no Meaningful-contribution playbook.
-- Pre-open quality: `playbooks/pre-pr-gates.md` (synthesis; not Pullfrog).
+- Pre-open quality: `playbooks/pre-pr-gates.md` (one `fresh-eyes` seat, one question; not Pullfrog).
 - Missing or rotten product verification: `create-verification-skill` and `maintain-verification-skill`.
 - No fitting playbook or large migration: `figure-it-out`.
 - Any code-producing playbook ends with `playbooks/opening-a-pr.md` when delivery includes a PR.
