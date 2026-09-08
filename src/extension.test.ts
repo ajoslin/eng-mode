@@ -10,6 +10,7 @@ import engModeExtension, {
   parsePromptClassification,
 } from "./extension.ts";
 import { MINIMUM_GOAL_TOKEN_BUDGET } from "./goal-tool.ts";
+import { ENG_MODE_ENTERED_TYPE } from "./eng-mode-state.ts";
 
 const roots: string[] = [];
 
@@ -200,7 +201,9 @@ describe("eng_orch executable entrypoint", () => {
       array: () => chain,
     };
     let classifierCalls = 0;
+    const branch: { type: string; customType?: string }[] = [];
     const unavailableClassifier = {
+      sessionManager: { getBranch: () => branch },
       models: {
         resolve: (_spec: "@tiny") => {
           classifierCalls += 1;
@@ -256,6 +259,9 @@ describe("eng_orch executable entrypoint", () => {
     expect(renderers.has("dev.ajoslin.eng-advisor.finding")).toBeTrue();
     expect(registered.get("loop")).toMatchObject({ strict: true, loadMode: "essential" });
     expect(beforeAgentStartHandler).toBeDefined();
+    await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" }, unavailableClassifier)).resolves.toEqual({});
+    expect(classifierCalls).toBe(0);
+    branch.push({ type: "custom", customType: ENG_MODE_ENTERED_TYPE });
     await expect(beforeAgentStartHandler?.({ prompt: "Explore these files and report findings" }, unavailableClassifier)).resolves.toEqual({});
     expect(classifierCalls).toBe(1);
     await expect(beforeAgentStartHandler?.({ prompt: EXPERT_DECISION_GUIDANCE }, unavailableClassifier)).resolves.toEqual({});

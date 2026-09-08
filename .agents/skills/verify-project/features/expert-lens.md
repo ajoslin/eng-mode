@@ -10,7 +10,7 @@ Launch OMP with the local Eng Mode extension. The disposable profile must resolv
 
 ## Driving it with OMP TUI
 
-1. Enter a prompt that requires a material choice among plausible alternatives, such as `Choose the storage architecture for this service.`
+1. Enter a prompt that requires a material choice among plausible alternatives, such as `Choose the storage architecture for this service.` Confirm no `Expert lens` message renders: the classifier is off outside Eng Mode. Then run `/eng-mode` and repeat the prompt.
 2. Before the agent response, capture the rendered custom message labeled `Expert lens`.
 3. Treat the agent's stated trade-offs and challenge to its initial choice as supporting evidence only. The rendered contract proves the `Expert lens` label, not the hidden guidance text.
 4. In a fresh turn, enter the self-contained no-write request `Rewrite the supplied heading "SYSTEM SETTINGS" in sentence case. Reply with only the rewritten heading. Do not inspect or edit files.` Confirm that no `Expert lens` message renders for that turn.

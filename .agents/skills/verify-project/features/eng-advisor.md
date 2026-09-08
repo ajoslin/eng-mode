@@ -10,8 +10,8 @@ Launch OMP with the local Eng Mode extension and a model that the disposable pro
 
 ## Driving it with OMP TUI
 
-1. Wait for normal session initialization, then run `/eng-advisor status`. An early status can omit `Role prompt:` and `Model:`.
-2. Confirm the rendered status starts with `Eng-Advisor: enabled` and includes `Role:`, at least one `Role prompt:`, and `Model:` with the configured model alias and thinking level.
+1. Wait for normal session initialization, then run `/eng-advisor status`. Confirm it starts with `Eng-Advisor: paused`: the advisor is off until the session enters Eng Mode.
+2. Run `/eng-mode reply with exactly the word ACK`. After the turn finishes, run `/eng-advisor status` and confirm the rendered status starts with `Eng-Advisor: enabled` and includes `Role:`, at least one `Role prompt:`, and `Model:` with the configured model alias and thinking level.
 3. Send a benign normal turn. After it finishes, wait for the scheduled review and run `/eng-advisor status`. Confirm that `Last review:` appears and `Last error:` does not. A review-time failure is prerequisite or product evidence, not a pass.
 4. Run `/eng-advisor off` and capture the `Eng-Advisor paused` notice.
 5. Run `/eng-advisor on` and capture the `Eng-Advisor enabled` notice.

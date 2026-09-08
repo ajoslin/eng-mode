@@ -39,6 +39,7 @@ export interface BeforeAgentStartEvent {
   readonly prompt: string;
 }
 export interface ExtensionContext {
+  readonly sessionManager: { getBranch(): readonly { type: string; customType?: string }[] };
   readonly models: {
     resolve(spec: "@tiny"): Parameters<typeof completeSimple>[0] | undefined;
   };

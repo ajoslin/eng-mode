@@ -45,7 +45,7 @@ To update, run the install command again, restart OMP, and rerun `setup-eng-mode
 
 ## Entering Eng Mode
 
-Eng Mode never starts on its own: the `eng-mode` skill is hidden from model invocation, so ordinary requests stay on your default (cheaper) model. Run `/eng-mode [request]` to enter it. The command switches the session to the `eng_mode` model role (set `modelRoles.eng_mode` in `config.yml`, e.g. `cliproxy/claude-fable-5-1:low`) and injects the Eng Mode skill as a user invocation. If the role is unset or unavailable, the command warns and keeps the current model.
+Eng Mode never starts on its own: the `eng-mode` skill is hidden from model invocation, so ordinary requests stay on your default (cheaper) model with Eng-Advisor and the expert lens off. Run `/eng-mode [request]` to enter it. The command switches the session to the `eng_mode` model role (set `modelRoles.eng_mode` in `config.yml`, e.g. `cliproxy/claude-fable-5-1:low`), marks the session as in Eng Mode, and injects the Eng Mode skill as a user invocation. From then on Eng-Advisor reviews turns and the expert lens classifies prompts. If the role is unset or unavailable, the command warns and keeps the current model. `/eng-advisor on` still arms the advisor in any session.
 
 ## What belongs in each repository
 

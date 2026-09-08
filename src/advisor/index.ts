@@ -1,6 +1,9 @@
 import * as path from "node:path";
 import type { AgentMessage } from "@oh-my-pi/pi-agent-core";
-import type { ExtensionAPI as OmpExtensionAPI, ExtensionContext } from "@oh-my-pi/pi-coding-agent";
+import type {
+	ExtensionAPI as OmpExtensionAPI,
+	ExtensionContext,
+} from "@oh-my-pi/pi-coding-agent";
 import { renderEngAdvisorCard } from "./card";
 import { type CompiledEngAdvisorConfig, loadEngAdvisorConfig } from "./config";
 import { applyFindingPolicy } from "./policy";
@@ -12,7 +15,12 @@ import {
 	resolveAdvisorRole,
 	type AdvisorRole,
 } from "./role-prompts";
-import { cursorSnapshot, digestMessagePrefix, messageEntries, restoreState } from "./state";
+import {
+	cursorSnapshot,
+	digestMessagePrefix,
+	messageEntries,
+	restoreState,
+} from "./state";
 import {
 	ENG_ADVISOR_CURSOR_TYPE,
 	ENG_ADVISOR_FINDING_STATE_TYPE,
@@ -24,16 +32,26 @@ import {
 	TRANSCRIBED_OMP_VERSION,
 } from "./types";
 import { collectWatchdogInstructions } from "./watchdog";
+import { engModeActive } from "../eng-mode-state";
 
 export type AdvisorExtensionAPI = Pick<
 	OmpExtensionAPI,
-	"appendEntry" | "on" | "pi" | "registerCommand" | "registerMessageRenderer" | "sendMessage" | "zod"
+	| "appendEntry"
+	| "on"
+	| "pi"
+	| "registerCommand"
+	| "registerMessageRenderer"
+	| "sendMessage"
+	| "zod"
 >;
 
 const FAILURE_BACKOFF_MS = 60_000;
 
 function isWorkInProgress(message: AgentMessage): boolean {
-	return message.role === "assistant" && message.content.some(block => block.type === "toolCall");
+	return (
+		message.role === "assistant" &&
+		message.content.some((block) => block.type === "toolCall")
+	);
 }
 export function advisorReviewIsDue(options: {
 	turnsSinceReview: number;
@@ -50,7 +68,7 @@ export function advisorReviewIsDue(options: {
 }
 
 function openFindings(state: EngAdvisorState) {
-	return state.findings.filter(finding => finding.status === "open");
+	return state.findings.filter((finding) => finding.status === "open");
 }
 
 function formatStatus(options: {
@@ -69,7 +87,8 @@ function formatStatus(options: {
 		`Cursor: ${options.state.cursor}; reviews: ${options.state.reviewSequence}`,
 		`Open findings: ${openFindings(options.state).length}`,
 	];
-	for (const source of options.roleSources) lines.push(`Role prompt: ${source}`);
+	for (const source of options.roleSources)
+		lines.push(`Role prompt: ${source}`);
 	if (options.config) {
 		lines.push(
 			`Model: ${options.config.model}:${options.config.thinking}`,
@@ -77,13 +96,17 @@ function formatStatus(options: {
 			`Review cadence: every ${options.config.reviewEveryTurns} in-progress turns; completed after ${options.config.reviewFinalAfterTurns} turn(s)`,
 		);
 	}
-	if (options.lastReviewAt) lines.push(`Last review: ${new Date(options.lastReviewAt).toISOString()}`);
+	if (options.lastReviewAt)
+		lines.push(`Last review: ${new Date(options.lastReviewAt).toISOString()}`);
 	if (options.lastError) lines.push(`Last error: ${options.lastError}`);
 	const findings = openFindings(options.state);
 	for (const finding of findings.slice(0, 20)) {
-		lines.push(`- ${finding.key.slice(0, 12)} [${finding.severity}] ${finding.note} (${finding.resource})`);
+		lines.push(
+			`- ${finding.key.slice(0, 12)} [${finding.severity}] ${finding.note} (${finding.resource})`,
+		);
 	}
-	if (findings.length > 20) lines.push(`- ${findings.length - 20} more open findings`);
+	if (findings.length > 20)
+		lines.push(`- ${findings.length - 20} more open findings`);
 	return lines.join("\n");
 }
 
@@ -96,7 +119,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 		prefixDigest: digestMessagePrefix([], 0),
 		findings: [],
 	};
-	let enabled = true;
+	let enabled = false;
 	let running = false;
 	let scheduled = false;
 	let pending = false;
@@ -113,7 +136,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 	let reviewer: InProcessReviewer | undefined;
 	let role: AdvisorRole = { kind: "main" };
 	let roleSources: readonly string[] = [];
-	const hiddenCallIds = new Set<string>();
+	let hiddenCallIds = new Set<string>();
 
 	function persistCursor(): void {
 		pi.appendEntry(ENG_ADVISOR_CURSOR_TYPE, cursorSnapshot(state));
@@ -149,22 +172,38 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 		reviewer?.dispose();
 		reviewer = undefined;
 		queuedContext = ctx;
-		state = restoreState(ctx.sessionManager.getBranch());
+		const branch = ctx.sessionManager.getBranch();
+		state = restoreState(branch);
 		hiddenCallIds.clear();
 		turnsSinceReview = 0;
 		forceReview = false;
+		// Off by default: only sessions that entered /eng-mode get a reviewer,
+		// unless the operator explicitly ran `/eng-advisor on`.
+		enabled ||= engModeActive(branch);
+		if (!enabled) return;
 		try {
 			const nextConfig = await loadEngAdvisorConfig(import.meta.dir);
 			const nextRole = resolveAdvisorRole(ctx.sessionManager.getBranch());
-			const watchdog = await collectWatchdogInstructions(import.meta.dir, pi.pi.getAgentDir(), ctx.cwd);
+			const watchdog = await collectWatchdogInstructions(
+				import.meta.dir,
+				pi.pi.getAgentDir(),
+				ctx.cwd,
+			);
 			const roleInstructions = await loadAdvisorRoleInstructions({
 				extensionRoot: path.resolve(import.meta.dir, "..", ".."),
 				cwd: ctx.cwd,
 				role: nextRole,
 			});
-			const nextInstructions = [watchdog, roleInstructions.text].filter(Boolean).join("\n\n");
+			const nextInstructions = [watchdog, roleInstructions.text]
+				.filter(Boolean)
+				.join("\n\n");
 			if (expectedGeneration !== generation) return;
-			const nextReviewer = new InProcessReviewer({ pi, ctx, config: nextConfig, instructions: nextInstructions });
+			const nextReviewer = new InProcessReviewer({
+				pi,
+				ctx,
+				config: nextConfig,
+				instructions: nextInstructions,
+			});
 			if (expectedGeneration !== generation) {
 				nextReviewer.dispose();
 				return;
@@ -182,20 +221,38 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 		}
 	}
 
-	async function reviewOnce(ctx: ExtensionContext, expectedGeneration: number): Promise<void> {
+	async function reviewOnce(
+		ctx: ExtensionContext,
+		expectedGeneration: number,
+	): Promise<void> {
 		if (!enabled || !config || !reviewer || Date.now() < failureUntil) return;
+		const candidate = structuredClone(state);
+		const candidateHiddenCallIds = new Set(hiddenCallIds);
 		const entries = messageEntries(ctx.sessionManager.getBranch());
-		if (state.cursor > entries.length || digestMessagePrefix(entries, state.cursor) !== state.prefixDigest) {
-			state.cursor = 0;
-			state.prefixDigest = digestMessagePrefix(entries, 0);
+		if (
+			candidate.cursor > entries.length ||
+			digestMessagePrefix(entries, candidate.cursor) !== candidate.prefixDigest
+		) {
+			candidate.cursor = 0;
+			candidate.prefixDigest = digestMessagePrefix(entries, 0);
+			candidateHiddenCallIds.clear();
 		}
-		const targetCursor = entries.length;
-		if (targetCursor === state.cursor) return;
-		const messages = entries.slice(state.cursor).map(entry => entry.message);
-		const batch = filterReviewBatch(messages, state.cursor, latestWip, config, hiddenCallIds);
+		if (entries.length === candidate.cursor) return;
+		const messages = entries
+			.slice(candidate.cursor)
+			.map((entry) => entry.message);
+		const batch = filterReviewBatch(
+			messages,
+			candidate.cursor,
+			latestWip,
+			config,
+			candidateHiddenCallIds,
+		);
 		if (!batch) {
-			state.cursor = targetCursor;
-			state.prefixDigest = digestMessagePrefix(entries, targetCursor);
+			candidate.cursor = entries.length;
+			candidate.prefixDigest = digestMessagePrefix(entries, candidate.cursor);
+			state = candidate;
+			hiddenCallIds = candidateHiddenCallIds;
 			persistCursor();
 			return;
 		}
@@ -203,7 +260,10 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 		reviewAbort = controller;
 		const reviewTimeoutMs = config.reviewTimeoutMs;
 		const timeout = setTimeout(
-			() => controller.abort(new Error(`Eng-Advisor review exceeded ${reviewTimeoutMs}ms`)),
+			() =>
+				controller.abort(
+					new Error(`Eng-Advisor review exceeded ${reviewTimeoutMs}ms`),
+				),
 			reviewTimeoutMs,
 		);
 		const reviewedTurns = turnsSinceReview;
@@ -211,7 +271,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 		try {
 			proposals = await reviewer.review({
 				batch,
-				openFindings: openFindings(state),
+				openFindings: openFindings(candidate),
 				signal: controller.signal,
 			});
 		} finally {
@@ -219,18 +279,21 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 			clearTimeout(timeout);
 		}
 		if (expectedGeneration !== generation) return;
-		state.reviewSequence++;
+		candidate.reviewSequence++;
 		const decisions = await applyFindingPolicy({
-			state,
+			state: candidate,
 			proposals,
 			batch,
 			config,
 			cwd: ctx.cwd,
 			force: forceReemit,
 		});
+		if (expectedGeneration !== generation) return;
+		candidate.cursor = batch.cursor;
+		candidate.prefixDigest = digestMessagePrefix(entries, batch.cursor);
+		state = candidate;
+		hiddenCallIds = candidateHiddenCallIds;
 		forceReemit = false;
-		state.cursor = targetCursor;
-		state.prefixDigest = digestMessagePrefix(entries, targetCursor);
 		lastReviewAt = Date.now();
 		lastError = undefined;
 		turnsSinceReview = Math.max(0, turnsSinceReview - reviewedTurns);
@@ -260,7 +323,10 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 					if (!enabled) continue;
 					lastError = error instanceof Error ? error.message : String(error);
 					failureUntil = Date.now() + FAILURE_BACKOFF_MS;
-					ctx.ui.notify(`Eng-Advisor review failed; retrying after cooldown: ${lastError}`, "warning");
+					ctx.ui.notify(
+						`Eng-Advisor review failed; retrying after cooldown: ${lastError}`,
+						"warning",
+					);
 				}
 			} while (pending && enabled);
 		} finally {
@@ -298,14 +364,19 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 		}, 0);
 	}
 
-	pi.registerMessageRenderer<EngAdvisorCardDetails>(ENG_ADVISOR_MESSAGE_TYPE, (message, _options, theme) => {
-		const details = message.details;
-		if (!details?.finding) return new pi.pi.Text(String(message.content), 1, 0);
-		return renderEngAdvisorCard(details, theme);
-	});
+	pi.registerMessageRenderer<EngAdvisorCardDetails>(
+		ENG_ADVISOR_MESSAGE_TYPE,
+		(message, _options, theme) => {
+			const details = message.details;
+			if (!details?.finding)
+				return new pi.pi.Text(String(message.content), 1, 0);
+			return renderEngAdvisorCard(details, theme);
+		},
+	);
 
 	pi.registerCommand("eng-advisor", {
-		description: "Show, pause, refresh, reload, or dismiss Eng-Advisor findings",
+		description:
+			"Show, pause, refresh, reload, or dismiss Eng-Advisor findings",
 		handler: async (args, ctx) => {
 			const [command = "status", value] = args.trim().split(/\s+/, 2);
 			if (command === "off") {
@@ -325,15 +396,24 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 				return;
 			}
 			if (command === "reload") {
+				const expectedGeneration = ++generation;
+				reviewAbort?.abort("Eng-Advisor reloading");
 				const nextConfig = await loadEngAdvisorConfig(import.meta.dir);
 				const nextRole = resolveAdvisorRole(ctx.sessionManager.getBranch());
-				const watchdog = await collectWatchdogInstructions(import.meta.dir, pi.pi.getAgentDir(), ctx.cwd);
+				const watchdog = await collectWatchdogInstructions(
+					import.meta.dir,
+					pi.pi.getAgentDir(),
+					ctx.cwd,
+				);
 				const roleInstructions = await loadAdvisorRoleInstructions({
 					extensionRoot: path.resolve(import.meta.dir, "..", ".."),
 					cwd: ctx.cwd,
 					role: nextRole,
 				});
-				const nextInstructions = [watchdog, roleInstructions.text].filter(Boolean).join("\n\n");
+				const nextInstructions = [watchdog, roleInstructions.text]
+					.filter(Boolean)
+					.join("\n\n");
+				if (expectedGeneration !== generation) return;
 				const nextReviewer = new InProcessReviewer({
 					pi,
 					ctx,
@@ -341,7 +421,7 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 					instructions: nextInstructions,
 				});
 				generation++;
-				reviewAbort?.abort("Eng-Advisor reloading");
+				reviewAbort?.abort("Eng-Advisor configuration replaced");
 				roleSources = roleInstructions.sources;
 				reviewer?.dispose();
 				config = nextConfig;
@@ -355,7 +435,8 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 			}
 			if (command === "dismiss") {
 				const matches = state.findings.filter(
-					finding => finding.status === "open" && value && finding.key.startsWith(value),
+					(finding) =>
+						finding.status === "open" && value && finding.key.startsWith(value),
 				);
 				if (matches.length !== 1) {
 					ctx.ui.notify(
@@ -367,15 +448,23 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 				const finding = matches[0];
 				if (!finding) return;
 				finding.status = "dismissed";
+				generation++;
+				reviewAbort?.abort("Eng-Advisor finding dismissed");
 				persistFinding(finding);
 				ctx.ui.notify(`Dismissed ${finding.key.slice(0, 12)}`, "info");
 				return;
 			}
 			if (command === "refresh") {
+				generation++;
+				reviewAbort?.abort("Eng-Advisor refreshing");
 				const entries = messageEntries(ctx.sessionManager.getBranch());
-				const retained = Math.max(0, entries.length - (config?.maxBatchMessages ?? 64));
+				const retained = Math.min(
+					state.cursor,
+					Math.max(0, entries.length - (config?.maxBatchMessages ?? 64)),
+				);
 				state.cursor = retained;
 				state.prefixDigest = digestMessagePrefix(entries, retained);
+				hiddenCallIds.clear();
 				forceReemit = true;
 				failureUntil = 0;
 				schedule(ctx, false, true);
@@ -387,7 +476,16 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 				return;
 			}
 			ctx.ui.notify(
-				formatStatus({ enabled, running, state, config, role, roleSources, lastReviewAt, lastError }),
+				formatStatus({
+					enabled,
+					running,
+					state,
+					config,
+					role,
+					roleSources,
+					lastReviewAt,
+					lastError,
+				}),
 				lastError ? "warning" : "info",
 			);
 		},
@@ -396,7 +494,14 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 	pi.on("session_start", async (_event, ctx) => initialize(ctx));
 	pi.on("session_switch", async (_event, ctx) => initialize(ctx));
 	pi.on("session_branch", async (_event, ctx) => initialize(ctx));
-	pi.on("turn_end", (event, ctx) => schedule(ctx, isWorkInProgress(event.message)));
+	pi.on("turn_end", async (event, ctx) => {
+		if (!enabled && engModeActive(ctx.sessionManager.getBranch())) {
+			enabled = true;
+			await initialize(ctx);
+			if (!reviewer) return;
+		}
+		schedule(ctx, isWorkInProgress(event.message));
+	});
 	pi.on("session_shutdown", () => {
 		generation++;
 		reviewAbort?.abort();

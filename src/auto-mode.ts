@@ -1,4 +1,5 @@
 import { completeSimple } from "@oh-my-pi/pi-ai";
+import { engModeActive } from "./eng-mode-state.ts";
 import type { BeforeAgentStartEvent, CustomMessagePayload, ExtensionAPI, ExtensionContext } from "./extension-types.ts";
 
 const PROMPT_CLASSIFIER_MAX_TOKENS = 16;
@@ -59,6 +60,7 @@ export function registerAutoMode(
 ): void {
   pi.on("before_agent_start", async (event, context) => {
     const startEvent = event as BeforeAgentStartEvent;
+    if (!engModeActive(context.sessionManager.getBranch())) return {};
     if (startEvent.prompt.includes(expertGuidance)) return {};
     let output: string | undefined;
     try {

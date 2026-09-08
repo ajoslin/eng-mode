@@ -4,6 +4,7 @@ import { getModelMatchPreferences, resolveModelRoleValue } from "@oh-my-pi/pi-co
 import { buildSkillPromptMessage } from "@oh-my-pi/pi-coding-agent/extensibility/skills";
 import { SKILL_PROMPT_MESSAGE_TYPE } from "@oh-my-pi/pi-coding-agent/session/messages";
 import { AUTO_THINKING } from "@oh-my-pi/pi-coding-agent/thinking";
+import { ENG_MODE_ENTERED_TYPE } from "./eng-mode-state.ts";
 
 /** Workstation role that `/eng-mode` switches the session onto; configured under `modelRoles`. */
 export const ENG_MODE_ROLE = "eng_mode";
@@ -12,13 +13,14 @@ export const ENG_MODE_ROLE_ALIAS = `@${ENG_MODE_ROLE}`;
 /** `pi` carries the host's live `settings` singleton; a deep import would load an uninitialized copy. */
 export type EngModeCommandAPI = Pick<
   OmpExtensionAPI,
-  "pi" | "registerCommand" | "sendMessage" | "setModel" | "setThinkingLevel"
+  "pi" | "appendEntry" | "registerCommand" | "sendMessage" | "setModel" | "setThinkingLevel"
 >;
 
 /**
- * Switch the session to `@eng_mode` and inject the Eng Mode skill as a user
- * invocation. The skill is hidden from model invocation; this command is the
- * only entry point, so the cheaper default model handles everything else.
+ * Switch the session to `@eng_mode`, mark the session as in Eng Mode (which
+ * arms Eng-Advisor and the expert lens), and inject the Eng Mode skill as a
+ * user invocation. The skill is hidden from model invocation; this command is
+ * the only entry point, so the cheaper default model handles everything else.
  */
 export function registerEngModeCommand(pi: EngModeCommandAPI, extensionRoot: string): void {
   const skillPath = path.join(extensionRoot, "skills", "eng-mode", "SKILL.md");
@@ -26,6 +28,7 @@ export function registerEngModeCommand(pi: EngModeCommandAPI, extensionRoot: str
     description: `Enter Eng Mode: switch to the ${ENG_MODE_ROLE_ALIAS} model role and load the eng-mode skill`,
     handler: async (args, ctx) => {
       const switched = await switchToEngModeModel(pi, ctx);
+      pi.appendEntry(ENG_MODE_ENTERED_TYPE);
       const built = await buildSkillPromptMessage(
         { name: "eng-mode", filePath: skillPath, baseDir: path.dirname(skillPath) },
         args,
