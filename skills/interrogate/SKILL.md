@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Interrogate
 
-The default panel is four auditable seats intended to span three vendors. A configured roster may extend, shrink, or replace those defaults; runtime fallbacks and dropouts may reduce either roster. Every seat receives the same review material. The lead applies judgment and never auto-edits.
+The default panel is four auditable seats intended to span three vendors. A configured roster may extend, shrink, or replace those defaults. Runtime fallbacks and dropouts may reduce either roster. Every seat receives the same review material. The lead applies judgment and never auto-edits.
 
 ## 1. Scope
 
@@ -28,7 +28,7 @@ Read and apply [`references/rubric.md`](references/rubric.md) plus [`references/
 
 ## 4. Panel
 
-Use the repository or session's configured `interrogate reviewers` list of project agent names when present, extending or shrinking the labels to match. Agent definitions own model routing; configuration must not put provider-specific model selectors in prompts. Without a configured list, use:
+Use the repository or session's configured `interrogate reviewers` list of project agent names when present, extending or shrinking the labels to match. Agent definitions own model routing. Configuration must not put provider-specific model selectors in prompts. Without a configured list, use:
 
 | Agent | Intended model family |
 |---|---|
@@ -37,20 +37,20 @@ Use the repository or session's configured `interrogate reviewers` list of proje
 | `panel-fable` | Anthropic Fable |
 | `panel-grok` | xAI Grok |
 
-Before the batch, resolve every configured seat. If its configured model or role is unavailable, recover it through the runtime resolver: choose the closest available equivalent, preferring the same family and highest reasoning tier, record the substitution, and then dispatch. Treat resolver-owned `auto` or parent-inheritance as valid, not broken configuration. If no equivalent resolves, drop that seat and report it; do not block the review or silently duplicate another seat.
+Before the batch, resolve every configured seat. If its configured model or role is unavailable, recover it through the runtime resolver. Choose the closest available equivalent, preferring the same family and highest reasoning tier, record the substitution, and then dispatch. Treat resolver-owned `auto` or parent-inheritance as valid, not broken configuration. If no equivalent resolves, drop that seat and report it. Do not block the review or silently duplicate another seat.
 
-Dispatch one `task` batch with the same intent, artifact, and rubric to every resolved seat. After it settles, inspect each delivered result's `resolvedModel` and `resolvedModelIsFallback` when the runtime exposes them. Report each seat's actual resolved model and vendor. Missing metadata means vendor `unverified`: never infer it from the nominal agent, count it toward cross-vendor agreement, or call the roster complete. A fallback is a substitution even when the nominal agent returned normally. Continue after dropouts.
+Dispatch one `task` batch with the same intent, artifact, and rubric to every resolved seat. After it settles, inspect each delivered result's `resolvedModel` and `resolvedModelIsFallback` when the runtime exposes them. Report each seat's actual resolved model and vendor. Missing metadata means vendor `unverified`. Never infer it from the nominal agent, count it toward cross-vendor agreement, or call the roster complete. A fallback is a substitution even when the nominal agent returned normally. Continue after dropouts.
 
 ## 5. Synthesis and lead judgment
 
 Read every report and apply [`references/lead-judgment.md`](references/lead-judgment.md). Parse every finding, including nits and findings later rejected. Deduplicate descriptions of the same issue while retaining every raising seat. Distinguish consensus findings from lone findings, and record explicit disagreements rather than forcing agreement.
 
-Compute agreement over actual resolved vendors, never nominal seats. Independent agreement from two or more resolved vendors is high signal. Opus/Fable agreement without a cross-vendor fallback is one-vendor reinforcement, not cross-vendor consensus. Lone findings stay visible at lower confidence; severity and evidence can still make one actionable.
+Compute agreement over actual resolved vendors, never nominal seats. Independent agreement from two or more resolved vendors is high signal. Opus/Fable agreement without a cross-vendor fallback is one-vendor reinforcement, not cross-vendor consensus. Lone findings stay visible at lower confidence. Severity and evidence can still make one actionable.
 
 Categorize every finding:
 
 - **Act on.** Correctness, security, observable contract, or documented project invariant. Blocks a real PR.
-- **Consider.** Real concern; cost or timing is unclear.
+- **Consider.** Real concern. Cost or timing is unclear.
 - **Noted.** Valid but not actionable now.
 - **Dismissed.** Wrong, nit, or missing context.
 

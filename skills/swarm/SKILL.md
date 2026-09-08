@@ -27,16 +27,16 @@ Before launching workers, put these phases in the lead's finite task list:
 
 ## Fan out
 
-Dispatch all N independent workers in one `task` batch. Shared batch `context` supplements each brief; it never replaces the brief. Every brief must stand alone and name:
+Dispatch all N independent workers in one `task` batch. Shared batch `context` supplements each brief. It never replaces the brief. Every brief must stand alone and name:
 
-- the goal and done predicate;
-- the scope and non-goals;
-- the exact slice or race arm;
-- the worker's owned output destination;
-- the scoped verification to perform, while skipping formatters, linters, and project-wide suites; and
-- the report contract: `PASS`, `ISSUES`, or `BLOCKED`, with evidence and the output location.
+- the goal and done predicate
+- the scope and non-goals
+- the exact slice or race arm
+- the worker's owned output destination
+- the scoped verification to perform, while skipping formatters, linters, and project-wide suites
+- the report contract: `PASS`, `ISSUES`, or `BLOCKED`, with evidence and the output location
 
-Continue lead work while workers run. Task results deliver asynchronously. Use `hub` only for needed messages and completion notifications; never poll workers.
+Continue lead work while workers run. Task results deliver asynchronously. Use `hub` only for needed messages and completion notifications. Never poll workers.
 
 ## Drain
 

@@ -22,11 +22,11 @@ Skip when the conversation is trivial, off-topic, or already covered by an exist
 
 ### 1. Capture the active conversation
 
-Use the conversation already present in the parent context. For long sessions, write a tight digest containing the opening request, decisions, corrections, tool evidence, and outcome. When the system provides a specific `history://<id>`, read that URI directly; never treat `history://` as a filesystem directory or scan unrelated sessions.
+Use the conversation already present in the parent context. For long sessions, write a tight digest containing the opening request, decisions, corrections, tool evidence, and outcome. When the system provides a specific `history://<id>`, read that URI directly. Never treat `history://` as a filesystem directory or scan unrelated sessions.
 
 ### 2. Spawn three reviewers in parallel
 
-Dispatch one `task` batch with three `reviewer` agents. Give each the same conversation or digest and one lens from `references/judgment-reviewer.md`, `references/tooling-reviewer.md`, and `references/divergent-reviewer.md`. Reviewers return findings only; they do not edit files. OMP configuration owns model routing.
+Dispatch one `task` batch with three `reviewer` agents. Give each the same conversation or digest and one lens from `references/judgment-reviewer.md`, `references/tooling-reviewer.md`, and `references/divergent-reviewer.md`. Reviewers return findings only. They do not edit files. OMP configuration owns model routing.
 
 ### 3. Synthesize
 
@@ -34,13 +34,13 @@ Spawn one `reviewer` with `references/synthesizer.md` and the three full reports
 
 ### 4. Structural enforcement check
 
-Sanity-check the synthesizer's Accepted list. For any item that would be enforced more reliably by a lint rule, script, metadata flag, or runtime check, move it from Accepted to Backlog. The synthesizer already applies this criterion; this is a final pass before edits land. See the **encode-lessons-in-structure** principle skill.
+Sanity-check the synthesizer's Accepted list. For any item that would be enforced more reliably by a lint rule, script, metadata flag, or runtime check, move it from Accepted to Backlog. See the **encode-lessons-in-structure** principle skill.
 
 ### 5. Apply
 
-Before applying any Accepted edit, present the synthesizer's full Accepted/Rejected/Backlog output to the user and wait for explicit approval. The user picks which subset to apply and may redirect routings. Skill changes affect every future agent in the org; do not auto-apply.
+Before applying any Accepted edit, present the synthesizer's full Accepted/Rejected/Backlog output to the user and wait for explicit approval. The user picks which subset to apply and may redirect routings. Skill changes affect every future agent in the org. Do not auto-apply.
 
-Route every Backlog item through `capture-learning`. It expects `linear_graphql`, resolves configured team/project identifiers, and deduplicates before creating or updating a candidate ticket. Tracker submission is automatic; only Accepted skill edits wait for approval.
+Route every Backlog item through `capture-learning`. It expects `linear_graphql`, resolves configured team/project identifiers, and deduplicates before creating or updating a candidate ticket. Tracker submission is automatic. Only Accepted skill edits wait for approval.
 
 For each approved Accepted item, follow the Routing field exactly:
 
