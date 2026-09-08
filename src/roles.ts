@@ -4,11 +4,11 @@ import { type AgentName, agentModelChains, agentNames } from "./manifest.ts";
 
 /**
  * Two-stage workstation role migration. Stage one (prepare) adds and validates
- * every new generic and panel role while retaining all old roles, so old and
- * new workflows coexist until the repository hard cut is proven. Stage two
- * (retire) deletes the four old `boja_*` keys only after no old workflow
- * consumer remains. Both stages are atomic over the config document and the
- * file runner restores the prior bytes on failure.
+ * every new generic, panel, and `eng_mode` role while retaining all old roles,
+ * so old and new workflows coexist until the repository hard cut is proven.
+ * Stage two (retire) deletes the four old `boja_*` keys only after no old
+ * workflow consumer remains. Both stages are atomic over the config document
+ * and the file runner restores the prior bytes on failure.
  */
 
 export const genericRoleSources = {
@@ -20,6 +20,9 @@ export const genericRoleSources = {
 
 export const panelRoleNames = ["panel_opus", "panel_sol", "panel_fable", "panel_grok"] as const;
 export type PanelRoleName = (typeof panelRoleNames)[number];
+/** Roles with no old-workflow source; each needs an explicit workstation selection. */
+export const selectedRoleNames = [...panelRoleNames, "eng_mode"] as const;
+export type SelectedRoleName = (typeof selectedRoleNames)[number];
 
 export const retiredRoleNames = ["boja_fast", "boja_code", "boja_judgment", "boja_adversary"] as const;
 export const preservedRoleNames = ["smol", "review", "commit"] as const;
@@ -42,8 +45,8 @@ export interface AgentChainResolution {
 
 export interface PrepareRolesInput {
   readonly roles: Readonly<Record<string, string>>;
-  /** Current pinned panel selectors, e.g. from the workstation's existing panel agents. */
-  readonly panelSelectors?: Partial<Record<PanelRoleName, string>>;
+  /** Current pinned selectors, e.g. panel seats from existing agents or the `/eng-mode` model. */
+  readonly selectors?: Partial<Record<SelectedRoleName, string>>;
 }
 
 export interface PrepareRolesResult {
@@ -120,8 +123,8 @@ export function prepareRoles(input: PrepareRolesInput): PrepareRolesResult {
     if (typeof old === "string" && !oldValid) invalid.push(source);
     stage(role, oldValid ? old : undefined);
   }
-  for (const role of panelRoleNames) {
-    stage(role, input.panelSelectors?.[role]);
+  for (const role of selectedRoleNames) {
+    stage(role, input.selectors?.[role]);
   }
 
   if (conflicts.length > 0 || invalid.length > 0) {
@@ -243,7 +246,7 @@ export function applyRoleStageToFile(
   configPath: string,
   stage: "prepare" | "retire",
   options: {
-    readonly panelSelectors?: Partial<Record<PanelRoleName, string>>;
+    readonly selectors?: Partial<Record<SelectedRoleName, string>>;
     readonly remainingConsumers?: readonly string[];
     readonly write?: (path: string, text: string) => void;
   } = {},
@@ -251,7 +254,7 @@ export function applyRoleStageToFile(
   const config = readRoleConfig(configPath);
   const write = options.write ?? ((path, text) => writeFileSync(path, text));
   if (stage === "prepare") {
-    const prepare = prepareRoles({ roles: config.roles, panelSelectors: options.panelSelectors ?? {} });
+    const prepare = prepareRoles({ roles: config.roles, selectors: options.selectors ?? {} });
     const wrote = prepare.status === "applied" && Object.keys(prepare.added).length > 0;
     if (wrote) writeRolesBack(configPath, config, prepare.roles, write);
     return { stage, configPath, prepare, wrote };
@@ -265,6 +268,7 @@ export function applyRoleStageToFile(
 export const roles = {
   genericRoleSources,
   panelRoleNames,
+  selectedRoleNames,
   retiredRoleNames,
   preservedRoleNames,
   prepareRoles,

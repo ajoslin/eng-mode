@@ -1,3 +1,4 @@
+import * as path from "node:path";
 import type { ExtensionAPI as OmpExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 import {
   classifierOutputNeedsExpertGuidance,
@@ -7,6 +8,7 @@ import {
 import { registerEngAdvisor } from "./advisor/index.ts";
 import type { ExtensionAPI } from "./extension-types.ts";
 import { registerEngOrchestration } from "./eng-orchestrator.ts";
+import { registerEngModeCommand } from "./eng-mode-command.ts";
 import { EXPERT_DECISION_GUIDANCE, EXPERT_DECISION_MESSAGE, registerExpertLens } from "./expert-lens.ts";
 import { registerGoalTool } from "./goal-tool.ts";
 import { registerLoopTool } from "./loop-tool.ts";
@@ -21,6 +23,7 @@ export { actionNames, executeEngOrch } from "./eng-orchestrator.ts";
 
 export default function engModeExtension(pi: OmpExtensionAPI & ExtensionAPI): void {
   registerEngAdvisor(pi);
+  registerEngModeCommand(pi, path.resolve(import.meta.dir, ".."));
   registerExpertLens(pi);
   registerAutoMode(pi, EXPERT_DECISION_GUIDANCE, EXPERT_DECISION_MESSAGE);
   registerGoalTool(pi);

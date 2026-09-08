@@ -1,6 +1,7 @@
 ---
 name: eng-mode
-description: Eng's default engineering operating system. Routes feature, bug, investigation, design, review, autonomous, and shipping work through playbooks implemented with OMP goal, loop, typed agents, hub, todo, LSP, debug, browser, and the eng_orch tool. Use for nontrivial repository work or /eng-mode.
+description: Eng's engineering operating system. Routes feature, bug, investigation, design, review, autonomous, and shipping work through playbooks implemented with OMP goal, loop, typed agents, hub, todo, LSP, debug, browser, and the eng_orch tool. Entered only by the user through /eng-mode, which also switches the session to the eng_mode model role.
+disable-model-invocation: true
 ---
 
 # Eng Mode
