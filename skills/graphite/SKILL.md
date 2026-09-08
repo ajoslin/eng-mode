@@ -5,7 +5,7 @@ description: Graphite stacked PRs via gt. Use for stack parentage, submit, resta
 
 # Graphite
 
-`gt` owns stack parentage and landing. GitHub `base` refs drift mid-restack; local Graphite tracking is the source of truth. `gh` still owns PR view, checks, review-comment replies, and `gh pr merge --disable-auto`. Never replace those with `gt`.
+`gt` owns stack parentage and landing. GitHub `base` refs drift mid-restack. Local Graphite tracking is the source of truth. `gh` still owns PR view, checks, review-comment replies, and `gh pr merge --disable-auto`. Never replace those with `gt`.
 
 Stacking is a review aid, not the default branch strategy. Use one PR for ordinary coherent work. Encourage a stack when the change is large or complicated enough that one PR would be hard to review, and when its parts form a real dependency chain. Split by independently understandable concerns, not arbitrary file or line counts. Do not stack small work merely because later code depends on earlier code within the same coherent change.
 
@@ -15,11 +15,11 @@ Workers never run `gt`. One stacker per stack.
 
 ## Delivery interface
 
-The named stacker is the topology owner. Freeze bottom-to-top order with `gt --no-interactive log short --stack --reverse`; inspect each tracked branch with `gt --no-interactive info <branch>`. Only that stacker may append with `gt track -p <parent>` followed by `gt submit --no-interactive`, or sync, restack, arm, and disarm landing. If these commands cannot establish parentage, stop; GitHub base refs are not a topology fallback.
+The named stacker is the topology owner. Freeze bottom-to-top order with `gt --no-interactive log short --stack --reverse`. Inspect each tracked branch with `gt --no-interactive info <branch>`. Only that stacker may append with `gt track -p <parent>` followed by `gt submit --no-interactive`, or sync, restack, arm, and disarm landing. If these commands cannot establish parentage, stop. GitHub base refs are not a topology fallback.
 
-Before requesting merge-when-ready, record every PR's current head SHA and base from the selected forge provider. Request it with `gt submit --merge-when-ready --always --update-only --no-interactive`. Confirm arming with a fresh provider snapshot of every affected PR: each head must still equal the recorded SHA and each PR must report an active merge-when-ready request. Command success is not confirmation. If confirmation fails or the head/base changes, disarm every affected PR with `gh pr merge <n> --disable-auto`, confirm each request is absent in a fresh provider snapshot, and stop. This disarm is recovery for Graphite's request, not permission to arm GitHub auto-merge directly.
+Before requesting merge-when-ready, record every PR's current head SHA and base from the selected forge provider. Request it with `gt submit --merge-when-ready --always --update-only --no-interactive`. Confirm arming with a fresh provider snapshot of every affected PR. Each head must still equal the recorded SHA and each PR must report an active merge-when-ready request. Command success is not confirmation. If confirmation fails or the head/base changes, disarm every affected PR with `gh pr merge <n> --disable-auto`, confirm each request is absent in a fresh provider snapshot, and stop. This disarm is recovery for Graphite's request, not permission to arm GitHub auto-merge directly.
 
-During the frozen drain, use the selected provider's watcher and its `WAITING`, `READY`, `ADVANCE`, and terminal `COMPLETE` events; Graphite does not replace PR-state watching. After each `ADVANCE`, compare the next PR's current head/base with its frozen snapshot and rearm the provider watcher. Never append a newly discovered PR to the frozen queue.
+During the frozen drain, use the selected provider's watcher and its `WAITING`, `READY`, `ADVANCE`, and terminal `COMPLETE` events. Graphite does not replace PR-state watching. After each `ADVANCE`, compare the next PR's current head/base with its frozen snapshot and rearm the provider watcher. Never append a newly discovered PR to the frozen queue.
 
 If a required topology, arming, disarming, snapshot, comparison, or watcher operation is undocumented, stop. Never substitute another provider or invent a command.
 
@@ -44,7 +44,7 @@ Always pass `--no-interactive`.
 | `gt track -p <parent>` | `gh pr create --base` |
 | `gh pr view` / checks / review replies | `gt` for those |
 
-SHA via `git rev-parse`. After submit, `gh pr edit` titles and bodies; apply **unslop**.
+SHA via `git rev-parse`. After submit, `gh pr edit` titles and bodies. Apply **unslop**.
 
 ## Core loop
 
@@ -65,7 +65,7 @@ Adopt existing branches bottom to top: `gt track -p <parent>` per layer, then `g
 
 - Sync: `gt --no-interactive sync`. Stacker only.
 - Restack: stacker only. `gt --no-interactive restack`.
-- Land: `gt submit --merge-when-ready --always --update-only --no-interactive`. `--always` is required; a no-op submit silently arms nothing. Never `gh pr merge` a stacked PR. Never GitHub auto-merge on a stacked PR. Children target unprotected parents and would collapse. If a previous agent armed GitHub auto-merge, disarm with `gh pr merge <n> --disable-auto`.
+- Land: `gt submit --merge-when-ready --always --update-only --no-interactive`. `--always` is required. A no-op submit silently arms nothing. Never `gh pr merge` a stacked PR. Never GitHub auto-merge on a stacked PR. Children target unprotected parents and would collapse. If a previous agent armed GitHub auto-merge, disarm with `gh pr merge <n> --disable-auto`.
 - After MWR is armed, do not `gt sync`, restack, or `gt submit --stack`. Independent work gets re-parented onto trunk.
 
 Workers never rebase and never run topology commands. One stacker per stack.

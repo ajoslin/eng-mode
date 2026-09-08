@@ -12,7 +12,7 @@ Don't reinvent a playbook you already have. A focused single-unit task that matc
 
 ## Start
 
-Open a todolist whose first item is to read the Principles section of the **eng-mode** skill. Then add the phases below as todos.
+Open a todolist whose first items are the phases below. Do not add a first todo to read the principles index. Read a sibling `principle-*` leaf only when it governs a decision.
 
 ## Phase A: Frame
 

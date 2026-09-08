@@ -14,11 +14,11 @@ The lead supplies three things. Refuse the seat if any is missing.
 
 1. Frozen SHA and base.
 2. The diff command. Read the whole diff plus the callers and owners the change touches.
-3. **One question.** The single failure class the lead judges riskiest for this diff, stated concretely: a uniqueness constraint under concurrency, a query cardinality bound, a timer standing in for state in a test, filesystem or iteration order, an error escaping its typed channel. Not "correctness"; not a rubric.
+3. **One question.** The single failure class the lead judges riskiest for this diff, stated concretely: a uniqueness constraint under concurrency, a query cardinality bound, a timer standing in for state in a test, filesystem or iteration order, an error escaping its typed channel. Not "correctness". Not a rubric.
 
 ## Review
 
-Answer the question adversarially first: construct the input, ordering, or environment that makes the change wrong, and trace it to the exact path and line. Then note anything else in the diff that is wrong on the same evidence bar. Stop at eight minutes; report what you have.
+Answer the question adversarially first: construct the input, ordering, or environment that makes the change wrong, and trace it to the exact path and line. Then note anything else in the diff that is wrong on the same evidence bar. Stop at eight minutes. Report what you have.
 
 ## Return
 
