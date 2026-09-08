@@ -18,9 +18,9 @@ export type EngModeCommandAPI = Pick<
 
 /**
  * Switch the session to `@eng_mode`, mark the session as in Eng Mode (which
- * arms Eng-Advisor and the expert lens), and inject the Eng Mode skill as a
- * user invocation. The skill is hidden from model invocation; this command is
- * the only entry point, so the cheaper default model handles everything else.
+ * arms the expert lens), and inject the Eng Mode skill as a user invocation.
+ * The skill is hidden from model invocation; this command is the only entry
+ * point, so the cheaper default model handles everything else.
  */
 export function registerEngModeCommand(pi: EngModeCommandAPI, extensionRoot: string): void {
   const skillPath = path.join(extensionRoot, "skills", "eng-mode", "SKILL.md");

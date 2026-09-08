@@ -1,7 +1,7 @@
 /**
- * Session marker appended by `/eng-mode`. Eng-Advisor and the expert lens stay
- * off until this entry exists on the current branch, so ordinary sessions run
- * on the cheap default model with no background reviewer or classifier calls.
+ * Session marker appended by `/eng-mode`. The expert lens stays off until this
+ * entry exists on the current branch, so ordinary sessions run on the cheap
+ * default model with no classifier calls.
  */
 export const ENG_MODE_ENTERED_TYPE = "dev.ajoslin.eng-mode.entered";
 

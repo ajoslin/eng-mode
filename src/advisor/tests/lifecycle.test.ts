@@ -19,7 +19,6 @@ import {
 	type ProposedFinding,
 	type ReviewBatch,
 } from "../types";
-import { ENG_MODE_ENTERED_TYPE } from "../../eng-mode-state";
 
 const repositoryRoot = path.resolve(import.meta.dir, "../../..");
 const originalPolicy = policy.applyFindingPolicy;
@@ -56,7 +55,7 @@ function user(text: string): AgentMessage {
 	return { role: "user", content: text, timestamp: 1 };
 }
 
-async function harness(messages: AgentMessage[], options: { engMode?: boolean } = {}) {
+async function harness(messages: AgentMessage[]) {
 	let branch: SessionEntry[] = [];
 	const events = new Map<
 		string,
@@ -87,7 +86,6 @@ async function harness(messages: AgentMessage[], options: { engMode?: boolean } 
 			timestamp: "2026-01-01",
 			message,
 		});
-	if (options.engMode !== false) append(ENG_MODE_ENTERED_TYPE, undefined);
 	messages.forEach(add);
 	const { model } = createMockModel({
 		handler: () => {
@@ -158,21 +156,19 @@ async function harness(messages: AgentMessage[], options: { engMode?: boolean } 
 	};
 }
 
-test("stays paused outside Eng Mode and arms once the session enters it", async () => {
+test("stays paused by default until /eng-advisor on", async () => {
 	const reviews: ReviewBatch[] = [];
 	stubReview(async ({ batch }) => {
 		reviews.push(batch);
 		return [];
 	});
-	const app = await harness([user("Plain session")], { engMode: false });
+	const app = await harness([user("Plain session")]);
 	try {
 		await app.command("status");
 		expect(app.notices.at(-1)).toStartWith("Eng-Advisor: paused");
 		await app.event("turn_end", { message: user("Plain turn") });
 		expect(app.timers).toEqual([]);
-		app.append(ENG_MODE_ENTERED_TYPE, undefined);
-		app.add(user("Entered Eng Mode"));
-		await app.event("turn_end", { message: user("Eng Mode turn") });
+		await app.command("on");
 		await app.flush();
 		expect(reviews).toHaveLength(1);
 		await app.command("status");
@@ -184,6 +180,7 @@ test("stays paused outside Eng Mode and arms once the session enters it", async 
 
 test("reload publication invalidates reviews started while configuration was loading", async () => {
 	const app = await harness([user("Pending boundary")]);
+	await app.command("on");
 	const loading = deferred();
 	const releaseConfig = deferred();
 	const policyReady = deferred();

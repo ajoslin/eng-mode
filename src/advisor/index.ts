@@ -32,7 +32,6 @@ import {
 	TRANSCRIBED_OMP_VERSION,
 } from "./types";
 import { collectWatchdogInstructions } from "./watchdog";
-import { engModeActive } from "../eng-mode-state";
 
 export type AdvisorExtensionAPI = Pick<
 	OmpExtensionAPI,
@@ -172,14 +171,11 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 		reviewer?.dispose();
 		reviewer = undefined;
 		queuedContext = ctx;
-		const branch = ctx.sessionManager.getBranch();
-		state = restoreState(branch);
+		state = restoreState(ctx.sessionManager.getBranch());
 		hiddenCallIds.clear();
 		turnsSinceReview = 0;
 		forceReview = false;
-		// Off by default: only sessions that entered /eng-mode get a reviewer,
-		// unless the operator explicitly ran `/eng-advisor on`.
-		enabled ||= engModeActive(branch);
+		// Off by default; only `/eng-advisor on` builds a reviewer.
 		if (!enabled) return;
 		try {
 			const nextConfig = await loadEngAdvisorConfig(import.meta.dir);
@@ -494,14 +490,9 @@ export function registerEngAdvisor(pi: AdvisorExtensionAPI): void {
 	pi.on("session_start", async (_event, ctx) => initialize(ctx));
 	pi.on("session_switch", async (_event, ctx) => initialize(ctx));
 	pi.on("session_branch", async (_event, ctx) => initialize(ctx));
-	pi.on("turn_end", async (event, ctx) => {
-		if (!enabled && engModeActive(ctx.sessionManager.getBranch())) {
-			enabled = true;
-			await initialize(ctx);
-			if (!reviewer) return;
-		}
-		schedule(ctx, isWorkInProgress(event.message));
-	});
+	pi.on("turn_end", (event, ctx) =>
+		schedule(ctx, isWorkInProgress(event.message)),
+	);
 	pi.on("session_shutdown", () => {
 		generation++;
 		reviewAbort?.abort();
