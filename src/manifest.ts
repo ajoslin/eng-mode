@@ -43,7 +43,7 @@ export const skillNames = [
   "principle-subtract-before-you-add",
   "principle-type-system-discipline",
   "omp-workflows",
-  "pre-pr-swarm",
+  "fresh-eyes",
   "prototype",
   "recall",
   "reflect",
