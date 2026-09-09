@@ -66,7 +66,7 @@ The core playbook ideas are pstack's:
 > - **Refactoring:** “a behavior-preserving change to structure or shape.”
 > - **Performance:** “trace a measured slowness and improve it against a baseline.”
 
-This tree ships **24 playbooks** (pstack's 23 plus Eng Mode's Pre-PR gates) and **23 principle skills**, including `principle-attack-the-premise` and `principle-test-behavior-not-implementation`. See [pstack's full playbook list](https://github.com/cursor/plugins/blob/main/pstack/README.md#just-use-poteto-mode). Upstream copyright and MIT license terms are preserved in [`LICENSE`](LICENSE).
+This tree ships **24 playbooks** (pstack's 23 plus Eng Mode's Pre-PR gates) and **23 principle skills**, including `principle-attack-the-premise` and `principle-test-behavior-not-implementation`. `/eng-mode` reads a principle leaf only when it governs a decision. Each leaf is also invocable as `/principle-<name>`. See [pstack's full playbook list](https://github.com/cursor/plugins/blob/main/pstack/README.md#just-use-poteto-mode). Upstream copyright and MIT license terms are preserved in [`LICENSE`](LICENSE).
 
 ## Development
 

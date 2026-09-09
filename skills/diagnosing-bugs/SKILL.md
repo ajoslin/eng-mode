@@ -30,7 +30,7 @@ data before sharing any excerpt. If a process exits before readiness, read its
 log first. A runner's thrown diagnostic usually contains only a bounded tail of
 the same stream.
 
-## Phase 1 — Build a feedback loop
+## Phase 1. Build a feedback loop
 
 **This is the skill.** Everything else is mechanical. If you have a **tight** pass/fail signal for the bug, one that goes red on _this_ bug, you will find the cause. Bisection, hypothesis-testing, and instrumentation all just consume it. If you don't have one, no amount of staring at code will save you.
 
@@ -73,7 +73,7 @@ The goal is not a clean repro but a **higher reproduction rate**. Loop the trigg
 
 Stop and say so explicitly. List what you tried. Ask the user for: (a) access to whatever environment reproduces it, (b) a redacted captured artifact (HAR file, log dump, core dump, screen recording with timestamps), or (c) permission to add temporary production instrumentation. Do **not** proceed to hypothesise without a loop.
 
-### Completion criterion — a tight loop that goes red
+### Completion criterion. A tight loop that goes red
 
 Phase 1 is done when the loop is **tight** and **red-capable**. You can name **one command**, a script path, a test invocation, a curl, that you have **already run at least once** (show the invocation and its output, redacted), and that is:
 
@@ -84,7 +84,7 @@ Phase 1 is done when the loop is **tight** and **red-capable**. You can name **o
 
 If you catch yourself reading code to build a theory before this command exists, **stop. Jumping straight to a hypothesis is the exact failure this skill prevents.** No red-capable command, no Phase 2.
 
-## Phase 2 — Reproduce + minimise
+## Phase 2. Reproduce + minimise
 
 Run the loop. Watch it go red. The bug appears.
 
@@ -104,7 +104,7 @@ Done when **every remaining element is load-bearing**. Removing any one of them 
 
 Do not proceed until you have reproduced **and** minimised.
 
-## Phase 3 — Hypothesise
+## Phase 3. Hypothesise
 
 Generate **3-5 ranked hypotheses** before testing any of them. Single-hypothesis generation anchors on the first plausible idea.
 
@@ -116,7 +116,7 @@ If you cannot state the prediction, the hypothesis is a vibe. Discard or sharpen
 
 **Show the ranked list to the user before testing.** They often have domain knowledge that re-ranks instantly ("we just deployed a change to #3"), or know hypotheses they've already ruled out. Cheap checkpoint, big time saver. Don't block on it. Proceed with your ranking if the user is AFK.
 
-## Phase 4 — Instrument
+## Phase 4. Instrument
 
 Each probe must map to a specific prediction from Phase 3. **Change one variable at a time.**
 
@@ -130,7 +130,7 @@ Tool preference:
 
 **Perf branch.** For performance regressions, logs are usually wrong. Instead, establish a baseline measurement (timing harness, `performance.now()`, profiler, query plan), then bisect. Measure first, fix second.
 
-## Phase 5 — Fix + durable contract
+## Phase 5. Fix + durable contract
 
 Read the project test law that `project-standards` names. It governs every durable test. Convert the minimized reproduction into a permanent failing test before the fix only when it exercises an uncovered observable contract at the correct public seam and earns its maintenance cost. A convenient shallow seam is not enough.
 
@@ -144,7 +144,7 @@ When that durable seam exists:
 
 When no durable test earns its keep, retain the real-surface reproduction as proof, apply the fix, and rerun it. Do not add a low-signal regression test merely because the bug existed.
 
-## Phase 6 — Cleanup
+## Phase 6. Cleanup
 
 Required before declaring done:
 

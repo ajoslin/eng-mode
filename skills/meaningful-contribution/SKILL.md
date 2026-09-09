@@ -25,4 +25,4 @@ Source bar: [bdsqqq meaningful contribution](https://gist.github.com/bdsqqq/1e7e
 - PR-shaped summaries with no observed run
 - Shifting proof burden onto reviewers
 
-Return findings only. Do not edit. Do not open a PR. Do not remediate. Do not add tests during this review; flag missing proof.
+Return findings only. Do not edit. Do not open a PR. Do not remediate. Do not add tests during this review. Flag missing proof.

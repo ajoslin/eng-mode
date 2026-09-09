@@ -10,7 +10,7 @@ Match evidence to the changed contract.
 
 Compilation proves compilation. A test proves its assertions. Runtime reproduction proves its scenario. Product verification proves behavior on the real surface. Drive web and mobile changes in their clients, CLI/TUI changes in the real program, jobs through a real worker, migrations through apply/readback, and cross-runtime contracts in every affected runtime. A failed health gate or wrong surface is **inconclusive**.
 
-Bug fixes reproduce first and remove the cause. Features name shape and ownership. Refactors pin behavior. Performance work records comparable baseline and result. Add tests only for uncovered observable contracts.
+Bug fixes reproduce first and remove the cause. Features name shape and ownership. Refactors pin behavior. Performance work records comparable baseline and result. Add tests only for uncovered observable contracts. A test calls the code the way its users do and asserts a literal expected value. If it would still pass when every imported function returned `undefined`, rewrite the assertion or delete the test.
 
 ## Review and delivery
 

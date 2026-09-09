@@ -15,7 +15,7 @@ Tests verify behavior through public interfaces, not implementation details. Cod
 
 See [tests.md](tests.md) for seam examples. Do not use mocks, spies, patched globals, or call-count assertions. If a boundary cannot be exercised honestly at this layer, move to a real layer as the project test law requires.
 
-## Seams — where tests go
+## Seams. Where tests go
 
 A **seam** is the public boundary you test at: the interface where you observe behavior without reaching inside. Tests live at seams, never against internals.
 

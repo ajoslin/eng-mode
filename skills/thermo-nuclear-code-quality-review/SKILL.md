@@ -110,7 +110,7 @@ Escalate findings when you see:
 
 ## Preferred Remedies
 
-Preferred remedies delete complexity. Narrow the instance. Reuse a pattern this stack already has. New helpers, queues, guards, or adapters only if this stack already does that for a named exclusive resource. If the honest remedy extends the change — new durable state, schema, subsystem, or extra surface — escalate; do not prescribe it as the fix.
+Preferred remedies delete complexity. Narrow the instance. Reuse a pattern this stack already has. New helpers, queues, guards, or adapters only if this stack already does that for a named exclusive resource. If the honest remedy extends the change, new durable state, schema, subsystem, or extra surface, escalate. Do not prescribe it as the fix.
 
 When you identify a code-quality problem, prefer suggestions like:
 

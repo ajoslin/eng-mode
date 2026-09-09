@@ -105,7 +105,7 @@ Proceed on reversible work without asking. Pause before irreversible writes such
 
 ## Principles
 
-Read each applicable leaf in full. These descriptions decide applicability. The category labels are only an index.
+When an applicability line matches, read that sibling `principle-*` skill now. Do not preload the catalog. Operators may also invoke `/principle-<name>` directly. These descriptions decide applicability. The category labels are only an index.
 
 - Simplicity: `principle-laziness-protocol` when refactoring, sizing a diff, or tempted to add abstraction, layers, or signal threading. `principle-subtract-before-you-add` when sequencing an addition, refactor, or rewrite. `principle-minimize-reader-load` when code is hard to trace or hides state behind layers. `principle-build-the-lever` for nontrivial work where a tool, script, generator, or codemod can do or prove the work.
 - Foundations: `principle-foundational-thinking` before choosing core types, data structures, scaffold order, or shared state. `principle-redesign-from-first-principles` when integrating a new requirement into an existing design. `principle-attack-the-premise` when two or more fixes that share one premise have failed the same gate. Take a census of which actors hold the imbalance before the next fix, then question the premise instead of writing another fix that assumes it. `principle-experience-first` for product, UX, or feature-scope tradeoffs. `principle-exhaust-the-design-space` for novel interactions or architectural decisions without precedent.

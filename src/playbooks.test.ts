@@ -98,7 +98,18 @@ describe("pstack 0.15.0 port contracts", () => {
     expect(skill).toContain("`principle-test-behavior-not-implementation`");
     expect(skill).toContain("Do not add a first todo to read the principles index.");
     expect(skill).toContain("Cite only principles whose leaf you read this session.");
+    expect(skill).toContain("Operators may also invoke `/principle-<name>` directly.");
+    expect(skill).toContain("When an applicability line matches, read that sibling `principle-*` skill now.");
     expect(skill).not.toContain("The first item is to read every applicable");
+
+    const { readdirSync, readFileSync } = await import("node:fs");
+    const principleDirs = readdirSync(join(root, "skills")).filter((name) => name.startsWith("principle-"));
+    expect(principleDirs).toHaveLength(23);
+    for (const name of principleDirs) {
+      const text = readFileSync(join(root, "skills", name, "SKILL.md"), "utf8");
+      expect(text).toContain(`Use for /${name}.`);
+      expect(text).toContain("disable-model-invocation: true");
+    }
   });
 
   it("makes /how explain-only and drops critique references", async () => {
