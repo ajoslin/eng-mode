@@ -57,7 +57,7 @@ The contracts decision is auditable on-disk validation, not model self-report. `
 - Dependent review-first PR chain: `playbooks/autopilot-stack.md` and the selected forge provider.
 - Project-scale program: `playbooks/orchestrate.md` and the `eng_orch` tool. Work one agent could finish inside the session budget is Autonomous run, not Orchestrate. Do not use OMP's `orchestrate` magic keyword. It supplies no scheduler or transport.
 - Large planned program without active execution: `playbooks/multi-phase-plan.md`.
-- Recent workspace context: `recall`. One known session uses `playbooks/session-pickup.md`.
+- Recent workspace context or prior-session precedent: `recall`. One known session uses `playbooks/session-pickup.md`.
 - Personal working-convention mining: `automate-me`.
 - Audited disk reclamation: `playbooks/worktree-cleanup.md`.
 - Pause current work: `playbooks/pause-safely.md`.
