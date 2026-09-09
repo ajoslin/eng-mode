@@ -1,12 +1,20 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { parseDocument } from "yaml";
+import { z } from "zod";
 
 export const contractNames = ["project-standards", "verify-project"] as const;
-export type ContractName = (typeof contractNames)[number];
+export type ContractName = typeof contractNames[number];
 
 export type ForgeProviderName = "github-graphite" | "pr-cockpit";
 
-export type ContractParseStatus = "ok" | "unconfigured" | "missing" | "unreadable" | "malformed" | "wrong-name";
+export type ContractParseStatus =
+  | "ok"
+  | "unconfigured"
+  | "missing"
+  | "unreadable"
+  | "malformed"
+  | "wrong-name";
 
 export interface ContractObservation {
   readonly name: ContractName;
@@ -40,8 +48,15 @@ export interface RepositoryContractsResult {
 }
 
 const UNCONFIGURED_SENTINEL = "UNCONFIGURED";
+const contractMetadataSchema = z.object({
+  name: z.string().optional(),
+  "forge-provider": z.string().min(1).optional(),
+});
 
-function observedContract(input: RepositoryContractsInput, name: ContractName): ContractObservation {
+function observedContract(
+  input: RepositoryContractsInput,
+  name: ContractName
+): ContractObservation {
   const found = input.observations.find((entry) => entry.name === name);
   if (found) return found;
   return {
@@ -51,23 +66,32 @@ function observedContract(input: RepositoryContractsInput, name: ContractName): 
   };
 }
 
-export function expectedContractPath(repositoryRoot: string, name: ContractName): string {
+export function expectedContractPath(
+  repositoryRoot: string,
+  name: ContractName
+): string {
   return join(resolve(repositoryRoot), ".agents", "skills", name, "SKILL.md");
 }
 
 export function decideRepositoryContracts(
-  input: RepositoryContractsInput,
+  input: RepositoryContractsInput
 ): RepositoryContractsResult {
   const standards = observedContract(input, "project-standards");
   const verification = observedContract(input, "verify-project");
   const contracts = [standards, verification];
-  const configuredForgeProvider = standards.parse === "ok"
-    ? (standards.forgeProvider ?? "github-graphite")
-    : null;
-  const forgeProvider: ForgeProviderName | null = configuredForgeProvider === "github-graphite" || configuredForgeProvider === "pr-cockpit"
-    ? configuredForgeProvider
-    : null;
-  const done = (decision: ContractDecision, reasons: readonly string[]): RepositoryContractsResult => ({
+  const configuredForgeProvider =
+    standards.parse === "ok"
+      ? standards.forgeProvider ?? "github-graphite"
+      : null;
+  const forgeProvider: ForgeProviderName | null =
+    configuredForgeProvider === "github-graphite" ||
+    configuredForgeProvider === "pr-cockpit"
+      ? configuredForgeProvider
+      : null;
+  const done = (
+    decision: ContractDecision,
+    reasons: readonly string[]
+  ): RepositoryContractsResult => ({
     decision,
     mode: input.mode,
     repositoryRoot: input.repositoryRoot,
@@ -76,11 +100,19 @@ export function decideRepositoryContracts(
     reasons,
   });
 
-  if (standards.parse === "unreadable" || standards.parse === "malformed" || standards.parse === "wrong-name") {
-    return done("blocked-standards", [`project-standards is ${standards.parse} at ${standards.expectedPath}`]);
+  if (
+    standards.parse === "unreadable" ||
+    standards.parse === "malformed" ||
+    standards.parse === "wrong-name"
+  ) {
+    return done("blocked-standards", [
+      `project-standards is ${standards.parse} at ${standards.expectedPath}`,
+    ]);
   }
   if (standards.parse === "unconfigured") {
-    return done("unconfigured", ["project-standards is an explicit UNCONFIGURED sentinel"]);
+    return done("unconfigured", [
+      "project-standards is an explicit UNCONFIGURED sentinel",
+    ]);
   }
   if (standards.parse === "missing") {
     if (input.mode === "read-only") {
@@ -94,12 +126,16 @@ export function decideRepositoryContracts(
   }
   if (forgeProvider === null) {
     return done("blocked-standards", [
-      `project-standards selects unknown forge-provider ${JSON.stringify(configuredForgeProvider)}`,
+      `project-standards selects unknown forge-provider ${JSON.stringify(
+        configuredForgeProvider
+      )}`,
     ]);
   }
 
   if (verification.parse === "unconfigured") {
-    return done("unconfigured", ["verify-project is an explicit UNCONFIGURED sentinel"]);
+    return done("unconfigured", [
+      "verify-project is an explicit UNCONFIGURED sentinel",
+    ]);
   }
   if (verification.parse !== "ok") {
     return done("inconclusive-verification", [
@@ -113,10 +149,18 @@ export function decideRepositoryContracts(
   ]);
 }
 
-export function observeRepositoryContracts(repositoryRoot: string): ContractObservation[] {
+export function observeRepositoryContracts(
+  repositoryRoot: string
+): ContractObservation[] {
   return contractNames.map((name) => {
     const canonicalPath = expectedContractPath(repositoryRoot, name);
-    const legacyPath = join(resolve(repositoryRoot), ".omp", "skills", name, "SKILL.md");
+    const legacyPath = join(
+      resolve(repositoryRoot),
+      ".omp",
+      "skills",
+      name,
+      "SKILL.md"
+    );
     let expectedPath = canonicalPath;
     let text: string;
     try {
@@ -129,35 +173,41 @@ export function observeRepositoryContracts(repositoryRoot: string): ContractObse
       try {
         text = readFileSync(legacyPath, "utf8");
       } catch (legacyError) {
-        const missing = (legacyError as NodeJS.ErrnoException).code === "ENOENT";
-        return { name, expectedPath: canonicalPath, parse: missing ? ("missing" as const) : ("unreadable" as const) };
+        const missing =
+          (legacyError as NodeJS.ErrnoException).code === "ENOENT";
+        return {
+          name,
+          expectedPath: canonicalPath,
+          parse: missing ? ("missing" as const) : ("unreadable" as const),
+        };
       }
     }
     if (text.trim() === UNCONFIGURED_SENTINEL) {
       return { name, expectedPath, parse: "unconfigured" as const };
     }
-    const frontmatter = /^---\n([\s\S]*?)\n---/.exec(text);
+    const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text);
     if (!frontmatter) {
       return { name, expectedPath, parse: "malformed" as const };
     }
-    const declaredName = /^name:\s*(\S+)\s*$/m.exec(frontmatter[1] ?? "");
-    if (!declaredName || declaredName[1] !== name) {
+    const document = parseDocument(frontmatter[1] ?? "", { uniqueKeys: true });
+    if (document.errors.length > 0) {
+      return { name, expectedPath, parse: "malformed" as const };
+    }
+    let metadata: unknown;
+    try {
+      metadata = document.toJS({ maxAliasCount: 0 });
+    } catch {
+      return { name, expectedPath, parse: "malformed" as const };
+    }
+    const parsed = contractMetadataSchema.safeParse(metadata);
+    if (!parsed.success) {
+      return { name, expectedPath, parse: "malformed" as const };
+    }
+    if (parsed.data.name !== name) {
       return { name, expectedPath, parse: "wrong-name" as const };
     }
-    let forgeProvider: string | undefined;
-    if (name === "project-standards") {
-      const providerLines = frontmatter[1]?.match(/^forge-provider\b.*$/gm) ?? [];
-      if (providerLines.length > 1) {
-        return { name, expectedPath, parse: "malformed" as const };
-      }
-      if (providerLines.length === 1) {
-        const provider = /^forge-provider:\s*(\S+)\s*$/.exec(providerLines[0] ?? "");
-        if (!provider) {
-          return { name, expectedPath, parse: "malformed" as const };
-        }
-        forgeProvider = provider[1];
-      }
-    }
+    const forgeProvider =
+      name === "project-standards" ? parsed.data["forge-provider"] : undefined;
     return {
       name,
       expectedPath,

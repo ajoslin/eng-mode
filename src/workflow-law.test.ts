@@ -158,6 +158,21 @@ describe("workflow law", () => {
     expect(codes(unsafe)).toEqual(expect.arrayContaining(["source-path-missing", "source-heading-missing"]));
   });
 
+  it("rejects an ambiguous source heading", async () => {
+    const law = await validLaw();
+    const inventory = buildSourceInventory(root);
+    const source = law.sourceRefs[0];
+    if (!source) throw new Error("Expected a source reference");
+    const text = inventory.files.get(source.path);
+    if (text === undefined) throw new Error("Expected source text");
+    const files = new Map(inventory.files);
+    files.set(source.path, `${text}\n## ${source.heading}\n`);
+    expect(validateWorkflowLaw(law, { ...inventory, files })).toContainEqual(expect.objectContaining({
+      code: "source-heading-missing",
+      sourceRef: { path: source.path, heading: source.heading },
+    }));
+  });
+
   it("rejects undefined skill, agent, and playbook references", async () => {
     const law = await validLaw();
     const unsafe = structuredClone(law);

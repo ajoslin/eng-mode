@@ -4,11 +4,12 @@ import type { Dirent } from "node:fs";
 import {
   access,
   mkdir,
-  open,
+  mkdtemp,
   readdir,
   readFile,
   rename,
   rm,
+  rmdir,
   unlink,
   writeFile,
 } from "node:fs/promises";
@@ -69,6 +70,7 @@ export interface InboxClaim {
 export interface InboxReclaimResult {
   readonly claims: readonly string[];
   readonly pointers: readonly InboxPointer[];
+  readonly skipped: readonly { readonly id: string; readonly reason: string }[];
 }
 
 export interface OpenGate {
@@ -207,8 +209,6 @@ export interface AddStandingParams {
 }
 
 export interface OpenStoreOptions {
-  readonly force?: boolean;
-  readonly onLockStolen?: (holder: string) => void;
   readonly onStaleLock?: (holder: string) => void;
 }
 
@@ -229,7 +229,9 @@ export interface Store {
     readonly push: (params: PushInboxParams) => Promise<InboxPushResult>;
     readonly claim: (params: ClaimInboxParams) => Promise<InboxClaim | null>;
     readonly ack: (params: AckInboxParams) => Promise<InboxClaim>;
-    readonly reclaim: (params: ReclaimInboxParams) => Promise<InboxReclaimResult>;
+    readonly reclaim: (
+      params: ReclaimInboxParams
+    ) => Promise<InboxReclaimResult>;
     readonly peek: () => Promise<readonly InboxPointer[]>;
     readonly count: () => Promise<number>;
   };
@@ -249,7 +251,9 @@ export interface Store {
   readonly status: {
     readonly render: () => Promise<StatusReport>;
   };
-  readonly init: (params: InitStoreParams) => Promise<{ readonly store: string }>;
+  readonly init: (
+    params: InitStoreParams
+  ) => Promise<{ readonly store: string }>;
   readonly close: () => Promise<void>;
 }
 
@@ -261,10 +265,7 @@ export interface NotFoundOutput {
 export class UserError extends Error {}
 export class UsageError extends UserError {}
 export class NotFoundError extends UserError {
-  public constructor(
-    message: string,
-    public readonly output?: NotFoundOutput,
-  ) {
+  public constructor(message: string, public readonly output?: NotFoundOutput) {
     super(message);
   }
 }
@@ -297,7 +298,7 @@ export function parseVerdict(value: string): Verdict {
   const verdict = verdictOrNull(value);
   if (verdict === null) {
     throw new UserError(
-      "verdict must be live-ui-verified, unit-test-verified, type-check-only, verifier-blocked, or verifier-failed",
+      "verdict must be live-ui-verified, unit-test-verified, type-check-only, verifier-blocked, or verifier-failed"
     );
   }
   return verdict;
@@ -347,7 +348,10 @@ async function exists(path: string): Promise<boolean> {
 }
 
 async function atomicWrite(path: string, contents: string): Promise<void> {
-  const temporary = join(dirname(path), `.${basename(path)}.${process.pid}.${randomUUID()}.tmp`);
+  const temporary = join(
+    dirname(path),
+    `.${basename(path)}.${process.pid}.${randomUUID()}.tmp`
+  );
   try {
     await writeFile(temporary, contents, { flag: "wx" });
     await rename(temporary, path);
@@ -370,7 +374,9 @@ async function requiredFile(path: string): Promise<string> {
       throw error;
     }
     if (errorCode(error) === "ENOENT") {
-      throw new UserError(`store is not initialized at ${dirname(path)}; run orch init`);
+      throw new UserError(
+        `store is not initialized at ${dirname(path)}; run orch init`
+      );
     }
     throw error;
   }
@@ -392,77 +398,109 @@ function holderIsDead(holder: string): boolean {
   }
 }
 
-async function acquireLock(store: string, options: OpenStoreOptions): Promise<() => Promise<void>> {
+interface StoreLock {
+  readonly assertOwned: () => Promise<void>;
+  readonly release: () => Promise<void>;
+}
+
+async function acquireLock(
+  store: string,
+  options: OpenStoreOptions
+): Promise<StoreLock> {
   const path = join(store, LOCK_FILE);
-  const pid = String(process.pid);
-  const create = async (): Promise<void> => {
-    const handle = await open(path, "wx");
-    await handle.writeFile(`${pid}\n`);
-    await handle.close();
-  };
-
-  const takeOver = async (): Promise<void> => {
-    await unlink(path);
-    try {
-      await create();
-    } catch (retryError) {
-      if (!(retryError instanceof Error)) {
-        throw retryError;
-      }
-      if (errorCode(retryError) === "EEXIST") {
-        const retryHolder = (await readFile(path, "utf8")).trim() || "unknown";
-        throw new UserError(`store lock held by pid ${retryHolder}`);
-      }
-      throw retryError;
-    }
-  };
-
+  const owner = `${process.pid}-${randomUUID()}`;
+  const candidate = await mkdtemp(join(store, `${LOCK_FILE}-`));
+  const ownerPath = join(path, owner);
   try {
-    await create();
-  } catch (error) {
-    if (!(error instanceof Error)) {
-      throw error;
+    await writeFile(join(candidate, owner), "", { flag: "wx" });
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await rename(candidate, path);
+        break;
+      } catch (error) {
+        if (!(error instanceof Error)) throw error;
+        const code = errorCode(error);
+        if (code === "ENOTDIR") {
+          throw new UserError(
+            "legacy store lock: stop all writers, then remove .orch.lock before retrying"
+          );
+        }
+        if (code !== "EEXIST" && code !== "ENOTEMPTY") throw error;
+        if (attempt >= 8)
+          throw new UserError("store lock changed during acquisition; retry");
+      }
+      let entries: string[];
+      try {
+        entries = await readdir(path);
+      } catch (error) {
+        if (error instanceof Error && errorCode(error) === "ENOENT") continue;
+        throw error;
+      }
+      if (entries.length === 0) continue;
+      const previousOwner = entries[0];
+      const holder = previousOwner?.match(/^(\d+)-[0-9a-f-]{36}$/)?.[1];
+      if (
+        entries.length !== 1 ||
+        previousOwner === undefined ||
+        holder === undefined
+      ) {
+        throw new UserError(
+          "store lock has unknown ownership; stop all writers before recovery"
+        );
+      }
+      if (!holderIsDead(holder))
+        throw new UserError(`store lock held by pid ${holder}`);
+      try {
+        await unlink(join(path, previousOwner));
+        options.onStaleLock?.(holder);
+      } catch (error) {
+        if (!(error instanceof Error) || errorCode(error) !== "ENOENT")
+          throw error;
+      }
+      try {
+        await rmdir(path);
+      } catch (error) {
+        if (
+          !(error instanceof Error) ||
+          !["ENOENT", "ENOTEMPTY", "EEXIST"].includes(errorCode(error) ?? "")
+        ) {
+          throw error;
+        }
+      }
     }
-    if (errorCode(error) !== "EEXIST") {
-      throw error;
-    }
-    let holder = "unknown";
-    try {
-      holder = (await readFile(path, "utf8")).trim() || "unknown";
-    } catch {
-      holder = "unknown";
-    }
-    if (holderIsDead(holder)) {
-      options.onStaleLock?.(holder);
-      await takeOver();
-    } else if (options.force) {
-      options.onLockStolen?.(holder);
-      await takeOver();
-    } else {
-      throw new UserError(`store lock held by pid ${holder}`);
-    }
+  } finally {
+    await rm(candidate, { recursive: true, force: true });
   }
-
-  return async (): Promise<void> => {
-    try {
-      if ((await readFile(path, "utf8")).trim() === pid) {
-        await unlink(path);
-      }
-    } catch (error) {
-      if (!(error instanceof Error)) {
+  return {
+    assertOwned: async () => {
+      if (!(await exists(ownerPath)))
+        throw new UserError("store lock ownership lost");
+    },
+    release: async () => {
+      try {
+        await unlink(ownerPath);
+      } catch (error) {
+        if (error instanceof Error && errorCode(error) === "ENOENT") return;
         throw error;
       }
-      if (errorCode(error) !== "ENOENT") {
-        throw error;
+      try {
+        await rmdir(path);
+      } catch (error) {
+        if (
+          !(error instanceof Error) ||
+          !["ENOENT", "ENOTEMPTY", "EEXIST"].includes(errorCode(error) ?? "")
+        ) {
+          throw error;
+        }
       }
-    }
+    },
   };
 }
 
 async function readTsv(
   path: string,
   header: string,
-  width: number,
+  width: number
 ): Promise<readonly (readonly string[])[]> {
   const lines = (await requiredFile(path)).replace(/\r/g, "").split("\n");
   if (lines.shift() !== header) {
@@ -482,26 +520,40 @@ async function readTsv(
 async function writeTsv(
   path: string,
   header: string,
-  rows: readonly (readonly string[])[],
+  rows: readonly (readonly string[])[]
 ): Promise<void> {
   const body = rows.map((row) => row.map(cleanCell).join("\t")).join("\n");
   await atomicWrite(path, `${header}\n${body}${body.length > 0 ? "\n" : ""}`);
 }
 
 async function readUnits(store: string): Promise<readonly Unit[]> {
-  return (await readTsv(join(store, "units.tsv"), UNIT_HEADER, 7)).map((row) => ({
-    id: row[0] ?? "",
-    track: row[1] ?? "",
-    state: row[2] ?? "",
-    branch: row[3] ?? "",
-    pr: row[4] ?? "",
-    sha: row[5] ?? "",
-    brief: row[6] ?? "",
-  }));
+  const ids = new Set<string>();
+  return (await readTsv(join(store, "units.tsv"), UNIT_HEADER, 7)).map((row) => {
+    const id = row[0] ?? "";
+    if (ids.has(id)) throw new UserError(`units.tsv has duplicate unit ${id}`);
+    ids.add(id);
+    return {
+      id,
+      track: row[1] ?? "",
+      state: row[2] ?? "",
+      branch: row[3] ?? "",
+      pr: row[4] ?? "",
+      sha: row[5] ?? "",
+      brief: row[6] ?? "",
+    };
+  });
 }
 
 function unitCells(unit: Unit): readonly string[] {
-  return [unit.id, unit.track, unit.state, unit.branch, unit.pr, unit.sha, unit.brief];
+  return [
+    unit.id,
+    unit.track,
+    unit.state,
+    unit.branch,
+    unit.pr,
+    unit.sha,
+    unit.brief,
+  ];
 }
 
 async function saveUnits(store: string, rows: readonly Unit[]): Promise<void> {
@@ -509,33 +561,53 @@ async function saveUnits(store: string, rows: readonly Unit[]): Promise<void> {
 }
 
 async function readLedger(store: string): Promise<readonly LedgerEntry[]> {
-  return (await readTsv(join(store, "ledger.tsv"), LEDGER_HEADER, 6)).map((row) => {
-    const rawVerdict = row[2] ?? "";
-    const verdict = verdictOrNull(rawVerdict);
-    if (verdict === null) {
-      throw new UserError(`ledger.tsv has invalid verdict ${rawVerdict}`);
+  const keys = new Set<string>();
+  return (await readTsv(join(store, "ledger.tsv"), LEDGER_HEADER, 6)).map(
+    (row) => {
+      const key = `${row[0]}\t${row[1]}`;
+      if (keys.has(key)) throw new UserError("ledger.tsv has duplicate PR/SHA key");
+      keys.add(key);
+      const rawVerdict = row[2] ?? "";
+      const verdict = verdictOrNull(rawVerdict);
+      if (verdict === null) {
+        throw new UserError(`ledger.tsv has invalid verdict ${rawVerdict}`);
+      }
+      return {
+        pr: row[0] ?? "",
+        sha: row[1] ?? "",
+        verdict,
+        evidence: row[3] ?? "",
+        verifier: row[4] ?? "",
+        ts: row[5] ?? "",
+      };
     }
-    return {
-      pr: row[0] ?? "",
-      sha: row[1] ?? "",
-      verdict,
-      evidence: row[3] ?? "",
-      verifier: row[4] ?? "",
-      ts: row[5] ?? "",
-    };
-  });
+  );
 }
 
 function ledgerCells(row: LedgerEntry): readonly string[] {
   return [row.pr, row.sha, row.verdict, row.evidence, row.verifier, row.ts];
 }
 
-async function saveLedger(store: string, rows: readonly LedgerEntry[]): Promise<void> {
-  await writeTsv(join(store, "ledger.tsv"), LEDGER_HEADER, rows.map(ledgerCells));
+async function saveLedger(
+  store: string,
+  rows: readonly LedgerEntry[]
+): Promise<void> {
+  await writeTsv(
+    join(store, "ledger.tsv"),
+    LEDGER_HEADER,
+    rows.map(ledgerCells)
+  );
 }
 
 function pointerCells(pointer: InboxPointer): readonly string[] {
-  return [pointer.ts, pointer.spawner, pointer.agent, pointer.unit, pointer.status, pointer.report];
+  return [
+    pointer.ts,
+    pointer.spawner,
+    pointer.agent,
+    pointer.unit,
+    pointer.status,
+    pointer.report,
+  ];
 }
 
 interface InboxEntry {
@@ -543,7 +615,9 @@ interface InboxEntry {
   readonly pointer: InboxPointer;
 }
 
-async function readPointerEntries(directory: string): Promise<readonly InboxEntry[]> {
+async function readPointerEntries(
+  directory: string
+): Promise<readonly InboxEntry[]> {
   let entries: Dirent[];
   try {
     entries = await readdir(directory, { withFileTypes: true });
@@ -552,7 +626,9 @@ async function readPointerEntries(directory: string): Promise<readonly InboxEntr
       throw error;
     }
     if (errorCode(error) === "ENOENT") {
-      throw new UserError(`store is not initialized at ${dirname(directory)}; run orch init`);
+      throw new UserError(
+        `store is not initialized at ${dirname(directory)}; run orch init`
+      );
     }
     throw error;
   }
@@ -561,7 +637,10 @@ async function readPointerEntries(directory: string): Promise<readonly InboxEntr
     .filter((entry) => entry.isFile() && entry.name.endsWith(".tsv"))
     .sort((left, right) => left.name.localeCompare(right.name));
   for (const entry of files) {
-    const raw = (await readFile(join(directory, entry.name), "utf8")).replace(/\r?\n$/, "");
+    const raw = (await readFile(join(directory, entry.name), "utf8")).replace(
+      /\r?\n$/,
+      ""
+    );
     const row = raw.split("\t");
     if (/[\r\n]/.test(raw) || row.length !== 6) {
       throw new UserError(`inbox pointer ${entry.name} is malformed`);
@@ -581,24 +660,44 @@ async function readPointerEntries(directory: string): Promise<readonly InboxEntr
   return result;
 }
 
-async function readPointers(directory: string): Promise<readonly InboxPointer[]> {
+async function readPointers(
+  directory: string
+): Promise<readonly InboxPointer[]> {
   return (await readPointerEntries(directory)).map((entry) => entry.pointer);
 }
 
 function requiredClaimId(value: string): string {
   const claim = requiredCell(value, "claim id");
-  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(claim) || claim === "." || claim === "..") {
+  if (
+    !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(claim) ||
+    claim === "." ||
+    claim === ".."
+  ) {
     throw new UserError("claim id is invalid");
   }
   return claim;
 }
 
 async function readClaimSpawner(directory: string): Promise<string> {
-  const raw = await requiredFile(join(directory, CLAIM_OWNER_FILE));
-  return requiredCell(raw.replace(/\r?\n$/, ""), "claim spawner");
+  const entries = await readdir(directory, { withFileTypes: true });
+  if (!entries.some((entry) => entry.name === CLAIM_OWNER_FILE && entry.isFile())) {
+    throw new UserError("claim has no valid spawner file");
+  }
+  if (entries.some((entry) => !entry.isFile() || (entry.name !== CLAIM_OWNER_FILE && !entry.name.endsWith(".tsv")))) {
+    throw new UserError("claim contains unidentified entries");
+  }
+  const raw = (await requiredFile(join(directory, CLAIM_OWNER_FILE))).replace(/\r?\n$/, "");
+  const spawner = requiredCell(raw, "claim spawner");
+  if (spawner !== raw || /[\t\r\n]/.test(raw)) {
+    throw new UserError("claim spawner is malformed");
+  }
+  return spawner;
 }
 
-async function migrateLegacyPointers(directory: string, spawnerValue: string): Promise<void> {
+async function migrateLegacyPointers(
+  directory: string,
+  spawnerValue: string
+): Promise<void> {
   const spawner = requiredCell(spawnerValue, "spawner");
   const entries = (await readdir(directory, { withFileTypes: true }))
     .filter((entry) => entry.isFile() && entry.name.endsWith(".tsv"))
@@ -613,7 +712,9 @@ async function migrateLegacyPointers(directory: string, spawnerValue: string): P
     if (row.length === 5) {
       await atomicWrite(
         path,
-        `${[row[0] ?? "", spawner, ...row.slice(1)].map(cleanCell).join("\t")}\n`,
+        `${[row[0] ?? "", spawner, ...row.slice(1)]
+          .map(cleanCell)
+          .join("\t")}\n`
       );
     }
   }
@@ -636,7 +737,9 @@ function renderGates(rows: readonly Gate[]): string {
 }
 
 async function readGates(store: string): Promise<readonly Gate[]> {
-  const raw = (await requiredFile(join(store, "gates.md"))).replace(/\r/g, "").trim();
+  const raw = (await requiredFile(join(store, "gates.md")))
+    .replace(/\r/g, "")
+    .trim();
   if (raw.length === 0) {
     return [];
   }
@@ -701,7 +804,14 @@ const frontierSchema = z.object({
   lowestUnmerged: z.number().int().nullable(),
 });
 const emptyObjectSchema = z.object({}).strict();
-const countsSchema = z.record(z.string(), z.number().int().nonnegative());
+const countsSchema = z.preprocess(
+  (value) =>
+    typeof value === "object" && value !== null && !Array.isArray(value)
+      ? Object.entries(value)
+      : value,
+  z.array(z.tuple([z.string(), z.number().int().nonnegative()]))
+    .transform((entries) => Object.fromEntries(entries))
+);
 const statusSummarySchema = z.object({
   unitStates: countsSchema,
   ledgerVerdicts: countsSchema,
@@ -748,6 +858,9 @@ function parseFrontier(raw: string): Frontier {
   if (!parsed.success) {
     throw new UserError("frontier.json has an invalid shape");
   }
+  if (parsed.data.lowestUnmerged !== (parsed.data.prs.find((row) => row.state === "OPEN")?.pr ?? null)) {
+    throw new UserError("frontier.json has an inconsistent lowestUnmerged");
+  }
   return parsed.data;
 }
 
@@ -756,7 +869,10 @@ async function readFrontier(store: string): Promise<Frontier> {
 }
 
 async function readStanding(store: string): Promise<readonly StandingLine[]> {
-  const raw = (await requiredFile(join(store, "preferences.md"))).replace(/\r/g, "");
+  const raw = (await requiredFile(join(store, "preferences.md"))).replace(
+    /\r/g,
+    ""
+  );
   if (raw.trim().length === 0) {
     return [];
   }
@@ -773,12 +889,12 @@ async function readStanding(store: string): Promise<readonly StandingLine[]> {
 }
 
 function countValues(values: readonly string[]): Counts {
-  const result: Record<string, number> = {};
+  const result = new Map<string, number>();
   for (const value of values) {
-    result[value] = (result[value] ?? 0) + 1;
+    result.set(value, (result.get(value) ?? 0) + 1);
   }
   return Object.fromEntries(
-    Object.entries(result).sort(([left], [right]) => left.localeCompare(right)),
+    [...result].sort(([left], [right]) => left.localeCompare(right))
   );
 }
 
@@ -786,7 +902,7 @@ function summarize(
   unitRows: readonly Unit[],
   ledgerRows: readonly LedgerEntry[],
   currentFrontier: Frontier,
-  gateRows: readonly Gate[],
+  gateRows: readonly Gate[]
 ): StatusSummary {
   return {
     unitStates: countValues(unitRows.map((unit) => unit.state)),
@@ -833,20 +949,26 @@ function changed(before: StatusSummary | null, after: StatusSummary): string {
     },
   ];
   for (const { label, oldCounts, newCounts } of groups) {
-    const names = [...new Set([...Object.keys(oldCounts), ...Object.keys(newCounts)])].sort();
+    const names = [
+      ...new Set([...Object.keys(oldCounts), ...Object.keys(newCounts)]),
+    ].sort();
     for (const name of names) {
-      const oldCount = oldCounts[name] ?? 0;
-      const newCount = newCounts[name] ?? 0;
+      const oldCount = Object.hasOwn(oldCounts, name) ? oldCounts[name] : 0;
+      const newCount = Object.hasOwn(newCounts, name) ? newCounts[name] : 0;
       if (oldCount !== newCount) {
         result.push(`${label} ${name} ${oldCount}->${newCount}`);
       }
     }
   }
   if (before.frontierGeneration !== after.frontierGeneration) {
-    result.push(`frontier generation ${before.frontierGeneration}->${after.frontierGeneration}`);
+    result.push(
+      `frontier generation ${before.frontierGeneration}->${after.frontierGeneration}`
+    );
   }
   if (before.openGateIds.join("\0") !== after.openGateIds.join("\0")) {
-    result.push(`open gates ${before.openGateIds.length}->${after.openGateIds.length}`);
+    result.push(
+      `open gates ${before.openGateIds.length}->${after.openGateIds.length}`
+    );
   }
   return result.length === 0 ? "no derived changes" : result.join("; ");
 }
@@ -855,7 +977,10 @@ function markdown(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
 }
 
-function table(headers: readonly string[], rows: readonly (readonly string[])[]): string {
+function table(
+  headers: readonly string[],
+  rows: readonly (readonly string[])[]
+): string {
   if (rows.length === 0) {
     return "(none)";
   }
@@ -871,7 +996,7 @@ function statusMarkdown(
   ledgerRows: readonly LedgerEntry[],
   currentFrontier: Frontier,
   gateRows: readonly Gate[],
-  currentSummary: StatusSummary,
+  currentSummary: StatusSummary
 ): string {
   return `# Orchestrate status
 
@@ -881,13 +1006,19 @@ Generated: ${new Date().toISOString()}
 
 States: ${countLine(currentSummary.unitStates)}
 
-${table(["ID", "Track", "State", "Branch", "PR", "SHA", "Brief"], unitRows.map(unitCells))}
+${table(
+  ["ID", "Track", "State", "Branch", "PR", "SHA", "Brief"],
+  unitRows.map(unitCells)
+)}
 
 ## Verification ledger
 
 Verdicts: ${countLine(currentSummary.ledgerVerdicts)}
 
-${table(["PR", "SHA", "Verdict", "Evidence", "Verifier", "Timestamp"], ledgerRows.map(ledgerCells))}
+${table(
+  ["PR", "SHA", "Verdict", "Evidence", "Verifier", "Timestamp"],
+  ledgerRows.map(ledgerCells)
+)}
 
 ## Frontier
 
@@ -896,7 +1027,12 @@ Lowest unmerged: ${currentFrontier.lowestUnmerged ?? "none"}
 
 ${table(
   ["Branch", "PR", "SHA", "State"],
-  currentFrontier.prs.map((row) => [row.branches, String(row.pr), row.sha, row.state]),
+  currentFrontier.prs.map((row) => [
+    row.branches,
+    String(row.pr),
+    row.sha,
+    row.state,
+  ])
 )}
 
 ## Gates
@@ -910,7 +1046,7 @@ ${table(
     gate.options,
     gate.defaultAnswer,
     gate.kind === "resolved" ? gate.answer : "",
-  ]),
+  ])
 )}
 
 <!-- orch-summary ${JSON.stringify(currentSummary)} -->
@@ -949,10 +1085,14 @@ function runGt({
     }
     if (args[0] === "auth") {
       throw new UserError(
-        `gt is missing or unauthenticated: ${errorMessage(error)}. Install Graphite and run gt auth`,
+        `gt is missing or unauthenticated: ${errorMessage(
+          error
+        )}. Install Graphite and run gt auth`
       );
     }
-    throw new UserError(`gt --no-interactive ${args.join(" ")} failed: ${errorMessage(error)}`);
+    throw new UserError(
+      `gt --no-interactive ${args.join(" ")} failed: ${errorMessage(error)}`
+    );
   }
 }
 
@@ -963,10 +1103,15 @@ function parseGtPullRequest({
   branch: string;
   detail: string;
 }): GtPullRequest {
-  const match = /^(?:\[origin\] )?PR #([1-9]\d*)(?: \(([^)\r\n]+)\))?(?: .+)?$/.exec(detail);
+  const match =
+    /^(?:\[origin\] )?PR #([1-9]\d*)(?: \(([^)\r\n]+)\))?(?: .+)?$/.exec(
+      detail
+    );
   const pr = Number(match?.[1] ?? 0);
   if (match === null || !Number.isSafeInteger(pr)) {
-    throw new UserError(`gt info output has an invalid PR row for branch ${branch}: ${detail}`);
+    throw new UserError(
+      `gt info output has an invalid PR row for branch ${branch}: ${detail}`
+    );
   }
   const status = match[2];
   if (status === "Merged") {
@@ -978,7 +1123,9 @@ function parseGtPullRequest({
   if (status === undefined || OPEN_GT_PR_STATUSES.has(status)) {
     return { pr, state: "OPEN" };
   }
-  throw new UserError(`gt info output has an unknown PR state for branch ${branch}: ${status}`);
+  throw new UserError(
+    `gt info output has an unknown PR state for branch ${branch}: ${status}`
+  );
 }
 
 function parseGtBranches(raw: string): readonly string[] {
@@ -988,15 +1135,21 @@ function parseGtBranches(raw: string): readonly string[] {
     if (line.length === 0) {
       continue;
     }
-    const branchMatch = /^(?:│ )*[◯◉] +([^\s]+)((?: \([^()\r\n]*\))*)$/.exec(line);
+    const branchMatch = /^(?:│ )*[◯◉] +([^\s]+)((?: \([^()\r\n]*\))*)$/.exec(
+      line
+    );
     if (branchMatch === null) {
       throw new UserError(
-        `gt log short output has an unparseable line ${index + 1}: ${JSON.stringify(line)}`,
+        `gt log short output has an unparseable line ${
+          index + 1
+        }: ${JSON.stringify(line)}`
       );
     }
     const branch = branchMatch[1] ?? "";
     if (branches.includes(branch)) {
-      throw new UserError(`gt log short output contains duplicate branch ${branch}`);
+      throw new UserError(
+        `gt log short output contains duplicate branch ${branch}`
+      );
     }
     branches.push(branch);
   }
@@ -1018,25 +1171,23 @@ function graphitePullRequest({
   const rows = raw
     .replace(/\r/g, "")
     .split("\n")
-    .filter((line) => line.startsWith("PR #") || line.startsWith("[origin] PR #"));
+    .filter(
+      (line) => line.startsWith("PR #") || line.startsWith("[origin] PR #")
+    );
   if (rows.length === 0) {
     throw new UserError(
-      `gt info output branch ${branch} has no pull request; this clone's gt metadata may predate the submit, so resolve the frontier from the stacker's clone or after gt sync`,
+      `gt info output branch ${branch} has no pull request; this clone's gt metadata may predate the submit, so resolve the frontier from the stacker's clone or after gt sync`
     );
   }
   if (rows.length > 1) {
-    throw new UserError(`gt info output contains multiple PRs for branch ${branch}`);
+    throw new UserError(
+      `gt info output contains multiple PRs for branch ${branch}`
+    );
   }
   return parseGtPullRequest({ branch, detail: rows[0] ?? "" });
 }
 
-function branchSha({
-  branch,
-  repo,
-}: {
-  branch: string;
-  repo: string;
-}): string {
+function branchSha({ branch, repo }: { branch: string; repo: string }): string {
   let raw: string;
   try {
     raw = execFileSync("git", ["rev-parse", branch], {
@@ -1049,7 +1200,9 @@ function branchSha({
     if (!(error instanceof Error)) {
       throw error;
     }
-    throw new UserError(`git rev-parse ${branch} failed: ${errorMessage(error)}`);
+    throw new UserError(
+      `git rev-parse ${branch} failed: ${errorMessage(error)}`
+    );
   }
   const sha = raw.trim();
   if (!/^[0-9a-f]{40,64}$/i.test(sha)) {
@@ -1086,7 +1239,10 @@ function validateFrontierPin({
   actual: readonly number[];
   expected: readonly number[];
 }): void {
-  if (actual.length === expected.length && actual.every((pr, index) => pr === expected[index])) {
+  if (
+    actual.length === expected.length &&
+    actual.every((pr, index) => pr === expected[index])
+  ) {
     return;
   }
   const actualSet = new Set(actual);
@@ -1101,95 +1257,114 @@ function validateFrontierPin({
     drift.push(`extra in gt: ${extra.join(",")}`);
   }
   if (missing.length === 0 && extra.length === 0) {
-    drift.push(`order differs: expected ${expected.join(",")}; gt ${actual.join(",")}`);
+    drift.push(
+      `order differs: expected ${expected.join(",")}; gt ${actual.join(",")}`
+    );
   }
   throw new UserError(`frontier pin mismatch: ${drift.join("; ")}`);
 }
 
-export function openStore(directory: string, options: OpenStoreOptions = {}): Store {
+export function openStore(
+  directory: string,
+  options: OpenStoreOptions = {}
+): Store {
   const store = resolve(directory);
-  let closed = false;
-  let releaseLock: (() => Promise<void>) | null = null;
-  let lockRequest: Promise<void> | null = null;
+  let closeRequest: Promise<void> | null = null;
+  let writes: Promise<void> = Promise.resolve();
+  let lock: StoreLock | null = null;
 
   const ensureOpen = (): void => {
-    if (closed) {
+    if (closeRequest !== null) {
       throw new UserError("store is closed");
     }
   };
 
   const ensureLock = async (): Promise<void> => {
+    lock ??= await acquireLock(store, options);
+    await lock.assertOwned();
+  };
+
+  const mutate = <T>(operation: () => Promise<T>): Promise<T> => {
     ensureOpen();
-    if (releaseLock !== null) {
-      return;
-    }
-    if (lockRequest === null) {
-      lockRequest = acquireLock(store, options).then((release) => {
-        releaseLock = release;
-      });
-    }
-    try {
-      await lockRequest;
-    } catch (error) {
-      lockRequest = null;
-      throw error;
-    }
+    const result = writes.then(operation);
+    writes = result.then(
+      () => {},
+      () => {}
+    );
+    return result;
   };
 
   const beginWrite = async (): Promise<void> => {
-    ensureOpen();
     if (!(await exists(store))) {
-      throw new UserError(`store is not initialized at ${store}; run orch init`);
+      throw new UserError(
+        `store is not initialized at ${store}; run orch init`
+      );
     }
     await ensureLock();
   };
 
   return {
     units: {
-      add: async (params) => {
-        await beginWrite();
-        const row: Unit = {
-          id: requiredCell(params.id, "unit id"),
-          track: requiredCell(params.track, "track"),
-          state: "pending",
-          branch: "",
-          pr: "",
-          sha: "",
-          brief: params.brief === undefined ? "" : requiredCell(params.brief, "brief"),
-        };
-        const rows = [...(await readUnits(store))];
-        if (rows.some((unit) => unit.id === row.id)) {
-          throw new UserError(`unit ${row.id} already exists`);
-        }
-        rows.push(row);
-        await saveUnits(store, rows);
-        return row;
-      },
-      set: async (params) => {
-        await beginWrite();
-        const id = requiredCell(params.id, "unit id");
-        const state = requiredCell(params.state, "state");
-        const rows = [...(await readUnits(store))];
-        const index = rows.findIndex((unit) => unit.id === id);
-        const old = rows[index];
-        if (index < 0 || old === undefined) {
-          throw new NotFoundError(`unit ${id} not found`);
-        }
-        const row: Unit = {
-          ...old,
-          state,
-          branch: params.branch === undefined ? old.branch : requiredCell(params.branch, "branch"),
-          pr: params.pr === undefined ? old.pr : String(positiveInteger(params.pr, "PR")),
-          sha: params.sha === undefined ? old.sha : requiredCell(params.sha, "SHA"),
-        };
-        rows[index] = row;
-        await saveUnits(store, rows);
-        return row;
-      },
+      add: async (params) =>
+        mutate(async () => {
+          await beginWrite();
+          const row: Unit = {
+            id: requiredCell(params.id, "unit id"),
+            track: requiredCell(params.track, "track"),
+            state: "pending",
+            branch: "",
+            pr: "",
+            sha: "",
+            brief:
+              params.brief === undefined
+                ? ""
+                : requiredCell(params.brief, "brief"),
+          };
+          const rows = [...(await readUnits(store))];
+          if (rows.some((unit) => unit.id === row.id)) {
+            throw new UserError(`unit ${row.id} already exists`);
+          }
+          rows.push(row);
+          await saveUnits(store, rows);
+          return row;
+        }),
+      set: async (params) =>
+        mutate(async () => {
+          await beginWrite();
+          const id = requiredCell(params.id, "unit id");
+          const state = requiredCell(params.state, "state");
+          const rows = [...(await readUnits(store))];
+          const index = rows.findIndex((unit) => unit.id === id);
+          const old = rows[index];
+          if (index < 0 || old === undefined) {
+            throw new NotFoundError(`unit ${id} not found`);
+          }
+          const row: Unit = {
+            ...old,
+            state,
+            branch:
+              params.branch === undefined
+                ? old.branch
+                : requiredCell(params.branch, "branch"),
+            pr:
+              params.pr === undefined
+                ? old.pr
+                : String(positiveInteger(params.pr, "PR")),
+            sha:
+              params.sha === undefined
+                ? old.sha
+                : requiredCell(params.sha, "SHA"),
+          };
+          rows[index] = row;
+          await saveUnits(store, rows);
+          return row;
+        }),
       get: async (id) => {
         ensureOpen();
         const cleanId = requiredCell(id, "unit id");
-        const row = (await readUnits(store)).find((unit) => unit.id === cleanId);
+        const row = (await readUnits(store)).find(
+          (unit) => unit.id === cleanId
+        );
         if (row === undefined) {
           throw new NotFoundError(`unit ${cleanId} not found`);
         }
@@ -1197,12 +1372,18 @@ export function openStore(directory: string, options: OpenStoreOptions = {}): St
       },
       list: async (params = {}) => {
         ensureOpen();
-        const state = params.state === undefined ? undefined : requiredCell(params.state, "state");
-        const track = params.track === undefined ? undefined : requiredCell(params.track, "track");
+        const state =
+          params.state === undefined
+            ? undefined
+            : requiredCell(params.state, "state");
+        const track =
+          params.track === undefined
+            ? undefined
+            : requiredCell(params.track, "track");
         return (await readUnits(store)).filter(
           (unit) =>
             (state === undefined || unit.state === state) &&
-            (track === undefined || unit.track === track),
+            (track === undefined || unit.track === track)
         );
       },
       counts: async () => {
@@ -1211,32 +1392,40 @@ export function openStore(directory: string, options: OpenStoreOptions = {}): St
       },
     },
     ledger: {
-      record: async (params) => {
-        await beginWrite();
-        const verdict = parseVerdict(params.verdict);
-        const row: LedgerEntry = {
-          pr: String(positiveInteger(params.pr, "PR")),
-          sha: requiredCell(params.sha, "SHA"),
-          verdict,
-          evidence: requiredCell(params.evidence, "evidence"),
-          verifier: params.verifier === undefined ? "" : requiredCell(params.verifier, "verifier"),
-          ts: new Date().toISOString(),
-        };
-        const rows = [...(await readLedger(store))];
-        const index = rows.findIndex((old) => old.pr === row.pr && old.sha === row.sha);
-        if (index < 0) {
-          rows.push(row);
-        } else {
-          rows[index] = row;
-        }
-        await saveLedger(store, rows);
-        return row;
-      },
+      record: async (params) =>
+        mutate(async () => {
+          await beginWrite();
+          const verdict = parseVerdict(params.verdict);
+          const row: LedgerEntry = {
+            pr: String(positiveInteger(params.pr, "PR")),
+            sha: requiredCell(params.sha, "SHA"),
+            verdict,
+            evidence: requiredCell(params.evidence, "evidence"),
+            verifier:
+              params.verifier === undefined
+                ? ""
+                : requiredCell(params.verifier, "verifier"),
+            ts: new Date().toISOString(),
+          };
+          const rows = [...(await readLedger(store))];
+          const index = rows.findIndex(
+            (old) => old.pr === row.pr && old.sha === row.sha
+          );
+          if (index < 0) {
+            rows.push(row);
+          } else {
+            rows[index] = row;
+          }
+          await saveLedger(store, rows);
+          return row;
+        }),
       check: async (params) => {
         ensureOpen();
         const pr = String(positiveInteger(params.pr, "PR"));
         const sha = requiredCell(params.sha, "SHA");
-        const row = (await readLedger(store)).find((value) => value.pr === pr && value.sha === sha);
+        const row = (await readLedger(store)).find(
+          (value) => value.pr === pr && value.sha === sha
+        );
         if (row === undefined) {
           throw new NotFoundError("NOT-VERIFIED", {
             compact: "NOT-VERIFIED",
@@ -1251,96 +1440,143 @@ export function openStore(directory: string, options: OpenStoreOptions = {}): St
       },
     },
     inbox: {
-      push: async (params) => {
-        await beginWrite();
-        const pointer: InboxPointer = {
-          ts: new Date().toISOString(),
-          spawner: requiredCell(params.spawner, "spawner"),
-          agent: requiredCell(params.agent, "agent"),
-          unit: requiredCell(params.unit, "unit"),
-          status: requiredCell(params.status, "status"),
-          report: params.report === undefined ? "" : requiredCell(params.report, "report"),
-        };
-        const inbox = join(store, "inbox");
-        if (!(await exists(inbox))) {
-          throw new UserError(`store is not initialized at ${store}; run orch init`);
-        }
-        const timestamp = pointer.ts.replace(/[:.]/g, "-");
-        const filename = `${timestamp}-${process.pid}-${randomUUID()}.tsv`;
-        const contents = `${pointerCells(pointer).map(cleanCell).join("\t")}\n`;
-        await atomicWrite(join(inbox, filename), contents);
-        return { pointer, filename };
-      },
-      claim: async (params) => {
-        await beginWrite();
-        const spawner = requiredCell(params.spawner, "spawner");
-        const inbox = join(store, "inbox");
-        const entries = (await readPointerEntries(inbox)).filter(
-          (entry) => entry.pointer.spawner === spawner,
-        );
-        if (entries.length === 0) {
-          return null;
-        }
-        const id = randomUUID();
-        const directory = join(store, "inbox-claimed", id);
-        await mkdir(directory);
-        await atomicWrite(join(directory, CLAIM_OWNER_FILE), `${spawner}\n`);
-        for (const entry of entries) {
-          await rename(join(inbox, entry.filename), join(directory, entry.filename));
-        }
-        return { id, spawner, pointers: entries.map((entry) => entry.pointer) };
-      },
-      ack: async (params) => {
-        await beginWrite();
-        const spawner = requiredCell(params.spawner, "spawner");
-        const id = requiredClaimId(params.claim);
-        const directory = join(store, "inbox-claimed", id);
-        const owner = await readClaimSpawner(directory);
-        if (owner !== spawner) {
-          throw new UserError(`claim ${id} belongs to another spawner`);
-        }
-        const pointers = await readPointers(directory);
-        await rm(directory, { recursive: true });
-        return { id, spawner, pointers };
-      },
-      reclaim: async (params) => {
-        await beginWrite();
-        const spawner = requiredCell(params.spawner, "spawner");
-        const root = join(store, "inbox-claimed");
-        const ids =
-          params.claim === undefined
-            ? (await readdir(root, { withFileTypes: true }))
-                .filter((entry) => entry.isDirectory())
-                .map((entry) => entry.name)
-                .sort()
-            : [requiredClaimId(params.claim)];
-        const reclaimedClaims: string[] = [];
-        const pointers: InboxPointer[] = [];
-        for (const id of ids) {
-          const directory = join(root, id);
+      push: async (params) =>
+        mutate(async () => {
+          await beginWrite();
+          const pointer: InboxPointer = {
+            ts: new Date().toISOString(),
+            spawner: requiredCell(params.spawner, "spawner"),
+            agent: requiredCell(params.agent, "agent"),
+            unit: requiredCell(params.unit, "unit"),
+            status: requiredCell(params.status, "status"),
+            report:
+              params.report === undefined
+                ? ""
+                : requiredCell(params.report, "report"),
+          };
+          const inbox = join(store, "inbox");
+          if (!(await exists(inbox))) {
+            throw new UserError(
+              `store is not initialized at ${store}; run orch init`
+            );
+          }
+          const timestamp = pointer.ts.replace(/[:.]/g, "-");
+          const filename = `${timestamp}-${process.pid}-${randomUUID()}.tsv`;
+          const contents = `${pointerCells(pointer)
+            .map(cleanCell)
+            .join("\t")}\n`;
+          await atomicWrite(join(inbox, filename), contents);
+          return { pointer, filename };
+        }),
+      claim: async (params) =>
+        mutate(async () => {
+          await beginWrite();
+          const spawner = requiredCell(params.spawner, "spawner");
+          const inbox = join(store, "inbox");
+          const entries = (await readPointerEntries(inbox)).filter(
+            (entry) => entry.pointer.spawner === spawner
+          );
+          if (entries.length === 0) {
+            return null;
+          }
+          const id = randomUUID();
+          const directory = join(store, "inbox-claimed", id);
+          const candidate = await mkdtemp(join(store, ".inbox-claim-"));
+          try {
+            await writeFile(join(candidate, CLAIM_OWNER_FILE), `${spawner}\n`, { flag: "wx" });
+            await rename(candidate, directory);
+          } finally {
+            await rm(candidate, { recursive: true, force: true });
+          }
+          for (const entry of entries) {
+            await rename(
+              join(inbox, entry.filename),
+              join(directory, entry.filename)
+            );
+          }
+          return {
+            id,
+            spawner,
+            pointers: entries.map((entry) => entry.pointer),
+          };
+        }),
+      ack: async (params) =>
+        mutate(async () => {
+          await beginWrite();
+          const spawner = requiredCell(params.spawner, "spawner");
+          const id = requiredClaimId(params.claim);
+          const directory = join(store, "inbox-claimed", id);
           const owner = await readClaimSpawner(directory);
           if (owner !== spawner) {
-            if (params.claim !== undefined) {
-              throw new UserError(`claim ${id} belongs to another spawner`);
-            }
-            continue;
+            throw new UserError(`claim ${id} belongs to another spawner`);
           }
-          const entries = await readPointerEntries(directory);
-          for (const entry of entries) {
-            const destination = join(store, "inbox", entry.filename);
-            if (await exists(destination)) {
-              throw new UserError(
-                `cannot reclaim claim ${id}: inbox already has ${entry.filename}`,
-              );
-            }
-            await rename(join(directory, entry.filename), destination);
-            pointers.push(entry.pointer);
+          const pointers = await readPointers(directory);
+          if (pointers.some((pointer) => pointer.spawner !== owner)) {
+            throw new UserError(`claim ${id} contains another spawner's pointers`);
           }
           await rm(directory, { recursive: true });
-          reclaimedClaims.push(id);
-        }
-        return { claims: reclaimedClaims, pointers };
-      },
+          return { id, spawner, pointers };
+        }),
+      reclaim: async (params) =>
+        mutate(async () => {
+          await beginWrite();
+          const spawner = requiredCell(params.spawner, "spawner");
+          const root = join(store, "inbox-claimed");
+          const ids =
+            params.claim === undefined
+              ? (await readdir(root, { withFileTypes: true }))
+                  .filter((entry) => entry.isDirectory())
+                  .map((entry) => entry.name)
+                  .sort()
+              : [requiredClaimId(params.claim)];
+          const reclaimedClaims: string[] = [];
+          const pointers: InboxPointer[] = [];
+          const skipped: { id: string; reason: string }[] = [];
+          for (const id of ids) {
+            const directory = join(root, id);
+            let owner: string;
+            try {
+              owner = await readClaimSpawner(directory);
+            } catch (error) {
+              if (!(error instanceof UserError) || params.claim !== undefined) throw error;
+              if ((await readdir(directory)).length === 0) await rmdir(directory);
+              else skipped.push({ id, reason: error.message });
+              continue;
+            }
+            if (owner !== spawner) {
+              if (params.claim !== undefined) {
+                throw new UserError(`claim ${id} belongs to another spawner`);
+              }
+              continue;
+            }
+            let entries: readonly InboxEntry[];
+            try {
+              entries = await readPointerEntries(directory);
+              if (entries.some((entry) => entry.pointer.spawner !== owner)) {
+                throw new UserError(`claim ${id} contains another spawner's pointers`);
+              }
+              for (const entry of entries) {
+                if (await exists(join(store, "inbox", entry.filename))) {
+                  throw new UserError(
+                    `cannot reclaim claim ${id}: inbox already has ${entry.filename}`
+                  );
+                }
+              }
+            } catch (error) {
+              if (!(error instanceof UserError) || params.claim !== undefined) throw error;
+              skipped.push({ id, reason: error.message });
+              continue;
+            }
+            for (const entry of entries) {
+              const destination = join(store, "inbox", entry.filename);
+              await rename(join(directory, entry.filename), destination);
+              pointers.push(entry.pointer);
+            }
+            await rm(directory, { recursive: true });
+            reclaimedClaims.push(id);
+          }
+          return { claims: reclaimedClaims, pointers, skipped };
+        }),
       peek: async () => {
         ensureOpen();
         return readPointers(join(store, "inbox"));
@@ -1351,76 +1587,86 @@ export function openStore(directory: string, options: OpenStoreOptions = {}): St
       },
     },
     gates: {
-      park: async (params) => {
-        await beginWrite();
-        const gate: OpenGate = {
-          kind: "open",
-          id: requiredLine(params.id, "gate id"),
-          question: requiredLine(params.question, "question"),
-          options: requiredLine(params.options, "options"),
-          defaultAnswer: requiredLine(params.defaultAnswer, "default"),
-        };
-        const rows = [...(await readGates(store))];
-        const index = rows.findIndex((old) => old.id === gate.id);
-        if (index < 0) {
-          rows.push(gate);
-        } else {
-          rows[index] = gate;
-        }
-        await atomicWrite(join(store, "gates.md"), renderGates(rows));
-        return gate;
-      },
+      park: async (params) =>
+        mutate(async () => {
+          await beginWrite();
+          const gate: OpenGate = {
+            kind: "open",
+            id: requiredLine(params.id, "gate id"),
+            question: requiredLine(params.question, "question"),
+            options: requiredLine(params.options, "options"),
+            defaultAnswer: requiredLine(params.defaultAnswer, "default"),
+          };
+          const rows = [...(await readGates(store))];
+          const index = rows.findIndex((old) => old.id === gate.id);
+          if (index < 0) {
+            rows.push(gate);
+          } else {
+            rows[index] = gate;
+          }
+          await atomicWrite(join(store, "gates.md"), renderGates(rows));
+          return gate;
+        }),
       list: async () => {
         ensureOpen();
-        return (await readGates(store)).filter((gate): gate is OpenGate => gate.kind === "open");
+        return (await readGates(store)).filter(
+          (gate): gate is OpenGate => gate.kind === "open"
+        );
       },
-      resolve: async (params) => {
-        await beginWrite();
-        const id = requiredLine(params.id, "gate id");
-        const rows = [...(await readGates(store))];
-        const index = rows.findIndex((gate) => gate.id === id);
-        const old = rows[index];
-        if (index < 0 || old === undefined) {
-          throw new NotFoundError(`gate ${id} not found`);
-        }
-        const gate: ResolvedGate = {
-          kind: "resolved",
-          id: old.id,
-          question: old.question,
-          options: old.options,
-          defaultAnswer: old.defaultAnswer,
-          answer: requiredLine(params.answer, "answer"),
-        };
-        rows[index] = gate;
-        await atomicWrite(join(store, "gates.md"), renderGates(rows));
-        return gate;
-      },
+      resolve: async (params) =>
+        mutate(async () => {
+          await beginWrite();
+          const id = requiredLine(params.id, "gate id");
+          const rows = [...(await readGates(store))];
+          const index = rows.findIndex((gate) => gate.id === id);
+          const old = rows[index];
+          if (index < 0 || old === undefined) {
+            throw new NotFoundError(`gate ${id} not found`);
+          }
+          const gate: ResolvedGate = {
+            kind: "resolved",
+            id: old.id,
+            question: old.question,
+            options: old.options,
+            defaultAnswer: old.defaultAnswer,
+            answer: requiredLine(params.answer, "answer"),
+          };
+          rows[index] = gate;
+          await atomicWrite(join(store, "gates.md"), renderGates(rows));
+          return gate;
+        }),
     },
     frontier: {
-      set: async (params) => {
-        await beginWrite();
-        const repo = resolve(requiredLine(params.repo, "repo directory"));
-        const pin =
-          params.prs === undefined ? undefined : params.prs.map((pr) => positiveInteger(pr, "PR"));
-        if (pin !== undefined && new Set(pin).size !== pin.length) {
-          throw new UserError("--prs must not contain duplicates");
-        }
-        const old = await readFrontier(store);
-        const prs = resolveFrontier(repo);
-        if (pin !== undefined) {
-          validateFrontierPin({
-            actual: prs.map((row) => row.pr),
-            expected: pin,
-          });
-        }
-        const value: Frontier = {
-          generation: old.generation + 1,
-          prs,
-          lowestUnmerged: prs.find((row) => row.state === "OPEN")?.pr ?? null,
-        };
-        await atomicWrite(join(store, "frontier.json"), `${JSON.stringify(value, null, 2)}\n`);
-        return value;
-      },
+      set: async (params) =>
+        mutate(async () => {
+          await beginWrite();
+          const repo = resolve(requiredLine(params.repo, "repo directory"));
+          const pin =
+            params.prs === undefined
+              ? undefined
+              : params.prs.map((pr) => positiveInteger(pr, "PR"));
+          if (pin !== undefined && new Set(pin).size !== pin.length) {
+            throw new UserError("--prs must not contain duplicates");
+          }
+          const old = await readFrontier(store);
+          const prs = resolveFrontier(repo);
+          if (pin !== undefined) {
+            validateFrontierPin({
+              actual: prs.map((row) => row.pr),
+              expected: pin,
+            });
+          }
+          const value: Frontier = {
+            generation: old.generation + 1,
+            prs,
+            lowestUnmerged: prs.find((row) => row.state === "OPEN")?.pr ?? null,
+          };
+          await atomicWrite(
+            join(store, "frontier.json"),
+            `${JSON.stringify(value, null, 2)}\n`
+          );
+          return value;
+        }),
       show: async () => {
         ensureOpen();
         return readFrontier(store);
@@ -1431,78 +1677,82 @@ export function openStore(directory: string, options: OpenStoreOptions = {}): St
         ensureOpen();
         return readStanding(store);
       },
-      add: async (params) => {
-        await beginWrite();
-        const rows = [...(await readStanding(store))];
-        const item: StandingLine = {
-          number: rows.length + 1,
-          line: requiredLine(params.line, "standing order"),
-        };
-        rows.push(item);
-        await atomicWrite(
-          join(store, "preferences.md"),
-          `${rows.map((row) => `${row.number}. ${row.line}`).join("\n")}\n`,
-        );
-        return item;
-      },
+      add: async (params) =>
+        mutate(async () => {
+          await beginWrite();
+          const rows = [...(await readStanding(store))];
+          const item: StandingLine = {
+            number: rows.length + 1,
+            line: requiredLine(params.line, "standing order"),
+          };
+          rows.push(item);
+          await atomicWrite(
+            join(store, "preferences.md"),
+            `${rows.map((row) => `${row.number}. ${row.line}`).join("\n")}\n`
+          );
+          return item;
+        }),
     },
     status: {
-      render: async () => {
-        await beginWrite();
-        const unitRows = await readUnits(store);
-        const ledgerRows = await readLedger(store);
-        const currentFrontier = await readFrontier(store);
-        const gateRows = await readGates(store);
-        const currentSummary = summarize(unitRows, ledgerRows, currentFrontier, gateRows);
-        const path = join(store, "status.md");
-        const before = (await exists(path)) ? previousSummary(await readFile(path, "utf8")) : null;
-        const change = changed(before, currentSummary);
-        await atomicWrite(
-          path,
-          statusMarkdown(unitRows, ledgerRows, currentFrontier, gateRows, currentSummary),
-        );
-        return {
-          units: unitRows,
-          ledger: ledgerRows,
-          frontier: currentFrontier,
-          gates: gateRows,
-          summary: currentSummary,
-          changed: change,
-        };
-      },
+      render: async () =>
+        mutate(async () => {
+          await beginWrite();
+          const unitRows = await readUnits(store);
+          const ledgerRows = await readLedger(store);
+          const currentFrontier = await readFrontier(store);
+          const gateRows = await readGates(store);
+          const currentSummary = summarize(
+            unitRows,
+            ledgerRows,
+            currentFrontier,
+            gateRows
+          );
+          const path = join(store, "status.md");
+          const before = (await exists(path))
+            ? previousSummary(await readFile(path, "utf8"))
+            : null;
+          const change = changed(before, currentSummary);
+          await atomicWrite(
+            path,
+            statusMarkdown(
+              unitRows,
+              ledgerRows,
+              currentFrontier,
+              gateRows,
+              currentSummary
+            )
+          );
+          return {
+            units: unitRows,
+            ledger: ledgerRows,
+            frontier: currentFrontier,
+            gates: gateRows,
+            summary: currentSummary,
+            changed: change,
+          };
+        }),
     },
-    init: async (params) => {
-      ensureOpen();
-      const spawner = requiredCell(params.spawner, "spawner");
-      await mkdir(store, { recursive: true });
-      await ensureLock();
-      await writeIfMissing(join(store, "units.tsv"), `${UNIT_HEADER}\n`);
-      await writeIfMissing(join(store, "ledger.tsv"), `${LEDGER_HEADER}\n`);
-      await mkdir(join(store, "inbox"), { recursive: true });
-      await mkdir(join(store, "inbox-claimed"), { recursive: true });
-      await migrateLegacyPointers(join(store, "inbox"), spawner);
-      await writeIfMissing(join(store, "gates.md"), "");
-      await writeIfMissing(join(store, "preferences.md"), "");
-      await writeIfMissing(join(store, "frontier.json"), "{}\n");
-      return { store };
-    },
-    close: async () => {
-      if (closed) {
-        return;
-      }
-      if (lockRequest !== null) {
-        try {
-          await lockRequest;
-        } catch {
-          // A failed acquisition has no lock to release.
-        }
-      }
-      const release = releaseLock;
-      releaseLock = null;
-      closed = true;
-      if (release !== null) {
-        await release();
-      }
+    init: async (params) =>
+      mutate(async () => {
+        const spawner = requiredCell(params.spawner, "spawner");
+        await mkdir(store, { recursive: true });
+        await ensureLock();
+        await writeIfMissing(join(store, "units.tsv"), `${UNIT_HEADER}\n`);
+        await writeIfMissing(join(store, "ledger.tsv"), `${LEDGER_HEADER}\n`);
+        await mkdir(join(store, "inbox"), { recursive: true });
+        await mkdir(join(store, "inbox-claimed"), { recursive: true });
+        await migrateLegacyPointers(join(store, "inbox"), spawner);
+        await writeIfMissing(join(store, "gates.md"), "");
+        await writeIfMissing(join(store, "preferences.md"), "");
+        await writeIfMissing(join(store, "frontier.json"), "{}\n");
+        return { store };
+      }),
+    close: () => {
+      closeRequest ??= writes.then(async () => {
+        await lock?.release();
+        lock = null;
+      });
+      return closeRequest;
     },
   };
 }

@@ -26,3 +26,7 @@ Use `<store>` for the same temporary store path in every call.
 ## Gotchas
 
 Never point this recipe at a production store or repository. Do not disclose credentials or production identifiers in evidence. Steps outside frontier verification use invented disposable PR and SHA values. Step 8 requires actual identifiers from its dedicated non-production Graphite stack. After capturing evidence, stop the managed process and delete only the throwaway store and disposable profile. If step 8 used dedicated non-production resources, remove only the disposable stack and repository that this run created.
+
+Store writes serialize per handle, and closing a handle drains accepted writes. Live lock takeover is not supported. A legacy flat `.orch.lock` file or unknown lock ownership blocks access. Stop all writers and verify that none remain before manually removing that lock. New-format locks recover only when their recorded owner process is dead. Unit states and ledger rows are bookkeeping, not authorization to merge.
+
+Bulk inbox recovery reports preserved malformed or conflicting claims in `skipped`. Confirm those IDs and reasons render, valid owned pointers return to the inbox, and preserved claim files remain unchanged.

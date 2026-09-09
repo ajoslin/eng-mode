@@ -128,7 +128,11 @@ function duplicateDiagnostics<T extends { readonly id: string }>(kind: string, e
 }
 
 function exactHeadingExists(text: string, heading: string): boolean {
-  return text.split(/\r?\n/u).some((line) => /^#{1,6}\s+(.+?)\s*$/u.exec(line)?.[1] === heading);
+  let matches = 0;
+  for (const line of text.split(/\r?\n/u)) {
+    if (/^#{1,6}\s+(.+?)\s*$/u.exec(line)?.[1] === heading && ++matches > 1) return false;
+  }
+  return matches === 1;
 }
 
 export function parseWorkflowLaw(text: string): ParseWorkflowLawResult {

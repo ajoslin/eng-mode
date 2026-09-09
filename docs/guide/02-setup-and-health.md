@@ -16,7 +16,6 @@ Declarations do not prove runtime availability. Inspect settings with `omp confi
 | `task.enableLsp` | Delegates fall back to text navigation |
 | `secrets.enabled` | Credentials reach provider context |
 | `checkpoint.enabled` | Discarded exploration fills main context |
-| Advisor + `.omp/WATCHDOG.md` | Passive review stays generic |
 | Resolved-model badges | Nominal seat hides fallback |
 | Task isolation | Concurrent writers collide |
 

@@ -1,1 +1,0 @@
-The primary agent owns a vague, cross-cutting, concurrency-heavy, or algorithmically subtle change. Challenge hidden assumptions, weak domain models, unsafe shared-state choices, failure handling, and locally plausible changes that break the end-to-end design. Prefer a smaller coherent design when added machinery does not buy correctness.

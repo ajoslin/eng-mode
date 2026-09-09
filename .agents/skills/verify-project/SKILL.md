@@ -44,6 +44,5 @@ Where a loop recipe applies, invoke `loop` with `op: status` and confirm `{ "ava
 - [Loop lifecycle](features/loop-lifecycle.md)
 - [Durable goal objective](features/goal-objective.md)
 - [Repository contract gate](features/repository-contracts.md)
-- [Eng-Advisor](features/eng-advisor.md)
 - [Durable orchestration store](features/orchestration-store.md)
 - [Automatic expert lens](features/expert-lens.md)

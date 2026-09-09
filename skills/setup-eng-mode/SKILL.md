@@ -42,21 +42,17 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 2. Validate existing `project-standards` and `verify-project` contracts from canonical `.agents/skills` or the backwards-compatible `.omp/skills` fallback. Never overwrite them. Unknown `forge-provider` values are blocking errors. Missing selection deliberately resolves to `github-graphite` for existing repositories.
 3. After explicit repository inspection, setup may create only an `UNCONFIGURED` sentinel (`SKILL.md` whose body is the single line `UNCONFIGURED`) under canonical `.agents/skills` for an absent contract, so the gap is explicit tool output rather than silence. It never infers a verification contract from package scripts. Real contract authoring routes through `create-verification-skill` and the repository owners.
 
-## 6. Advisor runtime
+## 6. Runtime validation
 
-The Eng Mode extension owns and registers Eng-Advisor directly. Verify that `/eng-advisor status` reports enabled, the resolved `@advisor` model, the current runtime transcription, the active role (`main`, a shipped Eng Mode agent name, or an unknown external agent name), and every loaded role-prompt source. Eng Mode ships short defaults in `.eng-advisor/{role}.md`. Repositories may add matching files at any ancestor to layer local guidance from filesystem root to current workspace. `WATCHDOG.md` remains shared cross-cutting guidance from the extension root, active agent directory, and repository ancestry. Role files are review lenses, not copies of principles or skill-routing maps. Setup does not copy files or edit OMP configuration.
+Restart OMP after installing or updating the extension, then verify `eng_orch contracts` and a throwaway store initialization through the registered tool.
 
-## 7. Runtime validation
-
-Restart OMP after installing or updating the extension, then verify `/eng-advisor status`. The semantic `advisor` model role controls model selection. Resolve and report its actual provider/model rather than editing `config.yml`.
-
-## 8. Capabilities
+## 7. Capabilities
 
 1. Verify `loop` is available without starting it and `goal` remains available. Reject duplicate tools.
 2. Validate that task worktree isolation is supported by current OMP configuration before any playbook depends on it.
 3. Dry-route one feature, one bug, and one contested design without editing product code, exercising discovery for every shipped agent.
 4. Observe `git commit --help`. Read only the `forgeProvider` skill returned by `eng_orch contracts` and validate its documented prerequisites. Do not inspect, invoke, or require another provider.
 
-## 9. Report
+## 8. Report
 
-Report advisor runtime status, resolved `@advisor` model, instruction sources, per-agent resolved models, contract decisions with source paths, isolation, `goal`, `loop`, commit capability, the selected forge provider's documented prerequisite results, and every unavailable capability. Refuse to report a capability as present without observing it.
+Report per-agent resolved models, contract decisions with source paths, isolation, `goal`, `loop`, commit capability, the selected forge provider's documented prerequisite results, and every unavailable capability. Refuse to report a capability as present without observing it.

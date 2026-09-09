@@ -4,7 +4,6 @@ import {
   parsePromptClassification,
   registerAutoMode,
 } from "./auto-mode.ts";
-import { registerEngAdvisor } from "./advisor/index.ts";
 import type { ExtensionAPI } from "./extension-types.ts";
 import { registerEngOrchestration } from "./eng-orchestrator.ts";
 import { EXPERT_DECISION_GUIDANCE, EXPERT_DECISION_MESSAGE, registerExpertLens } from "./expert-lens.ts";
@@ -20,7 +19,6 @@ export { actionNames, executeEngOrch } from "./eng-orchestrator.ts";
 
 
 export default function engModeExtension(pi: OmpExtensionAPI & ExtensionAPI): void {
-  registerEngAdvisor(pi);
   registerExpertLens(pi);
   registerAutoMode(pi, EXPERT_DECISION_GUIDANCE, EXPERT_DECISION_MESSAGE);
   registerGoalTool(pi);

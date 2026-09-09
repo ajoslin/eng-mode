@@ -178,8 +178,6 @@ describe("eng_orch executable entrypoint", () => {
     let beforeAgentStartHandler: BeforeAgentStartHandler | undefined;
     let expertRenderer: ((_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown) | undefined;
     const registered = new Map<string, RegisteredTool>();
-    const commands = new Map<string, unknown>();
-    const renderers = new Map<string, unknown>();
     let tokenBudgetMinimum: number | undefined;
     const chain = {
       optional: () => chain,
@@ -231,7 +229,6 @@ describe("eng_orch executable entrypoint", () => {
       engModeExtension({
         pi: { Text: TestText, InteractiveMode: TestInteractiveMode },
         registerMessageRenderer: (customType: string, renderer: unknown) => {
-          renderers.set(customType, renderer);
           if (customType === "eng-mode-expert-decision-guidance") {
             expertRenderer = renderer as typeof expertRenderer;
           }
@@ -242,9 +239,6 @@ describe("eng_orch executable entrypoint", () => {
             beforeAgentStartHandler = handler as BeforeAgentStartHandler;
           }
         },
-        registerCommand: (name: string, command: unknown) => commands.set(name, command),
-        appendEntry: () => {},
-        sendMessage: () => {},
         registerTool: (tool: RegisteredTool) => registered.set(tool.name, tool),
       } as unknown as Parameters<typeof engModeExtension>[0]);
       expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
@@ -252,8 +246,6 @@ describe("eng_orch executable entrypoint", () => {
       expect(existsSync(join(repositoryRoot, ".agents"))).toBeFalse();
     });
     expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
-    expect(commands.has("eng-advisor")).toBeTrue();
-    expect(renderers.has("dev.ajoslin.eng-advisor.finding")).toBeTrue();
     expect(registered.get("loop")).toMatchObject({ strict: true, loadMode: "essential" });
     expect(beforeAgentStartHandler).toBeDefined();
     await expect(beforeAgentStartHandler?.({ prompt: "Explore these files and report findings" }, unavailableClassifier)).resolves.toEqual({});

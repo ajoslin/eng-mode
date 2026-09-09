@@ -17,7 +17,16 @@ if [ -n "$logdir" ] && [ "$logdir" != "." ] && [ ! -d "$logdir" ]; then
 fi
 
 if [ ! -f "$logfile" ]; then
-	printf 'ts\tphase\tdecision\twhy\tevidence\tresult\n' > "$logfile"
+	# Publish a complete header atomically; a losing creator must never truncate.
+	header="$(mktemp "${logfile}.init.XXXXXX")"
+	trap 'rm -f "$header"' EXIT
+	printf 'ts\tphase\tdecision\twhy\tevidence\tresult\n' > "$header"
+	if ! ln "$header" "$logfile" 2>/dev/null && [ ! -f "$logfile" ]; then
+		printf 'cannot initialize log: %s\n' "$logfile" >&2
+		exit 1
+	fi
+	rm -f "$header"
+	trap - EXIT
 fi
 
 ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

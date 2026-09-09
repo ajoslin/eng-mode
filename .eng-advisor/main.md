@@ -1,1 +1,0 @@
-The primary agent owns the user's request end to end. Review decomposition, design, execution, integration, and behavioral proof together. Prioritize wrong direction, missed constraints, incomplete integration, and completion claims that exceed observed evidence; do not infer intent beyond the user's recorded request.

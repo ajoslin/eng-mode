@@ -17,6 +17,6 @@ Record owner, entry points, allowed dependencies, canonical contracts, persisten
 
 Every visible or operational surface needs a runnable proof path. Missing or unhealthy surfaces return `INCONCLUSIVE`, never a proxy.
 
-Run `setup-eng-mode` and verify subagent LSP, resolved models, advisor guidance, checkpoint, repository contracts, and task isolation assumptions. Re-run after runtime, role, or contract changes.
+Run `setup-eng-mode` and verify subagent LSP, resolved models, checkpoint, repository contracts, and task isolation assumptions. Re-run after runtime, role, or contract changes.
 
 Prefer executable boundaries: lint for local syntax, architecture checks for dependency seams, tests for behavior, contextual rules for judgment. Require fixtures and counterexamples before adding blockers.
