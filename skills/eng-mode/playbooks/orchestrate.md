@@ -12,7 +12,7 @@ Three rules carry the rest.
 - Every spawn and every resume carries the standing orders verbatim.
 - The brief is the product. A vague brief fails quietly, because a worker cannot ask you a question.
 
-Open a todo of the playbook steps. An active goal owns the durable program objective, not this finite graph or its repeated drain cadence. A step you skip stays listed with `skip: <reason>`.
+`todo` holds the program's units per Eng Mode's Start rule, not these steps. An active goal owns the durable program objective, not this finite graph or its repeated drain cadence.
 
 #### Roles and placement
 

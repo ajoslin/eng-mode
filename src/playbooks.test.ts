@@ -96,11 +96,12 @@ describe("pstack 0.15.0 port contracts", () => {
     const skill = await read("skills/eng-mode/SKILL.md");
     expect(skill).toContain("`principle-attack-the-premise`");
     expect(skill).toContain("`principle-test-behavior-not-implementation`");
-    expect(skill).toContain("Do not add a first todo to read the principles index.");
     expect(skill).toContain("Cite only principles whose leaf you read this session.");
     expect(skill).toContain("Operators may also invoke `/principle-<name>` directly.");
     expect(skill).toContain("When an applicability line matches, read that sibling `principle-*` skill now.");
     expect(skill).not.toContain("The first item is to read every applicable");
+    expect(skill).not.toContain("copied in verbatim");
+    expect(skill).toContain("never appear as todos");
 
     const { readdirSync, readFileSync } = await import("node:fs");
     const principleDirs = readdirSync(join(root, "skills")).filter((name) => name.startsWith("principle-"));

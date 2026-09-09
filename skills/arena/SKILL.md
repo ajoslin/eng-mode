@@ -10,7 +10,7 @@ Fan out an explicit `N >= 2` attempts at the same artifact, then select and synt
 
 ## Start
 
-Before dispatch, the lead creates one `todo` item for each phase: **Frame, Fan out, Cross-judge, Pick, Graft, Verify**. Delegates report phase evidence. They never mutate the lead's `todo` or `/goal` state.
+Before dispatch, the lead's `todo` holds work on the requested artifact per Eng Mode's Start rule, not one item per Arena phase. Delegates report phase evidence. They never mutate the lead's `todo` or `/goal` state.
 
 ## Frame
 

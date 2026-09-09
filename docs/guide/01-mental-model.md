@@ -16,7 +16,7 @@ flowchart TD
   C --> E
 ```
 
-`goal` retains the objective across turns. `loop` repeats bounded work. `todo` tracks finite steps. Completing a step or iteration does not complete the goal.
+`goal` retains the objective across turns. `loop` repeats bounded work. `todo` tracks the concrete work of the current task, never playbook steps or principles. Completing a step or iteration does not complete the goal.
 
 A playbook owns an end-to-end route such as investigation, bug fix, feature, refactoring, performance, or delivery. A skill is a focused method inside it. State the problem. Name a method only to override routing.
 

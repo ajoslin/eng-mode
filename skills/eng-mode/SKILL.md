@@ -10,7 +10,7 @@ Correctness first. Smallest coherent change. Prove the real behavior. OMP only. 
 ## Start
 
 1. Match exactly one primary playbook before editing.
-2. In the main session, multi-step work initializes `todo` whose first items are the matched playbook's finite steps, copied in verbatim, before any task-specific todos. Do not add a first todo to read the principles index. Delegates report requested transitions to the lead and never mutate parent state. For an inapplicable item, record `skip: <reason>` in the final report, then drop the task using its exact original content.
+2. In the main session, `todo` holds the concrete work for this task. Each item names an action and its target, such as "Fix expired-token handling in the session loader". Playbook steps, principles, and skill reads govern how you work and never appear as todos. Add only work in the requested scope. Mark an item done when its outcome exists, and revise the list when the approach changes. Skip the list for trivial tasks. Delegates report requested transitions to the lead and never mutate parent state.
 3. Apply only principles that govern a decision. Read each applied leaf in full from its sibling `principle-*` skill. In the reply, name each applied principle and the specific choice it changed. Cite only principles whose leaf you read this session. A citation without a decision is decorative and means its leaf was not applied.
 4. Read the project's `project-standards` contract for repository law, domain vocabulary sources, and the repository-selected specialized skills. Read `CONTEXT.md` for domain vocabulary and nearby ADRs for settled decisions when the project keeps them. `CONTEXT.md` is never a spec.
 

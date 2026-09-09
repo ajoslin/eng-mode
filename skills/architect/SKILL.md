@@ -10,7 +10,7 @@ Design before implementing. Sketch types, function signatures, class shapes, and
 
 ## Start
 
-In the main session, follow Eng Mode's Start rule: track Architect phases in `todo`. An active goal owns only the durable objective, and a loop owns repeated continuation when required. In a delegated session, do not call parent-owned state tools. Track the phase in the final report and return requested transitions to the lead.
+In the main session, `todo` holds the task's design and implementation work per Eng Mode's Start rule, not the phase names below. An active goal owns only the durable objective, and a loop owns repeated continuation when required. In a delegated session, do not call parent-owned state tools. Track the phase in the final report and return requested transitions to the lead.
 
 1. Ground
 2. Sketch

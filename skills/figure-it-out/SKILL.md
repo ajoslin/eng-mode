@@ -12,7 +12,7 @@ Don't reinvent a playbook you already have. A focused single-unit task that matc
 
 ## Start
 
-Open a todolist whose first items are the phases below. Do not add a first todo to read the principles index. Read a sibling `principle-*` leaf only when it governs a decision.
+Track the concrete work for this task in `todo` per Eng Mode's Start rule. The phases below are not todos. Read a sibling `principle-*` leaf only when it governs a decision.
 
 ## Phase A: Frame
 
@@ -33,7 +33,7 @@ Decompose into atomic, independently-landable units. Sequence riskiest-unknown-f
 - Decide what fans out. Parallelize only across seams, and give each worker its own worktree or branch (the **separate-before-serializing-shared-state** principle skill). Don't over-fan.
 - Write the designed phase list down. That list is what the human reviews.
 
-Then execute the design. Add its steps to the todolist as concrete items, after the Phase C entry and before Phase D. Run each under the Phase C loop discipline, and weave the Phase D log through them, a row as each step lands, rather than saving the whole trail for the end.
+Then execute the design. Put its units in the todolist. Run each under the Phase C loop discipline, and weave the Phase D log through them, a row as each step lands, rather than saving the whole trail for the end.
 
 ## Phase C: Run the loop
 
