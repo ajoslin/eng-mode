@@ -10,16 +10,16 @@ Use OMP `eval` as executable glue around tools and one-shot agents. Keep product
 ## Choose the runtime
 
 - `completion()`: one stateless, tool-free classification or transformation.
-- `agent()`: one complete brief and output schema; child is disposed after return.
+- `agent()`: one complete brief and output schema. Child is disposed after return.
 - `parallel(thunks)`: independent work with results returned in input order.
-- `pipeline(items, ...stages)`: barriered waves; every item completes a stage before the next begins.
+- `pipeline(items, ...stages)`: barriered waves. Every item completes a stage before the next begins.
 - Normal `task` + `hub`: work needs steering, revival, model badges, or a long-lived worker.
 
 Do not move ordinary edits into eval merely to look systematic.
 
 ## Contract first
 
-Define the input record and stable ID; stage output schemas; structured failure representation; artifact boundary; budget and stop condition; reducer; and human decision point.
+Define the input record and stable ID, stage output schemas, structured failure representation, artifact boundary, budget and stop condition, reducer, and human decision point.
 
 Persist normalized intermediate results in kernel bindings or `local://` artifacts. Reuse top-level bindings across cells. Work incrementally: setup, load, transform, dispatch, reduce, verify.
 
@@ -39,8 +39,8 @@ Persist normalized intermediate results in kernel bindings or `local://` artifac
 - Retry transient tool failures only.
 - Preserve provenance from output to input and transcript.
 - Check `budget.remaining()` before another wave.
-- Never use hub with eval children; they no longer exist after return.
+- Never use hub with eval children. They no longer exist after return.
 
 ## Finish
 
-Report input, completed, and failed counts; stage timings when relevant; artifacts; budget used; reducer result; and the decision still owned by the lead.
+Report input, completed, and failed counts, stage timings when relevant, artifacts, budget used, reducer result, and the decision still owned by the lead.

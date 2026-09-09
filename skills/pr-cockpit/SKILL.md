@@ -7,7 +7,7 @@ description: PR workflow adapter using PR Cockpit for cached state, reviews, wai
 
 Read this skill once and use its routing for every forge and pull-request operation. Do not choose a backend yourself.
 
-Use `owner/repo#123` as `REF`. GitHub remains authoritative; PR Cockpit is the warm local read model and the default interface after a PR exists.
+Use `owner/repo#123` as `REF`. GitHub remains authoritative. PR Cockpit is the warm local read model and the default interface after a PR exists.
 
 Before the first forge operation in a session, run `pr-cockpit --help`. If the command is unavailable, use the repository's `setup-pr-cockpit` skill. If that skill is absent, stop.
 
@@ -27,20 +27,20 @@ This is explicit composition inside one selected provider. It is not permission 
 
 ## Delivery interface
 
-Use `pr-cockpit REF --json` as the authoritative snapshot of head SHA, base ref/SHA, checks, threads, and merge state; use `pr-cockpit REF --diff` for the receipts-and-diff audit. Re-read `--json` immediately before a decision and compare its current head and base with the pinned pair used for verification. A changed head or base invalidates the snapshot. Missing fields or cached data stop the operation; they never mean absent or ready.
+Use `pr-cockpit REF --json` as the authoritative snapshot of head SHA, base ref/SHA, checks, threads, and merge state. Use `pr-cockpit REF --diff` for the receipts-and-diff audit. Re-read `--json` immediately before a decision and compare its current head and base with the pinned pair used for verification. A changed head or base invalidates the snapshot. Missing fields or cached data stop the operation. They never mean absent or ready.
 
 Before watching a stack or queue, freeze its ordered PR references and head SHAs. The watcher record is `{ event, ref, head, base, reason }`, where `event` is exactly one of:
 
 - `WAITING`: the frozen frontier is unchanged and `pr-cockpit listen REF` is armed.
 - `READY`: a fresh JSON snapshot shows that frontier merge-ready at `head`.
-- `ADVANCE`: the frozen frontier merged; move to the next frozen PR and snapshot it before rearming.
+- `ADVANCE`: the frozen frontier merged. Move to the next frozen PR and snapshot it before rearming.
 - `COMPLETE`: every PR in the frozen queue is merged. This is the only terminal event.
 
-After `listen` returns, re-read full JSON and classify the event; watcher exit alone proves nothing. Rearm after `READY`, any mutation or reconnect, and `ADVANCE`, unless the result is `COMPLETE` or a blocker. Do not add PRs discovered after the queue was frozen; use a new watch.
+After `listen` returns, re-read full JSON and classify the event. Watcher exit alone proves nothing. Rearm after `READY`, any mutation or reconnect, and `ADVANCE`, unless the result is `COMPLETE` or a blocker. Do not add PRs discovered after the queue was frozen. Use a new watch.
 
 For independent merge-when-ready, Shipping requests GitHub auto-merge with `pr-cockpit auto-merge REF enable`. Confirm arming only when a fresh JSON snapshot still names the requested head and reports GitHub auto-merge active. Disarm with `pr-cockpit auto-merge REF disable` and confirm it absent at the same head. `cockpit-auto-merge` is separate local automation, not this merge-when-ready operation. Command success or stale cached state is not confirmation.
 
-For dependent stacks, one named stack owner is the topology owner. Only that owner runs Graphite's documented topology, append, merge-when-ready, or disarm operations. Freeze order through Graphite, then observe every affected PR through Cockpit. Confirm Graphite arming only when fresh Cockpit JSON at each recorded head reports the request active; confirm disarming reports it absent. After each `ADVANCE`, compare the next PR's current head/base with its frozen snapshot before rearming `listen`.
+For dependent stacks, one named stack owner is the topology owner. Only that owner runs Graphite's documented topology, append, merge-when-ready, or disarm operations. Freeze order through Graphite, then observe every affected PR through Cockpit. Confirm Graphite arming only when fresh Cockpit JSON at each recorded head reports the request active. Confirm disarming reports it absent. After each `ADVANCE`, compare the next PR's current head/base with its frozen snapshot before rearming `listen`.
 
 If this skill or `graphite` does not document a required operation, stop. A failed or unsupported operation never authorizes another provider or an improvised command.
 
@@ -55,7 +55,7 @@ pr-cockpit REF --logs [CHECK]
 pr-cockpit cache-run REF RUN_ID
 ```
 
-The cache may refresh in the background. Re-read before authority-sensitive decisions. Missing cached data is a failure, not proof of absence. `cache-run` fetches an existing Actions run and retains unsuccessful logs; it does not rerun CI.
+The cache may refresh in the background. Re-read before authority-sensitive decisions. Missing cached data is a failure, not proof of absence. `cache-run` fetches an existing Actions run and retains unsuccessful logs. It does not rerun CI.
 
 Use `pr-cockpit --help` for less common reads and mutations.
 
@@ -71,7 +71,7 @@ pr-cockpit listen REF --comments-only
 
 ## Review and mutate
 
-Every body must come from `--body-file FILE`; never interpolate untrusted text into a shell command. Displayed thread handles are the mutation identifiers.
+Every body must come from `--body-file FILE`. Never interpolate untrusted text into a shell command. Displayed thread handles are the mutation identifiers.
 
 ```sh
 pr-cockpit comment REF --body-file FILE
@@ -148,7 +148,7 @@ These are not a repository-wide merge queue and do not model dependent-stack ord
 
 ## Dependent stacks
 
-Graphite exclusively owns dependent-stack topology: parentage, creation, submission, restacking, and ordered landing. Read the `graphite` skill before using `gt`. Workers never run `gt`; one stack owner serializes topology changes.
+Graphite exclusively owns dependent-stack topology: parentage, creation, submission, restacking, and ordered landing. Read the `graphite` skill before using `gt`. Workers never run `gt`. One stack owner serializes topology changes.
 
 Always use non-interactive commands. Typical operations include:
 
@@ -165,7 +165,7 @@ Do not emulate a stack with unrelated `gh pr create --base` calls. Do not use Gi
 
 ## Failure rules
 
-- Unknown PR Cockpit commands or invalid options exit `2`; runtime or mutation failures exit `1`. Treat either as failure.
+- Unknown PR Cockpit commands or invalid options exit `2`. Runtime or mutation failures exit `1`. Treat either as failure.
 - A failed PR Cockpit read does not authorize a `gh` read fallback.
 - A failed GitHub PR creation or CI rerun does not authorize another creation or rerun path.
 - A failed Graphite operation does not authorize manual stack emulation.

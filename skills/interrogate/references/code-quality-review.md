@@ -18,7 +18,7 @@ Start from this baseline:
 
 Each dimension is stated once. Apply the ones that are relevant.
 
-0. **Be ambitious about structural simplification.** Do not stop at "this could be a bit cleaner." Simplification means deleting complexity: reframings that make whole branches, helpers, modes, conditionals, or layers disappear. Assume a "code judo" move is often available. It uses the existing architecture more effectively and makes the change dramatically simpler. If you can delete complexity rather than rearrange it, push hard for that. Adding durable state, a schema, background machinery, or a new subsystem is not simplification; escalate it.
+0. **Be ambitious about structural simplification.** Do not stop at "this could be a bit cleaner." Simplification means deleting complexity. Reframings that make whole branches, helpers, modes, conditionals, or layers disappear. Assume a "code judo" move is often available. It uses the existing architecture more effectively and makes the change dramatically simpler. If you can delete complexity rather than rearrange it, push hard for that. Adding durable state, a schema, background machinery, or a new subsystem is not simplification. Escalate it.
 
 1. **Do not let a PR push a file from under 1,500 lines to over 1,500 lines, or touch more than 50 files, without a very strong reason.** Treat either threshold as a strong smell. Prefer deleting sprawl, reducing scope, or using a split this stack already has. Do not extract a new helper layer to dodge either cap. If the diff crosses either threshold, ask whether complexity or scope should be reduced first. Waive only for a compelling structural reason where the resulting file or change stays clearly organized.
 
@@ -40,7 +40,7 @@ Prioritize structural code-quality regressions and missed simplifications first,
 
 ## Approval Bar
 
-Do not approve merely because behavior seems correct. Missed delete-complexity stays a blocker. A "fix" that adds machinery is not a pass. Treat these as presumptive blockers unless the author can justify them: the PR keeps a lot of incidental complexity when a code-judo move would delete it; pushes a file from below 1500 lines to above 1500 lines or touches more than 50 files; adds ad-hoc branching that tangles an existing flow; scatters feature checks across shared code; adds an unnecessary abstraction, wrapper, or cast-heavy contract; or duplicates an existing helper or puts logic in the wrong layer when there is a clear canonical home. If those conditions are not met, leave explicit, actionable feedback and push for a cleaner decomposition.
+Do not approve merely because behavior seems correct. Missed delete-complexity stays a blocker. A "fix" that adds machinery is not a pass. Treat these as presumptive blockers unless the author can justify them: the PR keeps a lot of incidental complexity when a code-judo move would delete it, pushes a file from below 1500 lines to above 1500 lines or touches more than 50 files, adds ad-hoc branching that tangles an existing flow, scatters feature checks across shared code, adds an unnecessary abstraction, wrapper, or cast-heavy contract, or duplicates an existing helper or puts logic in the wrong layer when there is a clear canonical home. If those conditions are not met, leave explicit, actionable feedback and push for a cleaner decomposition.
 
 ## Review Tone
 

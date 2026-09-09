@@ -9,16 +9,16 @@ Create evidence-bearing candidates, never automatic policy. This skill expects t
 
 ## Configuration
 
-Resolve in order: explicit request values; repository contract values named `ENG_AUTOLEARN_TEAM_ID`, `ENG_AUTOLEARN_TEAM_KEY`, `ENG_AUTOLEARN_PROJECT_ID`, or `ENG_AUTOLEARN_PROJECT_NAME`; then team references already present in the repository. Project name defaults to `eng-autolearn`.
+Resolve in order. Explicit request values. Repository contract values named `ENG_AUTOLEARN_TEAM_ID`, `ENG_AUTOLEARN_TEAM_KEY`, `ENG_AUTOLEARN_PROJECT_ID`, or `ENG_AUTOLEARN_PROJECT_NAME`. Then team references already present in the repository. Project name defaults to `eng-autolearn`.
 
-Do not embed organization-specific IDs. If no team resolves, report the missing configuration; do not guess.
+Do not embed organization-specific IDs. If no team resolves, report the missing configuration. Do not guess.
 
 ## Find or create the project
 
 1. Query teams and projects. Match team by exact ID, then exact key. Match project by exact ID, then case-insensitive exact name within that team.
 2. One project: use its returned ID. Several: stop on ambiguity.
 3. None: introspect `ProjectCreateInput` before mutation. Create with resolved team ID, project name, and a description within the current schema limit.
-4. Query the returned project by ID. Accept creation only when name and team match; mutation success alone is insufficient.
+4. Query the returned project by ID. Accept creation only when name and team match. Mutation success alone is insufficient.
 
 Every run searches before creation, making the path idempotent.
 
@@ -46,4 +46,4 @@ Never include secrets, credentials, private user data, or transcript dumps. A ti
 
 ## Output
 
-Project ID and URL; created, updated, or deduplicated; issue ID and URL; fingerprint; omitted sensitive evidence; unresolved configuration or ambiguity.
+Project ID and URL. Created, updated, or deduplicated. Issue ID and URL. Fingerprint. Omitted sensitive evidence. Unresolved configuration or ambiguity.

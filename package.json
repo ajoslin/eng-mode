@@ -1,6 +1,6 @@
 {
   "name": "@eng/eng-mode",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Global Eng Mode engineering workflows, agents, orchestration, and goal/loop integration for OMP.",

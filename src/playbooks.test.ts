@@ -86,6 +86,62 @@ describe("thermo-nuclear stays explicit-only", () => {
   });
 });
 
+describe("pstack 0.15.0 port contracts", () => {
+  it("registers the two new principle leaves", async () => {
+    const { skillNames } = await import("./manifest.ts");
+    expect(skillNames).toContain("principle-attack-the-premise");
+    expect(skillNames).toContain("principle-test-behavior-not-implementation");
+    expect(skillNames.filter((name) => name.startsWith("principle-"))).toHaveLength(23);
+
+    const skill = await read("skills/eng-mode/SKILL.md");
+    expect(skill).toContain("`principle-attack-the-premise`");
+    expect(skill).toContain("`principle-test-behavior-not-implementation`");
+    expect(skill).toContain("Do not add a first todo to read the principles index.");
+    expect(skill).toContain("Cite only principles whose leaf you read this session.");
+    expect(skill).toContain("Operators may also invoke `/principle-<name>` directly.");
+    expect(skill).toContain("When an applicability line matches, read that sibling `principle-*` skill now.");
+    expect(skill).not.toContain("The first item is to read every applicable");
+
+    const { readdirSync, readFileSync } = await import("node:fs");
+    const principleDirs = readdirSync(join(root, "skills")).filter((name) => name.startsWith("principle-"));
+    expect(principleDirs).toHaveLength(23);
+    for (const name of principleDirs) {
+      const text = readFileSync(join(root, "skills", name, "SKILL.md"), "utf8");
+      expect(text).toContain(`Use for /${name}.`);
+      expect(text).toContain("disable-model-invocation: true");
+    }
+  });
+
+  it("makes /how explain-only and drops critique references", async () => {
+    const how = await read("skills/how/SKILL.md");
+    expect(how).toContain("## Step 1. Assess Complexity");
+    expect(how).toContain("`scout`");
+    expect(how).not.toContain("Critique");
+    expect(how).not.toContain("critic-prompt");
+    expect(how).not.toContain("critique-rubric");
+
+    const investigation = await read("skills/eng-mode/playbooks/investigation.md");
+    expect(investigation).toContain("Route through the **how** skill.");
+    expect(investigation).not.toContain("Critique mode");
+
+    const { existsSync } = await import("node:fs");
+    expect(existsSync(join(root, "skills/how/references/critic-prompt.md"))).toBe(false);
+    expect(existsSync(join(root, "skills/how/references/critique-rubric.md"))).toBe(false);
+  });
+
+  it("treats the PR body as a briefing with a squash length cap", async () => {
+    const opening = await read("skills/eng-mode/playbooks/opening-a-pr.md");
+    expect(opening).toContain("The PR body is a briefing, not the lab notebook.");
+    expect(opening).toContain("longer than about 40 lines, cut the body");
+    expect(opening).toContain("`## Why`");
+    expect(opening).toContain("`## Scope`");
+    expect(opening).toContain("`## Tradeoffs`");
+    expect(opening).toContain("`## Blast Radius`");
+    expect(opening).toContain("`## Verification`");
+    expect(opening).toContain("Never reset, discard, or overwrite user work.");
+  });
+});
+
 describe("goal and loop ownership", () => {
   it("assigns durable objectives to goal and bounded repetition to loop", async () => {
     const [skill, autonomous] = await Promise.all([
