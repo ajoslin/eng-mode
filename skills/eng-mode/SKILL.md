@@ -78,9 +78,20 @@ The contracts decision is auditable on-disk validation, not model self-report. `
 - Run owners in true parallel when work is self-contained. Only genuinely overlapping work serializes. When concurrent actors might share mutable state, apply `principle-separate-before-serializing-shared-state`. First ask whether they truly need the same mutable object. If not, eliminate the sharing.
 - `swarm` covers independent slices or races. `arena` creates competing artifacts and grafts a winner. `interrogate` runs adversarial review and never auto-applies findings. Before relying on worktree isolation, verify OMP isolation is configured and set `isolated: true` only for independent writer tasks whose merged union is intended on the parent tree. Competing candidates use distinct `local://` artifacts, never isolated writer workspaces. Use `hub` for lifecycle and peer messages.
 - Use the most specific OMP agent type. `scout` is read-only exploration. `sonic` handles trivial mechanical edits. `reviewer` and `security-reviewer` review. Use `judgment-agent` for vague, cross-cutting, concurrency-heavy, or algorithmically subtle implementation. Use `implementation-agent` for precisely specified implementation. Agent definitions own model routing.
+- The lead edits only when the change is one file and under roughly twenty lines. Every other edit, fix-retry loop, patch regeneration, dependency reinstall, or test-fix cycle goes to `implementation-agent`, `judgment-agent`, or `sonic` with a complete brief. A fresh worker runs the loop on a small context; the lead running it replays its whole history on every tool call.
 - The lead owns decomposition, integration, and verification. A delegate summary is not evidence.
 - If delegation is interrupted, start a fresh agent with the consolidated scope and current evidence. Do not trust an interrupt-chained resume or its `done` summary because it may have dropped directives. For high-risk or contested work, request an explicit second opinion with the same brief through a different suitable agent or model route. Agreement is evidence, not proof.
 - `todo`, `goal`, and `loop` are lead-owned. Delegates report requested transitions through `hub` or their final result.
+
+## Context budget
+
+The lead's context is replayed on every call. Cost and reasoning quality are both set by its size, so the lead treats context as the scarcest resource in the session.
+
+- Wrap every investigation, trace, log read, transcript parse, or verification run in `checkpoint` before the first exploratory tool call and end it with `rewind` carrying only the findings. Skipping the checkpoint for "just a quick look" is the failure mode; the look grows.
+- Never poll. A wait is one blocking call: `hub wait` with `timeoutMs` of at least 900000 or `await: true` on the send; a managed process through `hub start` plus `hub wait name=… for=exit`; the forge provider's blocking listen. `bash sleep`, `hub wait` under ten minutes, `hub jobs` in a loop, and repeated status commands are polling and are forbidden.
+- Read ranges, never whole files. Route bulk output (diffs, logs, transcripts, API payloads) through a `scout` and keep only its report.
+- At a phase boundary (plan → implement → verify → PR) with context above 200k tokens, run `/handoff` or `rewind` before starting the next phase. Automatic compaction is the backstop, not the plan.
+- A user status question is answered from `todo view` and `goal get`, not from a re-verification pass.
 
 ## Goals, loops, and state
 
