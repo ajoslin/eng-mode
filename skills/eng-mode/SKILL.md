@@ -83,21 +83,11 @@ The contracts decision is auditable on-disk validation, not model self-report. `
 - If delegation is interrupted, start a fresh agent with the consolidated scope and current evidence. Do not trust an interrupt-chained resume or its `done` summary because it may have dropped directives. For high-risk or contested work, request an explicit second opinion with the same brief through a different suitable agent or model route. Agreement is evidence, not proof.
 - `todo`, `goal`, and `loop` are lead-owned. Delegates report requested transitions through `hub` or their final result.
 
-## Context budget
-
-The lead's context is replayed on every call. Cost and reasoning quality are both set by its size, so the lead treats context as the scarcest resource in the session.
-
-- Wrap every investigation, trace, log read, transcript parse, or verification run in `checkpoint` before the first exploratory tool call and end it with `rewind` carrying only the findings. Skipping the checkpoint for "just a quick look" is the failure mode; the look grows.
-- Never poll. A wait is one blocking call: `hub wait` with `timeoutMs` of at least 900000 or `await: true` on the send; a managed process through `hub start` plus `hub wait name=… for=exit`; the forge provider's blocking listen. `bash sleep`, `hub wait` under ten minutes, `hub jobs` in a loop, and repeated status commands are polling and are forbidden.
-- Read ranges, never whole files. Route bulk output (diffs, logs, transcripts, API payloads) through a `scout` and keep only its report.
-- At a phase boundary (plan → implement → verify → PR) with context above 200k tokens, run `/handoff` or `rewind` before starting the next phase. Automatic compaction is the backstop, not the plan.
-- A user status question is answered from `todo view` and `goal get`, not from a re-verification pass.
-
 ## Goals, loops, and state
 
 - `goal` owns the durable objective.
 - `loop` owns bounded repetition. Invoke `loop` with a prompt and limit. Stop it when done and pause it when blocked.
-- Prefer a blocking watcher when one command already waits for the event.
+- Prefer a blocking watcher when one command already waits for the event. A wait is one call: `hub wait` with `timeoutMs` of at least 900000, `await: true` on the send, or `hub wait name=… for=exit` on a managed process. `bash sleep`, short `hub wait`, and repeated status commands are polling, and polling replays the lead's whole context each time.
 - `todo` owns the finite task graph.
 - `show-me-your-work` owns durable decision trails. Use it for unattended, high-risk, or multi-phase runs. ADRs record only hard-to-reverse, surprising decisions with a real tradeoff.
 
@@ -122,7 +112,7 @@ When an applicability line matches, read that sibling `principle-*` skill now. D
 - Foundations: `principle-foundational-thinking` before choosing core types, data structures, scaffold order, or shared state. `principle-redesign-from-first-principles` when integrating a new requirement into an existing design. `principle-attack-the-premise` when two or more fixes that share one premise have failed the same gate. Take a census of which actors hold the imbalance before the next fix, then question the premise instead of writing another fix that assumes it. `principle-experience-first` for product, UX, or feature-scope tradeoffs. `principle-exhaust-the-design-space` for novel interactions or architectural decisions without precedent.
 - Architecture: `principle-model-the-domain` for stateful logic, repeated shape assumptions, or branching spread across files. `principle-boundary-discipline` when placing validation, error handling, or framework adapters. `principle-type-system-discipline` when designing types or signatures in typed code. `principle-make-operations-idempotent` for commands, lifecycle steps, or loops that face retries and crashes. `principle-migrate-callers-then-delete-legacy-apis` when replacing an internal interface with callers still on the old one. `principle-separate-before-serializing-shared-state` when concurrent actors might write the same file, branch, key, or object.
 - Proof: `principle-prove-it-works` after completing work and before claiming done. `principle-fix-root-causes` when debugging. `principle-sequence-verifiable-units` for multi-step sweeps, migrations, and delivery ordering. `principle-outcome-oriented-execution` for planned rewrites and migrations with explicit phase boundaries. `principle-test-behavior-not-implementation` when writing, changing, or keeping a test. Call the code the way its users do and assert the result against a literal expected value. If the test would still pass when every imported function returns `undefined`, rewrite the assertion or delete the test.
-- Delegation: `principle-guard-the-context-window` when large output, long files, repeated reads, or fan-out planning consume context. `principle-never-block-on-the-human` when tempted to ask about reversible work that evidence can settle.
+- Delegation: `principle-guard-the-context-window` when large output, long files, repeated reads, fan-out planning, or lead-driven exploration consume context; it decides between a `scout` and `checkpoint`→`rewind`. `principle-never-block-on-the-human` when tempted to ask about reversible work that evidence can settle.
 - Learning: `principle-encode-lessons-in-structure` when the same instruction or correction appears again and could become a lint, metadata flag, runtime check, or script.
 
 ## Reply
