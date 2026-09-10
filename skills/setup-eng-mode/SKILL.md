@@ -15,11 +15,10 @@ Setup is a validator and orchestrator, never an installer of duplicate machinery
 
 ## 2. Shadows and collisions
 
-Observed skill precedence: native project `.agents/skills`, legacy project/user `.omp/skills` (project before user), then the Eng extension through `omp-plugins`, then Claude-provider skills. Observed agent precedence: project `.omp/agents`, user agents, extension agents, then bundled.
+Observed skill precedence (OMP `skills.md`): native `.omp` user/project skills (100), then the Eng extension through `omp-plugins` (90), then Claude-provider skills (80), then project `.agents/skills` (70). A repository copy of an Eng skill therefore never shadows the extension for OMP users; it exists only for agents without the plugin.
 
-1. Report the full intersection of the extension's exact `skillNames` with the host repository's `.agents/skills` and `.claude/skills` in both directions. Extension-wins overrides are intentional but require operator visibility. Never replace silently.
+1. Report the full intersection of the extension's exact `skillNames` with the host repository's `.agents/skills` and `.claude/skills`. Names in `portableSkillNames` (`src/portable-skills.ts`) are expected copies; verify them with `bun run sync-skills:check <repo>`. Any other intersection is a stale duplicate the operator removes with `/eng-mode-sync-skills`.
 2. Any user-native `.omp/skills` or user-agent shadow of an exact `skillNames`/`agentNames` entry is an error. Report it by name. Quarantining a shadow is an explicit operator-approved setup action with a rollback record, never a silent move.
-3. Repository duplicates matching the extension manifests are deleted at the repository's hard cut, not by setup.
 
 ## 3. Model roles
 

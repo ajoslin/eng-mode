@@ -21,6 +21,8 @@
   },
   "scripts": {
     "workflow-law:check": "bun src/workflow-law-check.ts",
+    "sync-skills": "bun src/sync-skills.ts sync",
+    "sync-skills:check": "bun src/sync-skills.ts check",
     "test": "bun test ./src",
     "typecheck": "bunx tsgo -p tsconfig.json",
     "check": "bun run workflow-law:check && bun run test && bun run typecheck"
