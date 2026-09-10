@@ -98,6 +98,7 @@ The contracts decision is auditable on-disk validation, not model self-report. `
 - Tests follow the project test law `project-standards` names. Use `tdd` only when a cheap red test represents an uncovered observable contract at a correct public seam.
 - Read the stack-specific skills `project-standards` names before changing code they govern.
 - Before commit or handoff, run the pre-commit pass `project-standards` names, then use `git commit`. Before review, run `no-comments`. Review-automation findings use the Babysit playbook's review-agent loop and the triage reference `project-standards` indexes. Never merge while that loop is unfinished. Use the Standards + Spec review skill `project-standards` names. Use `interrogate` when independent adversarial pressure is warranted.
+- Project gates (typecheck, lint, unit tests, format) run once per verifiable unit, by the worker that produced the unit, after its last edit. The lead re-runs a gate only when it has changed a governed file since the last pass. A gate that passed on a SHA stays passed for that SHA; do not re-run it as a status check, before a commit that changes nothing it covers, or to reassure yourself.
 - Green CI is evidence, not a behavioral verdict.
 
 ## Autonomy

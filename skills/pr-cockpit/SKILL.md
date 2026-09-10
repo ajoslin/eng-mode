@@ -9,7 +9,7 @@ Read this skill once and use its routing for every forge and pull-request operat
 
 Use `owner/repo#123` as `REF`. GitHub remains authoritative. PR Cockpit is the warm local read model and the default interface after a PR exists.
 
-Before the first forge operation in a session, run `pr-cockpit --help`. If the command is unavailable, use the repository's `setup-pr-cockpit` skill. If that skill is absent, stop.
+Before the first forge operation in a session, confirm the command exists with `command -v pr-cockpit`. Do not run `pr-cockpit --help`; this skill is the command reference. If the command is unavailable, use the repository's `setup-pr-cockpit` skill. If that skill is absent, stop.
 
 ## Operation ownership
 
@@ -57,17 +57,19 @@ pr-cockpit cache-run REF RUN_ID
 
 The cache may refresh in the background. Re-read before authority-sensitive decisions. Missing cached data is a failure, not proof of absence. `cache-run` fetches an existing Actions run and retains unsuccessful logs. It does not rerun CI.
 
-Use `pr-cockpit --help` for less common reads and mutations.
+Run `pr-cockpit --help` only for an operation this skill does not list, at most once per session.
 
 ## Wait
 
-```sh
-pr-cockpit listen REF
-pr-cockpit listen REF --ci-only
-pr-cockpit listen REF --comments-only
+Run `listen` as a managed process so the wait costs one call to arm and one when it returns:
+
+```
+hub start name=pr-listen application=pr-cockpit args=[listen, REF, --ci-only]
+hub wait name=pr-listen for=exit timeout=1800
+pr-cockpit REF --json
 ```
 
-`listen` blocks until substantive cached state changes, then exits. It may return immediately when a blocker is already cached. Re-read full state after it returns. Do not poll when `listen` can represent the wait.
+`listen REF` without a flag waits for CI or comments; `--comments-only` waits for comments. `listen` blocks until substantive cached state changes, then exits. It may return immediately when a blocker is already cached. Re-read full state after it returns. While a listen is armed, do not run `gh run view`, `gh run watch`, `gh pr checks`, `gh api …/actions/…`, `gh api rate_limit`, `bash sleep`, or a short `hub wait`; one listen replaces them all.
 
 ## Review and mutate
 
