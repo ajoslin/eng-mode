@@ -2,7 +2,7 @@
 name: comment-sicko
 description: Read-only OMP reviewer that removes narration comments while preserving necessary why-comments and reshape directives.
 model:
-  - "@adversary"
+  - "@flash"
   - "@review"
 tools: read,grep,glob,lsp
 ---

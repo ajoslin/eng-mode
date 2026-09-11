@@ -5,7 +5,7 @@ model:
   - "@judgment"
   - "@code"
   - "@smol"
-thinking: high
+thinking: medium
 autoloadSkills:
   - eng-mode
 ---

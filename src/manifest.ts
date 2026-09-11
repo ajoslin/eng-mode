@@ -101,7 +101,7 @@ export const agentSkillsAllowlist: readonly SkillName[] = [
 export const agentModelChains: Readonly<Record<AgentName, readonly string[]>> = {
   "implementation-agent": ["@code", "@judgment", "@smol"],
   "judgment-agent": ["@judgment", "@code", "@smol"],
-  "comment-sicko": ["@adversary", "@review"],
+  "comment-sicko": ["@flash", "@review"],
   "panel-opus": ["@panel_opus", "@adversary", "@review"],
   "panel-sol": ["@panel_sol", "@adversary", "@review"],
   "panel-fable": ["@panel_fable", "@adversary", "@review"],

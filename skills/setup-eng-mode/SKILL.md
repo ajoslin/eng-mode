@@ -27,6 +27,7 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 1. **Prepare:** atomically add and validate all new roles while retaining all old roles: `code` from `boja_code` when absent, `judgment` from `boja_judgment`, `adversary` from `boja_adversary`, `fast` from `boja_fast`. `panel_opus`, `panel_sol`, `panel_fable`, `panel_grok` from the workstation's current pinned panel selectors. An existing valid new value wins. A differing old/new pair is a conflict and produces no change without explicit user selection. On a workstation with no old roles, absent panel roles require explicit selection from actually available models. Never invent a concrete model.
 2. **Retire:** only after hard-cut proof shows no old workflow consumer remains, atomically delete `boja_fast`, `boja_code`, `boja_judgment`, and `boja_adversary`.
 3. Both stages capture the prior config and restore it byte-for-byte on failure. `smol`, `review`, `commit`, and all unrelated settings are preserved.
+   `flash` is the cheap text-only role for rubric reviews, comment audits, and mechanical delegates (`comment-sicko`, `task`, repository precommit agents). It must resolve to a model with tool use and no image requirement; when absent, chains fall through to `@review` and setup reports the fallback.
 4. Do not create a second config file. OMP owns model config in the active agent directory's `config.yml`. Project behavior lives in the repository's `.omp` directory and the extension.
 
 ## 4. Agents and panel resolution
