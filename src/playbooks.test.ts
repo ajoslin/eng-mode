@@ -37,12 +37,13 @@ describe("delivery authority", () => {
 });
 
 describe("lead context budget", () => {
-  it("keeps checkpoint and rewind in the top-level startup path", async () => {
+  it("loads guard-the-context-window before every Eng Mode session", async () => {
     const skill = await read("skills/eng-mode/SKILL.md");
-    const rule = skill.indexOf("Before lead-owned exploration, choose exactly one path.");
+    const rule = skill.indexOf("Read `principle-guard-the-context-window` in every session.");
     expect(rule).toBeGreaterThan(-1);
     expect(skill.slice(rule)).toContain("open `checkpoint` before the first read");
     expect(skill.slice(rule)).toContain("`rewind` with the findings before editing or yielding");
+    expect(rule).toBeLessThan(skill.indexOf("Match exactly one primary playbook"));
     expect(rule).toBeLessThan(skill.indexOf("## Repository contracts"));
   });
 });
