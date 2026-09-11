@@ -38,6 +38,13 @@ export interface CustomMessagePayload {
 export interface BeforeAgentStartEvent {
   readonly prompt: string;
 }
+export interface InputEvent {
+  readonly text: string;
+}
+export interface InputEventResult {
+  readonly handled?: boolean;
+  readonly text?: string;
+}
 export interface ExtensionContext {
   readonly models: {
     resolve(spec: string): Parameters<typeof completeSimple>[0] | undefined;
@@ -84,5 +91,6 @@ export interface ExtensionAPI {
   sendUserMessage?(content: string): void;
   setModel?(model: Parameters<typeof completeSimple>[0]): Promise<boolean>;
   setThinkingLevel?(level: "low"): void;
+  on(event: "input", handler: (event: InputEvent, context: ExtensionContext) => Promise<InputEventResult | void> | InputEventResult | void): void;
   on(event: string, handler: (event: unknown, context: ExtensionContext) => unknown): void;
 }

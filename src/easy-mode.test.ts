@@ -1,13 +1,17 @@
 import { describe, expect, it } from "bun:test";
-import { EASY_MODEL_ROLE, registerEasyMode } from "./easy-mode.ts";
-import type { ExtensionAPI, ExtensionContext } from "./extension-types.ts";
+import { EASY_MODEL_ROLE, registerEasyMode, stripEasyModifier } from "./easy-mode.ts";
+import type { ExtensionAPI, ExtensionContext, InputEventResult } from "./extension-types.ts";
 
 describe("easy mode", () => {
   function setup(options: { resolve?: boolean; activate?: boolean } = {}) {
     let handler: ((args: string, context: ExtensionContext) => Promise<void>) | undefined;
+    let inputHandler: ((event: { text: string }, context: ExtensionContext) => Promise<InputEventResult | void>) | undefined;
     const events: string[] = [];
     const model = {} as NonNullable<Parameters<typeof registerEasyMode>[0]["setModel"]> extends (model: infer T) => Promise<boolean> ? T : never;
     const pi = {
+      on: (event: string, value: typeof inputHandler) => {
+        if (event === "input") inputHandler = value;
+      },
       registerCommand: (name: string, command: { handler: typeof handler }) => {
         events.push(`command:${name}`);
         handler = command.handler;
@@ -24,8 +28,24 @@ describe("easy mode", () => {
       ui: { notify: (message: string, type?: string) => events.push(`notify:${type}:${message}`) },
     } as unknown as ExtensionContext;
     registerEasyMode(pi);
-    return { events, handler, context };
+    return { events, handler, inputHandler, context };
   }
+
+  it("recognizes /easy only as an Eng Mode standalone modifier", () => {
+    expect(stripEasyModifier("/eng-mode build the page /easy")).toBe("/eng-mode build the page");
+    expect(stripEasyModifier("/easy /eng-mode build the page")).toBe("/eng-mode build the page");
+    expect(stripEasyModifier("build the page /easy")).toBeUndefined();
+    expect(stripEasyModifier("/eng-mode build /easy-mode")).toBeUndefined();
+  });
+
+  it("switches model before submitting an Eng Mode prompt with /easy", async () => {
+    const state = setup();
+    await expect(state.inputHandler?.({ text: "/eng-mode build the page /easy" }, state.context)).resolves.toEqual({
+      text: "/eng-mode build the page",
+    });
+    expect(state.events).toContain(`resolve:${EASY_MODEL_ROLE}`);
+    expect(state.events).toContain("thinking:low");
+  });
 
   it("selects the easy role at low thinking and starts Eng Mode", async () => {
     const state = setup();
