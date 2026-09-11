@@ -36,6 +36,17 @@ describe("delivery authority", () => {
   });
 });
 
+describe("lead context budget", () => {
+  it("keeps checkpoint and rewind in the top-level startup path", async () => {
+    const skill = await read("skills/eng-mode/SKILL.md");
+    const rule = skill.indexOf("Before lead-owned exploration, choose exactly one path.");
+    expect(rule).toBeGreaterThan(-1);
+    expect(skill.slice(rule)).toContain("open `checkpoint` before the first read");
+    expect(skill.slice(rule)).toContain("`rewind` with the findings before editing or yielding");
+    expect(rule).toBeLessThan(skill.indexOf("## Repository contracts"));
+  });
+});
+
 describe("thermo-nuclear stays explicit-only", () => {
   it("Pre-PR gates run one fresh-eyes seat with one question and no browser", async () => {
     const gates = await read("skills/eng-mode/playbooks/pre-pr-gates.md");
