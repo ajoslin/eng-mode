@@ -1,6 +1,6 @@
 ---
 name: principle-guard-the-context-window
-description: "Apply when context is filling up: large outputs, long files, repeated reads, fan-out planning, or the lead is about to explore. Chooses between a scout and checkpoint→rewind, and sets wait and handoff rules. Use for /principle-guard-the-context-window."
+description: "Apply before multi-file or multi-system exploration, repeated reads or logs, long-running lead work, external waits, or large phase handoffs. Chooses scout versus checkpoint→rewind and prevents polling or excess context. Use for /principle-guard-the-context-window."
 disable-model-invocation: true
 ---
 
