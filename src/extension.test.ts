@@ -178,6 +178,7 @@ describe("eng_orch executable entrypoint", () => {
     let beforeAgentStartHandler: BeforeAgentStartHandler | undefined;
     let expertRenderer: ((_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown) | undefined;
     const registered = new Map<string, RegisteredTool>();
+    const registeredCommands: Record<string, (args: string, context: unknown) => Promise<void>> = {};
     let tokenBudgetMinimum: number | undefined;
     const chain = {
       optional: () => chain,
@@ -239,9 +240,16 @@ describe("eng_orch executable entrypoint", () => {
             beforeAgentStartHandler = handler as BeforeAgentStartHandler;
           }
         },
+        registerCommand: (name: string, options: { handler: (args: string, context: unknown) => Promise<void> }) => {
+          registeredCommands[name] = options.handler;
+        },
+        setModel: async () => true,
+        setThinkingLevel: () => {},
+        sendUserMessage: () => {},
         registerTool: (tool: RegisteredTool) => registered.set(tool.name, tool),
       } as unknown as Parameters<typeof engModeExtension>[0]);
       expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
+      expect(Object.keys(registeredCommands)).toEqual(["easy"]);
       expect(existsSync(join(homeDir, ".agents"))).toBeFalse();
       expect(existsSync(join(repositoryRoot, ".agents"))).toBeFalse();
     });

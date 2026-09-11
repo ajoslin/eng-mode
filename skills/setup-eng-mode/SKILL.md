@@ -24,7 +24,7 @@ Observed skill precedence (OMP `skills.md`): native `.omp` user/project skills (
 
 Role migration is two-stage and owned by the extension's config migrator. Setup runs it. It never hand-edits roles.
 
-1. **Prepare:** atomically add and validate all new roles while retaining all old roles: `code` from `boja_code` when absent, `judgment` from `boja_judgment`, `adversary` from `boja_adversary`, `fast` from `boja_fast`. `panel_opus`, `panel_sol`, `panel_fable`, `panel_grok` from the workstation's current pinned panel selectors. An existing valid new value wins. A differing old/new pair is a conflict and produces no change without explicit user selection. On a workstation with no old roles, absent panel roles require explicit selection from actually available models. Never invent a concrete model.
+1. **Prepare:** atomically add and validate all new roles while retaining all old roles: `code` from `boja_code` when absent, `judgment` from `boja_judgment`, `adversary` from `boja_adversary`, `fast` from `boja_fast`. `panel_opus`, `panel_sol`, `panel_fable`, `panel_grok` from the workstation's current pinned panel selectors; `eng_mode_easy` from `panel_sol`. An existing valid new value wins. A differing old/new pair is a conflict and produces no change without explicit user selection. On a workstation with no old roles, absent panel roles require explicit selection from actually available models. Never invent a concrete model.
 2. **Retire:** only after hard-cut proof shows no old workflow consumer remains, atomically delete `boja_fast`, `boja_code`, `boja_judgment`, and `boja_adversary`.
 3. Both stages capture the prior config and restore it byte-for-byte on failure. `smol`, `review`, `commit`, and all unrelated settings are preserved.
    `flash` is the cheap text-only role for rubric reviews, comment audits, and mechanical delegates (`comment-sicko`, `task`, repository precommit agents). It must resolve to a model with tool use and no image requirement; when absent, chains fall through to `@review` and setup reports the fallback.
@@ -32,7 +32,7 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 
 ## 4. Agents and panel resolution
 
-1. Verify each shipped agent (`implementation-agent`, `judgment-agent`, `comment-sicko`, `panel-opus`, `panel-sol`, `panel-fable`, `panel-grok`) is discoverable and that its role chain resolves end to end. No shipped agent may contain a concrete provider-qualified selector. The workstation config supplies concrete models.
+1. Verify each shipped agent (`implementation-agent`, `judgment-agent`, `comment-sicko`, `panel-opus`, `panel-sol`, `panel-fable`, `panel-grok`) is discoverable, every agent role chain resolves end to end, and `eng_mode_easy` resolves to the same model as `panel_sol`. No shipped agent may contain a concrete provider-qualified selector. The workstation config supplies concrete models.
 2. Resolve every chain through all referenced role keys, flag entries that resolve identically to an earlier entry, and require at least one fallback after the primary to use a different provider where the workstation allows it. `comment-sicko` must retain a resolvable fallback.
 3. Report each panel seat's actual `resolvedModel` and fallback status. Never claim full-roster or cross-vendor diversity from nominal seat names. Report actual resolved models and refuse to claim diversity the resolution does not show.
 

@@ -40,10 +40,13 @@ export interface BeforeAgentStartEvent {
 }
 export interface ExtensionContext {
   readonly models: {
-    resolve(spec: "@tiny"): Parameters<typeof completeSimple>[0] | undefined;
+    resolve(spec: string): Parameters<typeof completeSimple>[0] | undefined;
   };
   readonly modelRegistry: {
     getApiKey(model: Parameters<typeof completeSimple>[0]): Promise<string | undefined>;
+  };
+  readonly ui: {
+    notify(message: string, type?: "info" | "warning" | "error"): void;
   };
 }
 
@@ -67,9 +70,19 @@ export interface ExtensionAPI {
   readonly zod: SchemaBuilder;
   readonly pi: { readonly Text: TextComponentConstructor; readonly InteractiveMode?: unknown };
   registerTool(tool: ToolDefinition): void;
+  registerCommand?(
+    name: string,
+    options: {
+      readonly description?: string;
+      readonly handler: (args: string, context: ExtensionContext) => Promise<void>;
+    },
+  ): void;
   registerMessageRenderer(
     customType: string,
     renderer: (_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown,
   ): void;
+  sendUserMessage?(content: string): void;
+  setModel?(model: Parameters<typeof completeSimple>[0]): Promise<boolean>;
+  setThinkingLevel?(level: "low"): void;
   on(event: string, handler: (event: unknown, context: ExtensionContext) => unknown): void;
 }
