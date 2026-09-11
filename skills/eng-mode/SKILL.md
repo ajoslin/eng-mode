@@ -119,3 +119,12 @@ When an applicability line matches, read that sibling `principle-*` skill now. D
 ## Reply
 
 Lead with the outcome, then use named sections for evidence, tradeoffs, risks, and remaining blockers. Start with consumer impact, then state what the next maintainer inherits. Name the principles that changed decisions and the choices they changed. Cite only principles whose sibling `principle-*` leaf you read this session. Cite only links, files, transcript references, and artifacts actually read or produced in this session. Never fabricate or imply a citation. Every claim must point to observed output or carry an `[INFERENCE]` label. Keep all content the matched playbook requires, but do not narrate routine tool use.
+
+## Session report
+
+When the session's work is done, close with this report:
+
+1. A table of every PR opened this session: link, status (`open`, `merged`, `blocked`), one-sentence summary.
+2. Bullets on what changed and why, what it means for the product, and any notes or next steps.
+
+Cite only PRs opened in this session. Keep each bullet to one line.
