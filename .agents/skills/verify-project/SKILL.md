@@ -13,11 +13,11 @@ Install dependencies with `bun install --frozen-lockfile`. Select a configured m
 omp --profile eng-mode-verification-<unique-suffix> --model <provider/model> --no-extensions -e "$PWD/src/extension.ts"
 ```
 
-The disposable profile must be able to resolve the selected model. If the model uses a custom definition, make that definition visible in the disposable profile before launch. Inject broker-backed credentials into the runtime environment when needed, but never record credential values in evidence or committed files. Readiness is the OMP composer accepting input. Stop only the managed process that this run started. Remove the disposable profile after evidence is captured.
+The disposable profile must resolve the selected model, the `@tiny` classifier role, and `eng_mode_easy`. Copy the workstation `config.yml` and `models.yml` into the profile's `agent/` directory before launch. A disposable profile has no broker credentials. Export the `@tiny` provider's API key into the launch environment without recording the value. When `@tiny` is an OpenRouter model, use `OPENROUTER_API_KEY="$(omp token openrouter)"`. Readiness is the OMP composer accepting input. Stop only the managed process that this run started. Remove the disposable profile after evidence is captured.
 
 ## Doctor
 
-Before driving the TUI, run `bun run check`. In the TUI, open the tool inventory and confirm the extension's expected tools are present. A load error, missing tool, or duplicate-tool warning fails the health gate; do not continue with behavioral claims.
+Before driving the TUI, run `bun run check`. In the TUI, send `/tools` and confirm `loop`, `goal`, and `xd://eng_orch` are present. A load error, missing tool, or duplicate-tool warning fails the health gate; do not continue with behavioral claims.
 
 ## Drive
 
@@ -46,3 +46,4 @@ Where a loop recipe applies, invoke `loop` with `op: status` and confirm `{ "ava
 - [Repository contract gate](features/repository-contracts.md)
 - [Durable orchestration store](features/orchestration-store.md)
 - [Automatic expert lens](features/expert-lens.md)
+- [Easy mode](features/easy-mode.md)
