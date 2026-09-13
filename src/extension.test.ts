@@ -249,7 +249,7 @@ describe("eng_orch executable entrypoint", () => {
         registerTool: (tool: RegisteredTool) => registered.set(tool.name, tool),
       } as unknown as Parameters<typeof engModeExtension>[0]);
       expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
-      expect(Object.keys(registeredCommands)).toEqual(["easy"]);
+      expect(Object.keys(registeredCommands)).toEqual(["easy", "eng-lead-writes"]);
       expect(existsSync(join(homeDir, ".agents"))).toBeFalse();
       expect(existsSync(join(repositoryRoot, ".agents"))).toBeFalse();
     });

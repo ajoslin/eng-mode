@@ -5,6 +5,7 @@ import {
   registerAutoMode,
 } from "./auto-mode.ts";
 import type { ExtensionAPI } from "./extension-types.ts";
+import { registerContextGuard } from "./context-guard.ts";
 import { registerEasyMode } from "./easy-mode.ts";
 import { registerEngOrchestration } from "./eng-orchestrator.ts";
 import { EXPERT_DECISION_GUIDANCE, EXPERT_DECISION_MESSAGE, registerExpertLens } from "./expert-lens.ts";
@@ -26,4 +27,5 @@ export default function engModeExtension(pi: OmpExtensionAPI & ExtensionAPI): vo
   registerGoalTool(pi);
   registerLoopTool(pi);
   registerEngOrchestration(pi);
+  registerContextGuard(pi);
 }
