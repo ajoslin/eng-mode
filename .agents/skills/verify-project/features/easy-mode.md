@@ -10,10 +10,10 @@ Launch OMP with the local Eng Mode extension. The disposable profile must resolv
 
 ## Driving it with OMP TUI
 
-1. Send `/easy` with no arguments. Confirm the notice `Easy mode selected.` renders and the status bar model changes to the `eng_mode_easy` model, such as `GPT 5.6 Sol`. No agent turn starts.
+1. Send `/easy` with no arguments. Confirm the notice `Easy mode selected.` renders and the status bar model changes to the `eng_mode_easy` model, such as `GPT 5.6 Sol`. No agent turn starts. The session transcript records a `model_change` to that model followed by `thinking_level_change` to `low`.
 2. Send `/easy Reply exactly EASY_OK and stop.` Confirm the transcript shows the submitted prompt as `/eng-mode Reply exactly EASY_OK and stop.` and the agent replies `EASY_OK`.
 3. Send `/eng-mode Reply exactly MODIFIER_OK and stop. /easy`. Confirm the transcript shows `/eng-mode Reply exactly MODIFIER_OK and stop.` with the modifier removed and the agent replies `MODIFIER_OK`.
 
 ## Gotchas
 
-The modifier only applies when the prompt contains `/eng-mode` and `/easy` stands alone as a word. `/easy-mode` or a prompt without `/eng-mode` submits unchanged. When the role is missing or the model cannot be activated, an error notice renders (`Model role @eng_mode_easy is not configured.` or `... is unavailable.`) and nothing submits. The model switch persists for the rest of the session. Relaunch or switch models before other recipes that expect the launch model.
+The modifier only applies when the prompt contains `/eng-mode` and `/easy` stands alone as a word; the rewritten prompt also collapses runs of whitespace to single spaces. `/easy-mode` or a prompt without `/eng-mode` submits unchanged. When the role is missing or the model cannot be activated, an error notice renders (`Model role @eng_mode_easy is not configured.` or `... is unavailable.`) and nothing submits. The model switch persists for the rest of the session. Run this recipe last, or relaunch, so earlier recipes keep the launch model.

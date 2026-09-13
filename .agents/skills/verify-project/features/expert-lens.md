@@ -11,10 +11,10 @@ Launch OMP with the local Eng Mode extension. The disposable profile must resolv
 ## Driving it with OMP TUI
 
 1. Enter a prompt that requires a material choice among plausible alternatives and forbids tool use, such as `Choose the storage architecture for this service. Answer in two sentences without reading files or using tools.`
-2. Before the agent response, capture the rendered custom message labeled `Expert lens`.
+2. Before the agent response, capture the rendered custom message labeled `◆ Expert lens`. In the session transcript it is a `custom_message` entry with `customType: "eng-mode-expert-decision-guidance"`.
 3. Treat the agent's stated trade-offs and challenge to its initial choice as supporting evidence only. The rendered contract proves the `Expert lens` label, not the hidden guidance text.
 4. In a fresh turn, enter the self-contained no-write request `Rewrite the supplied heading "SYSTEM SETTINGS" in sentence case. Reply with only the rewritten heading. Do not inspect or edit files.` Confirm that no `Expert lens` message renders for that turn.
 
 ## Gotchas
 
-The classifier defaults to ordinary when `@tiny` is unavailable, credentials are missing, the classifier errors, or its output is not exactly `expert`. Such a run does not verify expert injection. A missing `Expert lens` on the first turn usually means the key was not exported, not a product regression. Without the no-tools clause, the agent may open an `ask` dialog that holds the composer until dismissed. Stop the managed process and remove the disposable profile after capturing both turns.
+The classifier defaults to ordinary when `@tiny` is unavailable, credentials are missing, the classifier errors or exceeds its timeout, or its trimmed, lowercased output is not `expert`. Such a run does not verify expert injection. A missing `Expert lens` on the first turn usually means the key was not exported, not a product regression. Prompts that already contain the guidance text skip classification. Terse tool-invocation drives such as the loop and goal recipes can also classify as expert; that is expected and does not change their tool results. Without the no-tools clause, the agent may open an `ask` dialog that holds the composer until dismissed. Stop the managed process and remove the disposable profile after capturing both turns.
