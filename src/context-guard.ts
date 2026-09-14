@@ -43,7 +43,7 @@ export interface GuardState {
 }
 
 const FRESH_SUFFIX = /[?&]fresh$/;
-const EDIT_HEADER = /^\[([^\]#]+)#[0-9A-Fa-f]{4}\]/m;
+const EDIT_HEADERS = /^\[([^\]#]+)#[0-9A-Fa-f]{4}\]/gm;
 
 interface ReadDetails {
   readonly resolvedPath?: unknown;
@@ -84,13 +84,13 @@ function stat(path: string): { mtimeMs: number; size: number } | undefined {
   }
 }
 
-function writeTarget(event: ToolCallEvent): string | undefined {
+function writeTargets(event: ToolCallEvent): string[] {
   const path = event.input.path;
-  if (typeof path === "string" && path.length > 0) return path;
-  if (event.toolName !== "edit") return undefined;
+  if (typeof path === "string" && path.length > 0) return [path];
+  if (event.toolName !== "edit") return [];
   const script = event.input.input;
-  if (typeof script !== "string") return undefined;
-  return EDIT_HEADER.exec(script)?.[1];
+  if (typeof script !== "string") return [];
+  return [...script.matchAll(EDIT_HEADERS)].map((match) => match[1] ?? "");
 }
 
 function isInside(root: string, target: string): boolean {
@@ -158,11 +158,11 @@ export function registerContextGuard(pi: ExtensionAPI): GuardState {
 
     if (event.toolName === "write" || event.toolName === "edit") {
       if (state.leadWrites === "allowed") return undefined;
-      const target = writeTarget(event);
-      if (target === undefined || target.includes("://")) return undefined;
       const artifactsDir = context.sessionManager?.getArtifactsDir();
-      if (artifactsDir && isInside(artifactsDir, target)) return undefined;
-      return { block: true, reason: LEAD_WRITE_BLOCK_REASON };
+      const repositoryTarget = writeTargets(event).some(
+        (target) => !target.includes("://") && !(artifactsDir && isInside(artifactsDir, target)),
+      );
+      return repositoryTarget ? { block: true, reason: LEAD_WRITE_BLOCK_REASON } : undefined;
     }
 
     if (event.toolName === "read") {

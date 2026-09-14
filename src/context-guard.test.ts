@@ -99,6 +99,9 @@ describe("lead write gate", () => {
       block: true,
       reason: LEAD_WRITE_BLOCK_REASON,
     });
+    const multi = `[local://plan.md#A1B2]\nPUT 1.=1:\n+x\n[${repoFile}#C3D4]\nPUT 1.=1:\n+y`;
+    expect(await h.call({ toolName: "edit", input: { input: multi } }, h.lead)).toMatchObject({ block: true });
+    expect(await h.call({ toolName: "edit", input: { input: `[local://plan.md#A1B2]\nPUT 1.=1:\n+x` } }, h.lead)).toBeUndefined();
     expect(await h.call({ toolName: "write", input: { path: "xd://eng_orch", content: "{}" } }, h.lead)).toBeUndefined();
     expect(await h.call({ toolName: "write", input: { path: "local://plan.md", content: "" } }, h.lead)).toBeUndefined();
     expect(await h.call({ toolName: "write", input: { path: join(h.artifactsDir, "note.md"), content: "" } }, h.lead)).toBeUndefined();
