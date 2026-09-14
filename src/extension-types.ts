@@ -45,6 +45,48 @@ export interface InputEventResult {
   readonly handled?: boolean;
   readonly text?: string;
 }
+
+// Harness-contract shapes for context guard tool interception. Typed narrowly
+// here (rather than importing the full OMP types) so extensions stay decoupled;
+// see node_modules/@oh-my-pi/pi-coding-agent/src/extensibility/shared-events.ts:310-348.
+export type ExtensionMode = "tui" | "rpc" | "json" | "print";
+
+export interface ToolCallEvent {
+  readonly type: "tool_call";
+  readonly toolName: string;
+  readonly toolCallId: string;
+  readonly input: Record<string, unknown>;
+}
+export interface ToolCallEventResult {
+  readonly block?: boolean;
+  readonly reason?: string;
+  readonly input?: Record<string, unknown>;
+}
+export interface ToolResultBlock {
+  readonly type: string;
+  readonly text?: string;
+}
+export interface ToolResultEvent {
+  readonly type: "tool_result";
+  readonly toolName: string;
+  readonly toolCallId: string;
+  readonly input: Record<string, unknown>;
+  readonly content: readonly ToolResultBlock[];
+  readonly details?: unknown;
+  readonly isError: boolean;
+}
+export interface ToolResultEventResult {
+  readonly content?: readonly ToolResultBlock[];
+  readonly details?: unknown;
+  readonly isError?: boolean;
+}
+
+export interface ReadonlySessionManager {
+  getSessionFile(): string | undefined;
+  getArtifactsDir(): string | null;
+  saveArtifact(content: string, toolType: string): Promise<string | undefined>;
+}
+
 export interface ExtensionContext {
   readonly models: {
     resolve(spec: string): Parameters<typeof completeSimple>[0] | undefined;
@@ -55,6 +97,8 @@ export interface ExtensionContext {
   readonly ui: {
     notify(message: string, type?: "info" | "warning" | "error"): void;
   };
+  readonly mode?: ExtensionMode;
+  readonly sessionManager?: ReadonlySessionManager;
 }
 
 export interface ToolDefinition {
@@ -92,5 +136,13 @@ export interface ExtensionAPI {
   setModel?(model: Parameters<typeof completeSimple>[0]): Promise<boolean>;
   setThinkingLevel?(level: "low"): void;
   on(event: "input", handler: (event: InputEvent, context: ExtensionContext) => Promise<InputEventResult | void> | InputEventResult | void): void;
+  on(
+    event: "tool_call",
+    handler: (event: ToolCallEvent, context: ExtensionContext) => Promise<ToolCallEventResult | void> | ToolCallEventResult | void,
+  ): void;
+  on(
+    event: "tool_result",
+    handler: (event: ToolResultEvent, context: ExtensionContext) => Promise<ToolResultEventResult | void> | ToolResultEventResult | void,
+  ): void;
   on(event: string, handler: (event: unknown, context: ExtensionContext) => unknown): void;
 }
