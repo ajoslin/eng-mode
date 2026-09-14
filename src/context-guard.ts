@@ -192,15 +192,12 @@ export function registerContextGuard(pi: ExtensionAPI): GuardState {
       const resolvedPath = readFilePath(event.details);
       if (typeof key === "string" && typeof resolvedPath === "string") {
         const current = stat(resolvedPath);
-        if (current) state.reads.set(key.replace(FRESH_SUFFIX, ""), { resolvedPath, ...current });
+        if (current) state.reads.set(key.replace(FRESH_SUFFIX, ""), { resolvedPath: resolve(resolvedPath), ...current });
       }
     } else if (event.toolName === "write" || event.toolName === "edit") {
-      const target = event.input.path;
-      if (typeof target === "string") {
-        const written = resolve(target);
-        for (const [key, stamp] of state.reads) {
-          if (stamp.resolvedPath === written) state.reads.delete(key);
-        }
+      const written = new Set(writeTargets({ ...event, type: "tool_call" }).map((target) => resolve(target)));
+      for (const [key, stamp] of state.reads) {
+        if (written.has(stamp.resolvedPath)) state.reads.delete(key);
       }
     }
 

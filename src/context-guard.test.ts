@@ -147,6 +147,9 @@ describe("same-path read short-circuit", () => {
     await h.result({ toolName: "write", input: { path: file, content: "" }, content: [{ type: "text", text: "ok" }] }, h.lead);
     expect(await read(file)).toBeUndefined();
     expect(await read(file)).toMatchObject({ block: true });
+    await h.result({ toolName: "edit", input: { input: `[${file}#A1B2]\nPUT 1.=1:\n+x` }, content: [{ type: "text", text: "ok" }] }, h.lead);
+    expect(await read(file)).toBeUndefined();
+    expect(await read(file)).toMatchObject({ block: true });
     h.switchSession();
     expect(await read(file)).toBeUndefined();
   });
