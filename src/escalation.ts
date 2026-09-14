@@ -32,7 +32,7 @@ export const EXPLORATION_STEER_TYPE = "eng-mode-exploration-steer";
 export const EXPLORATION_STEER_MESSAGE: CustomMessagePayload = {
   customType: EXPLORATION_STEER_TYPE,
   content:
-    "Decide now whether the remaining work is easy enough for a cheaper model, or whether you should keep executing. The cheaper model reads the same repository and inherits this conversation, and can escalate back once. State the decision in one sentence, then act on it.",
+    "Decide now whether the remaining work is easy enough for a cheaper model, or whether you should keep executing. Hand off once you can name the files, the change, and how to verify it; the cheaper model reads the same repository, inherits this conversation, and can escalate back once. Keep executing only when the remaining work is a judgment call rather than execution. State the decision in one sentence, then act on it.",
   display: true,
   attribution: "agent",
 };
