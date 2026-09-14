@@ -1,5 +1,5 @@
-import { existsSync, statSync } from "node:fs";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { statSync } from "node:fs";
+import { isAbsolute, relative, resolve } from "node:path";
 import type {
   ExtensionAPI,
   ExtensionContext,
@@ -13,7 +13,7 @@ import type {
 export const LEAD_WRITES_COMMAND = "eng-lead-writes";
 
 export const LEAD_WRITE_BLOCK_REASON =
-  "Lead sessions do not edit repository files. Delegate this change to implementation-agent or sonic with a complete brief (file, symbols, expected result). Toggle with /eng-lead-writes allow.";
+  "Lead writes are blocked for this session. Delegate repository edits to a worker, or /eng-lead-writes allow.";
 
 export function readBlockReason(path: string): string {
   return `${path} is unchanged since it was read earlier in this session; its content is already in context. Read a narrower range, or append ?fresh to force.`;
@@ -28,6 +28,9 @@ export const RESULT_CAPS: Readonly<Record<string, number>> = {
   web_search: 8192,
   read: 24576,
   grep: 16384,
+  edit: 512,
+  write: 512,
+  todo: 512,
 };
 export const DEFAULT_RESULT_CAP = 16384;
 
@@ -134,16 +137,16 @@ export function capResultText(fullText: string, cap: number, artifactId: string 
 }
 
 export function registerContextGuard(pi: ExtensionAPI): GuardState {
-  const state: GuardState = { leadWrites: "blocked", reads: new Map() };
+  const state: GuardState = { leadWrites: "allowed", reads: new Map() };
   for (const event of ["session_start", "session_switch", "session_branch"] as const) {
     pi.on(event, () => {
-      state.leadWrites = "blocked";
+      state.leadWrites = "allowed";
       state.reads.clear();
     });
   }
 
   pi.registerCommand?.(LEAD_WRITES_COMMAND, {
-    description: "Toggle whether the lead session may edit repository files: allow | block.",
+    description: "Allow (default) or block lead repository writes: allow | block.",
     async handler(args, context): Promise<void> {
       const mode = args.trim();
       if (mode === "allow" || mode === "block") {

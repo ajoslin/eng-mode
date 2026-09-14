@@ -88,14 +88,17 @@ async function harness() {
 }
 
 describe("lead write gate", () => {
-  it("blocks lead repository writes and edits, allows internal URIs and artifacts", async () => {
+  it("allows lead repository writes by default, blocks only when opted in, and never blocks headless sessions", async () => {
     const h = await harness();
     const repoFile = join(h.root, "src", "a.ts");
+    expect(await h.call({ toolName: "write", input: { path: repoFile, content: "x" } }, h.lead)).toBeUndefined();
+    expect(await h.call({ toolName: "edit", input: { input: `[${repoFile}#A1B2]\nPUT 1.=1:\n+x` } }, h.lead)).toBeUndefined();
+    expect(await h.call({ toolName: "write", input: { path: repoFile, content: "x" } }, h.child)).toBeUndefined();
+    expect(await h.call({ toolName: "write", input: { path: repoFile, content: "x" } }, h.headlessLead)).toBeUndefined();
+
+    await h.command("block", h.lead);
+    expect(h.notices).toEqual(["Lead repository writes: blocked."]);
     expect(await h.call({ toolName: "write", input: { path: repoFile, content: "x" } }, h.lead)).toEqual({
-      block: true,
-      reason: LEAD_WRITE_BLOCK_REASON,
-    });
-    expect(await h.call({ toolName: "edit", input: { input: `[${repoFile}#A1B2]\nPUT 1.=1:\n+x` } }, h.lead)).toEqual({
       block: true,
       reason: LEAD_WRITE_BLOCK_REASON,
     });
@@ -103,20 +106,10 @@ describe("lead write gate", () => {
     expect(await h.call({ toolName: "edit", input: { input: multi } }, h.lead)).toMatchObject({ block: true });
     expect(await h.call({ toolName: "edit", input: { input: `[local://plan.md#A1B2]\nPUT 1.=1:\n+x` } }, h.lead)).toBeUndefined();
     expect(await h.call({ toolName: "write", input: { path: "xd://eng_orch", content: "{}" } }, h.lead)).toBeUndefined();
-    expect(await h.call({ toolName: "write", input: { path: "local://plan.md", content: "" } }, h.lead)).toBeUndefined();
     expect(await h.call({ toolName: "write", input: { path: join(h.artifactsDir, "note.md"), content: "" } }, h.lead)).toBeUndefined();
-  });
 
-  it("never blocks headless sessions and honours the allow toggle until the session changes", async () => {
-    const h = await harness();
-    const repoFile = join(h.root, "src", "a.ts");
-    expect(await h.call({ toolName: "write", input: { path: repoFile, content: "x" } }, h.child)).toBeUndefined();
-    expect(await h.call({ toolName: "write", input: { path: repoFile, content: "x" } }, h.headlessLead)).toBeUndefined();
-    await h.command("allow", h.lead);
-    expect(h.notices).toEqual(["Lead repository writes: allowed."]);
-    expect(await h.call({ toolName: "write", input: { path: repoFile, content: "x" } }, h.lead)).toBeUndefined();
     h.switchSession();
-    expect(await h.call({ toolName: "write", input: { path: repoFile, content: "x" } }, h.lead)).toMatchObject({ block: true });
+    expect(await h.call({ toolName: "write", input: { path: repoFile, content: "x" } }, h.lead)).toBeUndefined();
   });
 });
 
@@ -182,5 +175,15 @@ describe("lead result cap", () => {
     expect(await h.result({ toolName: "hub", input: {}, content: [{ type: "text", text: "x".repeat(3000) }] }, h.lead)).toBeUndefined();
     expect(await h.result({ toolName: "hub", input: {}, content: [{ type: "text", text: big }], isError: true }, h.lead)).toBeUndefined();
     expect(await h.result({ toolName: "hub", input: {}, content: [{ type: "text", text: big }] }, h.child)).toBeUndefined();
+  });
+
+  it("caps lead edit and write echoes to a one-line confirmation", async () => {
+    const h = await harness();
+    const echo = Array.from({ length: 80 }, (_, i) => `changed line ${i}`).join("\n");
+    const result = await h.result({ toolName: "edit", input: { input: "[src/a.ts#A1B2]" }, content: [{ type: "text", text: echo }] }, h.lead);
+    const text = result?.content?.[0]?.text ?? "";
+    expect(Buffer.byteLength(text)).toBeLessThanOrEqual(512 + 160);
+    expect(text).toContain("elided");
+    expect(h.saved).toHaveLength(1);
   });
 });
