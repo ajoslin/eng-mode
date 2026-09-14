@@ -12,21 +12,6 @@ export const ESCALATION_STEER_MESSAGE: CustomMessagePayload = {
   attribution: "agent",
 };
 
-/**
- * Expert-tier tool calls before the exploration check. Every Boja-scale run
- * reached a grounded brief by roughly call 20 and kept reading past 60. The
- * check names the options without ranking them; a message that favors one
- * outcome gets followed regardless of whether it fits.
- */
-const EXPLORATION_STEER_THRESHOLD = 30;
-export const EXPLORATION_STEER_TYPE = "eng-mode-exploration-steer";
-export const EXPLORATION_STEER_MESSAGE: CustomMessagePayload = {
-  customType: EXPLORATION_STEER_TYPE,
-  content: `${EXPLORATION_STEER_THRESHOLD} tool calls on the expert tier. Before the next one, state in one sentence what is still unknown that decides the shape of the change. If nothing is, the plan is done: keep it (state the exception) or hand it off. If something is, name it and read for that alone.`,
-  display: true,
-  attribution: "agent",
-};
-
 /** Model-facing criteria. The classifier verdict is a mechanical trigger and is not listed here. */
 export const ESCALATION_CRITERIA = [
   "the scope is vague or contested",
@@ -37,6 +22,26 @@ export const ESCALATION_CRITERIA = [
 ] as const;
 
 const CRITERIA_SENTENCE = `any of: ${ESCALATION_CRITERIA.join("; ")}`;
+
+/**
+ * Expert-tier tool calls before the exploration check. Every Boja-scale run
+ * reached a grounded brief by roughly call 20 and kept reading past 60. The
+ * criteria live here, at decision time; stating them in the opening prompt
+ * did not change when the model decided.
+ */
+const EXPLORATION_STEER_THRESHOLD = 30;
+export const EXPLORATION_STEER_TYPE = "eng-mode-exploration-steer";
+export const EXPLORATION_STEER_MESSAGE: CustomMessagePayload = {
+  customType: EXPLORATION_STEER_TYPE,
+  content: [
+    "Decide now whether this task qualifies for handoff to a cheaper model or if you should keep executing.",
+    "Hand off when the brief can name the entry files and symbols, the diagnosis or design decision, the constraints, and the observable acceptance check; line numbers and the full caller list are the cheaper model's job.",
+    `Keep executing when the whole change is one file and under roughly twenty lines, or when ${CRITERIA_SENTENCE}.`,
+    "State the decision in one sentence, then act on it.",
+  ].join("\n"),
+  display: true,
+  attribution: "agent",
+};
 
 const GATE_FAILURE_THRESHOLD = 2;
 const EDIT_TOOLS = new Set(["edit", "write"]);
@@ -278,7 +283,7 @@ export function registerEscalation(pi: ExtensionAPI): void {
   pi.registerTool({
     name: "handoff",
     label: "Handoff",
-    description: `Hand execution to the cheaper model. You plan; it edits. Call this once the brief names the entry files and symbols, the diagnosis or design decision, the constraints, and the observable acceptance check; line numbers and full traces are the execution model's job, since it reads the same repository and inherits this conversation (summarized only when large). It can escalate back once. Two exceptions, each stated in one sentence first: the whole change is one file and under roughly twenty lines; or ${CRITERIA_SENTENCE} for the remaining work. Refused after the execution model has escalated.`,
+    description: "Hand execution to the cheaper model, which reads the same repository and inherits this conversation (summarized only when large). It can escalate back once; refused after that.",
     parameters: z.object({
       brief: z.string().describe("The plan, the exact files and symbols to change, the constraints the user set, and the observable acceptance criteria. The execution model works from this."),
     }),

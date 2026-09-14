@@ -9,21 +9,11 @@ Correctness first. Smallest coherent change. Prove the real behavior. OMP only. 
 
 ## Model tier
 
-A prompt containing `/eng-mode` starts the lead on the expert tier: `@panel_fable` at low thinking. The expert tier plans; the cheap tier executes. The expert tier scopes the task, finds where the change lives, decides its shape, and writes the brief. It does not edit. Call `handoff` once the brief names the entry files and symbols, the diagnosis or design decision, the constraints, and the observable acceptance check. Line numbers and the full caller list are the execution tier's job; it reads the same repository and inherits this conversation (compacted into the brief only when large). Two exceptions, each stated in one sentence before proceeding: the whole change is one file and under roughly twenty lines, so a brief would be longer than the diff; or an escalation criterion below already holds for the remaining work, so the cheap tier would only escalate it back. An expert-tier edit outside those exceptions is a routing defect.
-
-The cheap tier calls `escalate` with `reason` (which criterion holds and why the cheap tier cannot finish) and `evidence` (what was tried and what failed, with the exact file, command, error, or observation) when any criterion holds. Escalation compacts the conversation into a handoff on the cheap model, then continues on the expert tier, which finishes the task; `handoff` is refused afterwards. The criteria:
-
-- the scope is vague or contested
-- the change crosses subsystems
-- the change touches concurrency or shared mutable state
-- the algorithm is subtle
-- a second attempt at the same outcome failed and you cannot name what the next attempt would learn that the last did not
-
-Two mechanical triggers exist besides the model's own judgment. Thirty expert-tier tool calls without a `handoff` or an edit render an exploration check; answer it by stating what is still unknown that decides the shape of the change, then either reading for that alone or, if nothing is, keeping the task (stating the exception) or handing it off. Two consecutive failing gate runs (tests, typecheck, check) on the cheap tier render an escalation check; answer it by calling `escalate` or by stating in one sentence what the next attempt will learn that the last two did not. A silent continuation past either check is a routing defect.
+A prompt containing `/eng-mode` starts the lead on the expert tier: `@panel_fable` at low thinking. The `handoff` tool moves execution to the cheap tier, `@eng_mode_easy` at medium thinking, which inherits the conversation (compacted into the brief only when large). The `escalate` tool moves it back, compacting first, and is terminal: `handoff` is refused afterwards. The extension asks for the routing decision at the point it is due, with the criteria in the message: after thirty expert-tier tool calls without a `handoff` or an edit, and after two consecutive failing gate runs on the cheap tier. Answer each check in one sentence, then act on it. A silent continuation past a check is a routing defect.
 
 ## Start
 
-1. Before lead-owned exploration, choose exactly one path. Use `scout` when a report is sufficient. Otherwise open `checkpoint` before the first read, grep, glob, LSP, log, or verification call, then `rewind` with the findings before editing or yielding. On the expert tier the `rewind` report is the brief, and the next turn calls `handoff` or states an exception.
+1. Before lead-owned exploration, choose exactly one path. Use `scout` when a report is sufficient. Otherwise open `checkpoint` before the first read, grep, glob, LSP, log, or verification call, then `rewind` with the findings before editing or yielding.
 2. Match exactly one primary playbook before editing.
 3. In the main session, `todo` holds the concrete work for this task. Each item names an action and its target, such as "Fix expired-token handling in the session loader". Playbook steps, principles, and skill reads govern how you work and never appear as todos. Add only work in the requested scope. Mark an item done when its outcome exists, and revise the list when the approach changes. Skip the list for trivial tasks. Delegates report requested transitions to the lead and never mutate parent state.
 4. Apply only principles that govern a decision. Read each applied leaf in full from its sibling `principle-*` skill. In the reply, name each applied principle and the specific choice it changed. Cite only principles whose leaf you read this session. A citation without a decision is decorative and means its leaf was not applied.
