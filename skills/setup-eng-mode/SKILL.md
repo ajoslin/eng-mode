@@ -32,7 +32,7 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 
 ## 4. Agents and panel resolution
 
-1. Verify each shipped agent (`implementation-agent`, `judgment-agent`, `comment-sicko`, `panel-opus`, `panel-sol`, `panel-fable`, `panel-grok`) is discoverable, every agent role chain resolves end to end, and `eng_mode_easy` resolves to the same model as `panel_sol`. No shipped agent may contain a concrete provider-qualified selector. The workstation config supplies concrete models.
+1. Verify each shipped agent (`implementation-agent`, `judgment-agent`, `comment-sicko`, `panel-opus`, `panel-sol`, `panel-fable`, `panel-grok`) is discoverable, every agent role chain resolves end to end, `eng_mode_easy` resolves to the same model as `panel_sol`, and `panel_fable` resolves. `panel_fable` is the tier the Eng lead starts on and the `escalate` target; `eng_mode_easy` is the `handoff` target. Either tool fails at runtime when its role does not resolve. No shipped agent may contain a concrete provider-qualified selector. The workstation config supplies concrete models.
 2. Resolve every chain through all referenced role keys, flag entries that resolve identically to an earlier entry, and require at least one fallback after the primary to use a different provider where the workstation allows it. `comment-sicko` must retain a resolvable fallback.
 3. Report each panel seat's actual `resolvedModel` and fallback status. Never claim full-roster or cross-vendor diversity from nominal seat names. Report actual resolved models and refuse to claim diversity the resolution does not show.
 
