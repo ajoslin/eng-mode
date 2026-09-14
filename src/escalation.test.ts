@@ -3,7 +3,7 @@ import {
   CHEAP_MODEL_ROLE,
   EXPERT_MODEL_ROLE,
   ESCALATION_STEER_TYPE,
-  HANDOFF_STEER_TYPE,
+  EXPLORATION_STEER_TYPE,
   isGateCommand,
   registerEscalation,
 } from "./escalation.ts";
@@ -21,7 +21,7 @@ type ToolResultHandler = (event: ToolResultEvent) => void;
 type SessionStartHandler = (event: unknown, context: ExtensionContext) => void;
 const text = (value: string) => ({ content: [{ type: "text", text: value }] });
 const STEER = `message:${ESCALATION_STEER_TYPE}:steer`;
-const HANDOFF_STEER = `message:${HANDOFF_STEER_TYPE}:steer`;
+const EXPLORATION_STEER = `message:${EXPLORATION_STEER_TYPE}:steer`;
 
 function setup(
   options: { resolve?: boolean; activate?: boolean; compactError?: string; contextTokens?: number } = {},
@@ -242,9 +242,9 @@ describe("escalation", () => {
     for (let i = 0; i < 29; i++) state.call("read", { path: "src/x.ts" });
     expect(state.events).toEqual([]);
     state.call("read", { path: "src/x.ts" });
-    expect(state.events).toEqual([HANDOFF_STEER]);
+    expect(state.events).toEqual([EXPLORATION_STEER]);
     for (let i = 0; i < 40; i++) state.call("grep");
-    expect(state.events).toEqual([HANDOFF_STEER]);
+    expect(state.events).toEqual([EXPLORATION_STEER]);
 
     const edited = setup();
     for (let i = 0; i < 10; i++) edited.call("read", { path: "src/x.ts" });

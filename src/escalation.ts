@@ -13,15 +13,16 @@ export const ESCALATION_STEER_MESSAGE: CustomMessagePayload = {
 };
 
 /**
- * Expert-tier tool calls before the handoff steer. Every Boja-scale run
- * reached a grounded brief by roughly call 20 and kept reading past 60; the
- * steer asks for the decision, it does not make it.
+ * Expert-tier tool calls before the exploration check. Every Boja-scale run
+ * reached a grounded brief by roughly call 20 and kept reading past 60. The
+ * check names the options without ranking them; a message that favors one
+ * outcome gets followed regardless of whether it fits.
  */
 const EXPLORATION_STEER_THRESHOLD = 30;
-export const HANDOFF_STEER_TYPE = "eng-mode-handoff-steer";
-export const HANDOFF_STEER_MESSAGE: CustomMessagePayload = {
-  customType: HANDOFF_STEER_TYPE,
-  content: `${EXPLORATION_STEER_THRESHOLD} tool calls on the expert tier without a decision. Call \`handoff\` with the brief as it stands, state which exception applies and edit, or name in one sentence the single fact the brief still needs and read only for that.`,
+export const EXPLORATION_STEER_TYPE = "eng-mode-exploration-steer";
+export const EXPLORATION_STEER_MESSAGE: CustomMessagePayload = {
+  customType: EXPLORATION_STEER_TYPE,
+  content: `${EXPLORATION_STEER_THRESHOLD} tool calls on the expert tier. Before the next one, state in one sentence what is still unknown that decides the shape of the change. If nothing is, the plan is done: keep it (state the exception) or hand it off. If something is, name it and read for that alone.`,
   display: true,
   attribution: "agent",
 };
@@ -161,7 +162,7 @@ export function registerEscalation(pi: ExtensionAPI): void {
 
   for (const [type, label] of [
     [ESCALATION_STEER_TYPE, "Escalation check"],
-    [HANDOFF_STEER_TYPE, "Handoff check"],
+    [EXPLORATION_STEER_TYPE, "Exploration check"],
   ] as const) {
     pi.registerMessageRenderer(type, (_message, _options, theme) => new pi.pi.Text(`${theme.fg("accent", "◆")} ${theme.fg("dim", label)}`, 0, 0));
   }
@@ -202,7 +203,7 @@ export function registerEscalation(pi: ExtensionAPI): void {
     }
     state.expertCalls += 1;
     if (state.expertCalls !== EXPLORATION_STEER_THRESHOLD) return;
-    pi.sendMessage?.(HANDOFF_STEER_MESSAGE, { deliverAs: "steer" });
+    pi.sendMessage?.(EXPLORATION_STEER_MESSAGE, { deliverAs: "steer" });
   }
 
   /**

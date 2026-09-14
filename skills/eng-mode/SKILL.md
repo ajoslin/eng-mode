@@ -19,7 +19,7 @@ The cheap tier calls `escalate` with `reason` (which criterion holds and why the
 - the algorithm is subtle
 - a second attempt at the same outcome failed and you cannot name what the next attempt would learn that the last did not
 
-Two mechanical triggers exist besides the model's own judgment. Thirty expert-tier tool calls without a `handoff` or an edit render a handoff check; answer it by calling `handoff` with the brief as it stands, by stating an exception and editing, or by naming the single fact the brief still needs. Two consecutive failing gate runs (tests, typecheck, check) on the cheap tier render an escalation check; answer it by calling `escalate` or by stating in one sentence what the next attempt will learn that the last two did not. A silent continuation past either check is a routing defect.
+Two mechanical triggers exist besides the model's own judgment. Thirty expert-tier tool calls without a `handoff` or an edit render an exploration check; answer it by stating what is still unknown that decides the shape of the change, then either reading for that alone or, if nothing is, keeping the task (stating the exception) or handing it off. Two consecutive failing gate runs (tests, typecheck, check) on the cheap tier render an escalation check; answer it by calling `escalate` or by stating in one sentence what the next attempt will learn that the last two did not. A silent continuation past either check is a routing defect.
 
 ## Start
 

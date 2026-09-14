@@ -2,7 +2,7 @@
 
 ## Sub-features
 
-An `/eng-mode` prompt starts the session on the `@panel_fable` model role at low thinking. The `handoff` tool ends the turn, switches the session to `@eng_mode_easy` at medium thinking, and starts a fresh turn on the cheap model; below 80k context tokens the conversation is kept intact, above it the conversation is compacted into the brief first. The `escalate` tool compacts the conversation on the cheap model, switches back to `@panel_fable`, and is terminal: a later `handoff` is refused. Calling a tool on its own tier returns `already on the … tier` with no side effects. Thirty tool calls on the expert tier without a `handoff` or a file edit render a `Handoff check` steer once. Two consecutive failing gate commands in `bash` on the cheap tier render an `Escalation check` steer.
+An `/eng-mode` prompt starts the session on the `@panel_fable` model role at low thinking. The `handoff` tool ends the turn, switches the session to `@eng_mode_easy` at medium thinking, and starts a fresh turn on the cheap model; below 80k context tokens the conversation is kept intact, above it the conversation is compacted into the brief first. The `escalate` tool compacts the conversation on the cheap model, switches back to `@panel_fable`, and is terminal: a later `handoff` is refused. Calling a tool on its own tier returns `already on the … tier` with no side effects. Thirty tool calls on the expert tier without a `handoff` or a file edit render an `Exploration check` steer once. Two consecutive failing gate commands in `bash` on the cheap tier render an `Escalation check` steer.
 
 ## How to get to it (user POV)
 
@@ -11,7 +11,7 @@ Launch OMP with the local Eng Mode extension. The disposable profile must resolv
 ## Driving it with OMP TUI
 
 1. Send `/eng-mode Reply exactly EXPERT_OK and stop.` Confirm the status bar model stays on the `panel_fable` model and the agent replies `EXPERT_OK`.
-   Then send `Read package.json thirty-two times, one read call each, then reply DONE.` Confirm `◆ Handoff check` renders exactly once after the thirtieth call and the model answers it in its reply.
+   Then send `Read package.json thirty-two times, one read call each, then reply DONE.` Confirm `◆ Exploration check` renders exactly once after the thirtieth call and the model answers it in its reply.
 2. Send `Call the handoff tool with brief "run bun test ./nonexistent.test.ts twice, one call each, then report" and do nothing else.` Confirm the `Handoff` tool invocation renders, the status bar model changes to the `eng_mode_easy` model, and a new user turn beginning `You are the execution tier.` starts. The cheap model runs both commands (exit 1 each), then `◆ Escalation check` renders, and the model either calls `escalate` or states why the next attempt differs.
 3. If the model escalated, confirm the status bar returns to the `panel_fable` model and a user turn beginning `You are the expert tier.` is answered. Then send `Call the handoff tool with brief "again" and report its exact result text.` Confirm the result starts with `refused`.
 
