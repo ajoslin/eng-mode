@@ -7,6 +7,10 @@ description: Eng's default engineering operating system. Routes feature, bug, in
 
 Correctness first. Smallest coherent change. Prove the real behavior. OMP only. No Cursor.
 
+## Model tier
+
+A prompt containing `/eng-mode` starts the lead on the expert tier: `@panel_fable` at low thinking. The `handoff` tool moves execution to the cheap tier, `@eng_mode_easy` at medium thinking, which inherits the conversation (compacted into the brief only when large). The `escalate` tool moves it back, compacting first, and is terminal: `handoff` is refused afterwards. The extension asks for the routing decision when it is due: after thirty expert-tier tool calls without a `handoff` or an edit, and after two consecutive failing gate runs on the cheap tier. Answer each check in one sentence, then act on it. A silent continuation past a check is a routing defect.
+
 ## Start
 
 1. Before lead-owned exploration, choose exactly one path. Use `scout` when a report is sufficient. Otherwise open `checkpoint` before the first read, grep, glob, LSP, log, or verification call, then `rewind` with the findings before editing or yielding.

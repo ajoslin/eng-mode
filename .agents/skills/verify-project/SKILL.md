@@ -17,7 +17,7 @@ The disposable profile must resolve the selected model, the `@tiny` classifier r
 
 ## Doctor
 
-Before driving the TUI, run `bun run check`. In the TUI, send `/tools` and confirm `loop`, `goal`, and `xd://eng_orch` are present. A load error, missing tool, or duplicate-tool warning fails the health gate; do not continue with behavioral claims.
+Before driving the TUI, run `bun run check`. In the TUI, send `/tools` and confirm `escalate`, `handoff`, `loop`, `goal`, and `xd://eng_orch` are present. A load error, missing tool, or duplicate-tool warning fails the health gate; do not continue with behavioral claims.
 
 ## Drive
 
@@ -46,4 +46,4 @@ Where a loop recipe applies, invoke `loop` with `op: status` and confirm `{ "ava
 - [Repository contract gate](features/repository-contracts.md)
 - [Durable orchestration store](features/orchestration-store.md)
 - [Automatic expert lens](features/expert-lens.md)
-- [Easy mode](features/easy-mode.md)
+- [Model tier handoff and escalation](features/escalation.md)

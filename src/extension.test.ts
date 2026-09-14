@@ -183,6 +183,7 @@ describe("eng_orch executable entrypoint", () => {
     const chain = {
       optional: () => chain,
       int: () => chain,
+      describe: () => chain,
       min: (value: number) => {
         tokenBudgetMinimum = value;
         return chain;
@@ -248,12 +249,12 @@ describe("eng_orch executable entrypoint", () => {
         sendUserMessage: () => {},
         registerTool: (tool: RegisteredTool) => registered.set(tool.name, tool),
       } as unknown as Parameters<typeof engModeExtension>[0]);
-      expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
-      expect(Object.keys(registeredCommands)).toEqual(["easy"]);
+      expect([...registered.keys()]).toEqual(["escalate", "handoff", "goal", "loop", "eng_orch"]);
+      expect(Object.keys(registeredCommands)).toEqual([]);
       expect(existsSync(join(homeDir, ".agents"))).toBeFalse();
       expect(existsSync(join(repositoryRoot, ".agents"))).toBeFalse();
     });
-    expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
+    expect([...registered.keys()]).toEqual(["escalate", "handoff", "goal", "loop", "eng_orch"]);
     expect(registered.get("loop")).toMatchObject({ strict: true, loadMode: "essential" });
     expect(beforeAgentStartHandler).toBeDefined();
     await expect(beforeAgentStartHandler?.({ prompt: "Explore these files and report findings" }, unavailableClassifier)).resolves.toEqual({});
