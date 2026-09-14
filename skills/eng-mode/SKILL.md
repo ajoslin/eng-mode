@@ -9,7 +9,7 @@ Correctness first. Smallest coherent change. Prove the real behavior. OMP only. 
 
 ## Model tier
 
-A prompt containing `/eng-mode` starts the lead on the expert tier: `@panel_fable` at low thinking. The `handoff` tool moves execution to the cheap tier, `@eng_mode_easy` at medium thinking, which inherits the conversation (compacted into the brief only when large). The `escalate` tool moves it back, compacting first, and is terminal: `handoff` is refused afterwards. The extension asks for the routing decision at the point it is due, with the criteria in the message: after thirty expert-tier tool calls without a `handoff` or an edit, and after two consecutive failing gate runs on the cheap tier. Answer each check in one sentence, then act on it. A silent continuation past a check is a routing defect.
+A prompt containing `/eng-mode` starts the lead on the expert tier: `@panel_fable` at low thinking. The `handoff` tool moves execution to the cheap tier, `@eng_mode_easy` at medium thinking, which inherits the conversation (compacted into the brief only when large). The `escalate` tool moves it back, compacting first, and is terminal: `handoff` is refused afterwards. The extension asks for the routing decision when it is due: after thirty expert-tier tool calls without a `handoff` or an edit, and after two consecutive failing gate runs on the cheap tier. Answer each check in one sentence, then act on it. A silent continuation past a check is a routing defect.
 
 ## Start
 

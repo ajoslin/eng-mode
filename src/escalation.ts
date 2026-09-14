@@ -25,20 +25,14 @@ const CRITERIA_SENTENCE = `any of: ${ESCALATION_CRITERIA.join("; ")}`;
 
 /**
  * Expert-tier tool calls before the exploration check. Every Boja-scale run
- * reached a grounded brief by roughly call 20 and kept reading past 60. The
- * criteria live here, at decision time; stating them in the opening prompt
- * did not change when the model decided.
+ * reached a grounded brief by roughly call 20 and kept reading past 60.
  */
 const EXPLORATION_STEER_THRESHOLD = 30;
 export const EXPLORATION_STEER_TYPE = "eng-mode-exploration-steer";
 export const EXPLORATION_STEER_MESSAGE: CustomMessagePayload = {
   customType: EXPLORATION_STEER_TYPE,
-  content: [
-    "Decide now whether this task qualifies for handoff to a cheaper model or if you should keep executing.",
-    "Hand off when the brief can name the entry files and symbols, the diagnosis or design decision, the constraints, and the observable acceptance check; line numbers and the full caller list are the cheaper model's job.",
-    `Keep executing when the whole change is one file and under roughly twenty lines, or when ${CRITERIA_SENTENCE}.`,
-    "State the decision in one sentence, then act on it.",
-  ].join("\n"),
+  content:
+    "Decide now whether the remaining work is easy enough for a cheaper model, or whether you should keep executing. The cheaper model reads the same repository and inherits this conversation, and can escalate back once. State the decision in one sentence, then act on it.",
   display: true,
   attribution: "agent",
 };
