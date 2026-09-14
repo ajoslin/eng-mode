@@ -1,0 +1,52 @@
+{
+  "sourceCommit": "abd30bfb7b0f8a1f189b9b03a2323ea37c26c0eb",
+  "skills": {
+    "unslop": {
+      "SKILL.md": "6948335a00f9fed7a29204b9f08f74a9d9596d90989fd06f58f02d984ceab6f3"
+    },
+    "typescript-best-practices": {
+      "SKILL.md": "abd84f43d3c33db81d90273777313a55cf39a6d32414f67e53951246ab4f3adc",
+      "references/patterns.md": "62e9cd32d2fa066a35d0d1349aac22dce31a48ad7d5eaf142570770cfe707384"
+    },
+    "tdd": {
+      "SKILL.md": "3f9f418b5f120f92a757dd040c9ceb78d938df38e21f78ebc466c25f934d8848",
+      "agents/openai.yaml": "ea6f01cf1b8c06a4b0f5b649d74b1b8ce8685e72af1b38d70d877693e092af0b",
+      "mocking.md": "7578d6c2e14da6531c3ad20dad3137e96f7e4feecc6f706bfa636623d84b2b1b",
+      "tests.md": "4f00617253a8b19e0e7b06c5a1a20f70b6aab28322da22aead31985fd0e96c7e"
+    },
+    "diagnosing-bugs": {
+      "SKILL.md": "706baf54b94725436f1789f42de624be9cc2d649b2eaec9e9cc571ea59f190f7",
+      "scripts/hitl-loop.template.sh": "18ae07e1cc49b32c71767e241a6e8de4be74ef21d5e3b7e39034d9c7335f2d80"
+    },
+    "domain-modeling": {
+      "ADR-FORMAT.md": "30da0982e37ed2ceb59a5cdfdc114c16e7b06589ec266024b9dda5c8c2d06b37",
+      "CONTEXT-FORMAT.md": "85e51bb199b76990bca88f3f3c16f45d20955596199fc0d2e81671699a4a15a2",
+      "SKILL.md": "4a75346a2fded6c4b9d45a247144889c3a29c63cec819b6ef80bda72dedec89c",
+      "agents/openai.yaml": "f6bf2aa996c6e6f53fdd0708e18a0d16a56aed8322cca59fedbe3c0d2c75f06b"
+    },
+    "codebase-design": {
+      "DEEPENING.md": "ef7b5f4baff4e686458cfc00058ea3ce1e60553c0d3f432976b08d5a082606c2",
+      "DESIGN-IT-TWICE.md": "763a449a992731e4f96950b33c818e6215a0e13a08994c5119932a72884b2570",
+      "SKILL.md": "15010d2da9a0dfa9b9a003db3c840f9e55646068379726edfbaa319588480195",
+      "agents/openai.yaml": "edebc9e4fcfe102114012575eaa9600b9b5fd08c311664f389c36e7bc717740f"
+    },
+    "technical-writing": {
+      "SKILL.md": "6d6d9e625ae412ee8f36df8deb6fd9203d7c6acca776d5ee3cabbb9126f8b84c"
+    },
+    "meaningful-contribution": {
+      "SKILL.md": "8c841a6fd4f625f90573233d8ea8253d50a3625f68aea01524632722529bed4a"
+    },
+    "create-verification-skill": {
+      "SKILL.md": "6add7dde32253e395695d2847e8061c7292a1ac9664cca0d315c2c86c0daf1da",
+      "references/feature-map-example/README.md": "cb7bd782cf89968a4ba3d58a5151db837430db92d19a6f52a906973b77b516ba",
+      "references/feature-map-example/create-note.md": "644a44c74f35d38c2feb7cd05a0121fdebbb623e8dc376c185b565a581d1ccf7",
+      "references/feature-map-example/search.md": "6e87b9e7f2791a7776ba1bb83f371cd285c306c67f19d245cc4dd6ca3015c823"
+    },
+    "maintain-verification-skill": {
+      "SKILL.md": "715a6d7b269bbcc270f29c7b2bf280390acabb3bc8a2d8a22018ebf286f2baa0"
+    },
+    "blast-radius": {
+      "SKILL.md": "20cb2945f5fe62055166f745107274af5f19428ca033e53a9b8bc69650d3ded1"
+    }
+  }
+}
