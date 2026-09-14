@@ -12,7 +12,12 @@ export const ESCALATION_STEER_MESSAGE: CustomMessagePayload = {
   attribution: "agent",
 };
 
-/** Model-facing criteria. The classifier verdict is a mechanical trigger and is not listed here. */
+/**
+ * Reasons the cheap tier gives when it is stuck. They describe why an attempt
+ * failed; none of them is a trigger on its own. The `escalate` tool refuses
+ * until the session shows stuckness mechanically: a gate-failure streak or the
+ * attempt floor.
+ */
 export const ESCALATION_CRITERIA = [
   "the scope is vague or contested",
   "the change crosses subsystems",
@@ -21,7 +26,17 @@ export const ESCALATION_CRITERIA = [
   "a second attempt at the same outcome failed and you cannot name what the next attempt would learn that the last did not",
 ] as const;
 
-const CRITERIA_SENTENCE = `any of: ${ESCALATION_CRITERIA.join("; ")}`;
+const CRITERIA_SENTENCE = `one of: ${ESCALATION_CRITERIA.join("; ")}`;
+
+const GATE_FAILURE_THRESHOLD = 2;
+/**
+ * Cheap-tier tool calls before `escalate` is allowed without a gate failure.
+ * The Sol run that escalated too soon (romp-dac2c9) had made 17 calls, 3 of
+ * them idle waits, with the focused tests green. Forty calls is more than a
+ * read-edit-test cycle on every file a typical brief names.
+ */
+const CHEAP_ATTEMPT_FLOOR = 40;
+const ESCALATION_UNLOCK_SENTENCE = `\`escalate\` is refused until either ${GATE_FAILURE_THRESHOLD} consecutive gate runs (tests, typecheck, \`bun run check\`) fail, or you have made ${CHEAP_ATTEMPT_FLOOR} tool calls on this tier`;
 
 /**
  * Expert-tier tool calls before the exploration check. Every Boja-scale run
@@ -37,7 +52,6 @@ export const EXPLORATION_STEER_MESSAGE: CustomMessagePayload = {
   attribution: "agent",
 };
 
-const GATE_FAILURE_THRESHOLD = 2;
 const EDIT_TOOLS = new Set(["edit", "write"]);
 const GATE_COMMAND = /\b(bun test|bun run check|tsgo|pytest|cargo test|go test|npm test|vitest|jest)\b/;
 /** OMP's default `compaction.keepRecentTokens`; below it `compact()` has nothing to summarize and fails. */
@@ -57,6 +71,10 @@ type Tier = "cheap" | "expert";
  * and the cheap tier may escalate back. After an escalation the expert tier is
  * terminal: `escalated` blocks a second hand-off so the two models never
  * ping-pong a task.
+ *
+ * `cheapCalls` and `gateFailures` gate `escalate`: the cheap tier escalates only
+ * after the attempt floor or two consecutive gate failures, never on the brief's
+ * criteria alone.
  */
 interface EscalationState {
   tier: Tier;
@@ -64,6 +82,7 @@ interface EscalationState {
   gateFailures: number;
   steered: boolean;
   expertCalls: number;
+  cheapCalls: number;
   decided: boolean;
 }
 
@@ -120,7 +139,8 @@ export function buildDelegationBrief(brief: string): string {
   return [
     "You are the execution tier. The expert tier planned this work and handed it to you.",
     `Brief: ${brief}`,
-    `Execute the brief from the handoff summary above. Call \`escalate\` as soon as ${CRITERIA_SENTENCE}.`,
+    "Execute the brief from the handoff summary above and finish it: edit, run the gates, fix what fails. The criteria the expert tier weighed (scope, subsystems, concurrency, algorithm) are not reasons to hand the work back; the expert tier already weighed them when it handed off.",
+    `${ESCALATION_UNLOCK_SENTENCE}. Call it then only if you cannot name what the next attempt would learn that the last did not.`,
   ].join("\n");
 }
 
@@ -157,7 +177,7 @@ function tierOf(models: ExtensionContext["models"], current: Model | undefined):
 }
 
 export function registerEscalation(pi: ExtensionAPI): void {
-  const state: EscalationState = { tier: "expert", escalated: false, gateFailures: 0, steered: false, expertCalls: 0, decided: false };
+  const state: EscalationState = { tier: "expert", escalated: false, gateFailures: 0, steered: false, expertCalls: 0, cheapCalls: 0, decided: false };
 
   for (const [type, label] of [
     [ESCALATION_STEER_TYPE, "Escalation check"],
@@ -178,6 +198,7 @@ export function registerEscalation(pi: ExtensionAPI): void {
   pi.on("tool_result", (event) => {
     const result = event as ToolResultEvent;
     if (state.tier === "expert") return onExpertToolResult(result);
+    if (result.toolName !== "escalate") state.cheapCalls += 1;
     if (result.toolName !== "bash") return;
     const command = result.input.command;
     if (typeof command !== "string" || !isGateCommand(command)) return;
@@ -219,6 +240,7 @@ export function registerEscalation(pi: ExtensionAPI): void {
     state.tier = to;
     state.gateFailures = 0;
     state.steered = false;
+    state.cheapCalls = 0;
     const schedule = context.setTimeout ?? ((callback: () => unknown) => queueMicrotask(() => void callback()));
     schedule(async () => {
       const usage = switchContext.getContextUsage?.();
@@ -256,7 +278,7 @@ export function registerEscalation(pi: ExtensionAPI): void {
   pi.registerTool({
     name: "escalate",
     label: "Escalate",
-    description: `Hand this session to the expert model, which finishes the task. Compacts the conversation into a handoff first. Call it when ${CRITERIA_SENTENCE}. Not calling it and trying again is a choice; make it only when you can say what the next attempt will learn.`,
+    description: `Hand this session to the expert model, which finishes the task. Compacts the conversation into a handoff first. ${ESCALATION_UNLOCK_SENTENCE}; a refused call changes nothing. Call it then when ${CRITERIA_SENTENCE}, and only if you can say what the next attempt would learn.`,
     parameters: z.object({
       reason: z.string().describe("Which criterion holds and why the cheap tier cannot finish this task."),
       evidence: z.string().describe("What was tried and what failed: the exact file, command, error, or observation. The expert tier starts from this."),
@@ -265,6 +287,11 @@ export function registerEscalation(pi: ExtensionAPI): void {
     loadMode: "essential",
     async execute(_toolCallId, input, _signal, _onUpdate, context) {
       if (state.tier === "expert") return textResult("already on the expert tier");
+      if (state.gateFailures < GATE_FAILURE_THRESHOLD && state.cheapCalls < CHEAP_ATTEMPT_FLOOR) {
+        return textResult(
+          `refused: not stuck yet (${state.cheapCalls} of ${CHEAP_ATTEMPT_FLOOR} tool calls, ${state.gateFailures} of ${GATE_FAILURE_THRESHOLD} consecutive gate failures). Keep executing the brief: edit, run the gates, fix what fails.`,
+        );
+      }
       if (!context) throw new Error("Tier switching requires a session context.");
       const reason = typeof input.reason === "string" ? input.reason : "";
       const evidence = typeof input.evidence === "string" ? input.evidence : "";

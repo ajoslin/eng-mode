@@ -82,6 +82,11 @@ function setup(
   }
   const handoff = () => run("handoff", { brief: "edit src/x.ts and run bun test" });
   const escalate = () => run("escalate", { reason: "concurrency bug", evidence: "two failed bun test runs" });
+  /** Two consecutive gate failures: the cheap tier's mechanical stuckness signal. */
+  const stuck = () => {
+    gate(true);
+    gate(true);
+  };
   function gate(failed: boolean, command = "bun test ./src/x.test.ts"): void {
     toolResultHandler?.({ toolName: "bash", input: { command }, isError: false, details: { exitCode: failed ? 1 : 0 } });
   }
@@ -97,7 +102,7 @@ function setup(
       },
     } as unknown as ExtensionContext);
   }
-  return { events, inputHandler, context, handoff, escalate, gate, call, startSession };
+  return { events, inputHandler, context, handoff, escalate, stuck, gate, call, startSession };
 }
 
 describe("session start tier", () => {
@@ -105,6 +110,7 @@ describe("session start tier", () => {
     const state = setup();
     state.startSession(CHEAP_MODEL_ROLE);
     await expect(state.handoff()).resolves.toEqual(text("already on the execution tier"));
+    state.stuck();
     await expect(state.escalate()).resolves.toEqual(text(expect.stringContaining("Escalating")));
   });
 
@@ -165,6 +171,7 @@ describe("escalation", () => {
   it("escalates after a handoff and then refuses a second handoff", async () => {
     const state = setup();
     await state.handoff();
+    state.stuck();
     state.events.length = 0;
     const result = await state.escalate();
     expect(result).toEqual(text(expect.stringContaining("Escalating")));
@@ -194,6 +201,7 @@ describe("escalation", () => {
   it("still restarts when there is nothing to compact", async () => {
     const state = setup({ compactError: "Nothing to compact (session too small)" });
     await state.handoff();
+    state.stuck();
     await state.escalate();
     expect(state.events).toContainEqual(expect.stringContaining("compact:"));
     expect(state.events).toContainEqual(expect.stringMatching(/^prompt:.*expert tier/));
@@ -203,6 +211,7 @@ describe("escalation", () => {
   it("skips compaction when the session is below the keep-recent floor", async () => {
     const state = setup({ contextTokens: 5_000 });
     await state.handoff();
+    state.stuck();
     await state.escalate();
     expect(state.events).not.toContainEqual(expect.stringContaining("compact:"));
     expect(state.events).toContainEqual(expect.stringMatching(/^prompt:.*expert tier/));
@@ -254,12 +263,41 @@ describe("escalation", () => {
     expect(edited.events).toEqual([]);
   });
 
+  it("refuses escalate on the cheap tier until two gate failures or the attempt floor", async () => {
+    const state = setup();
+    await state.handoff();
+    state.events.length = 0;
+    for (let i = 0; i < 17; i++) state.call("read", { path: "src/x.ts" });
+    state.gate(false);
+    await expect(state.escalate()).resolves.toEqual(text(expect.stringContaining("refused: not stuck yet (18 of 40")));
+    expect(state.events).toEqual([]);
+
+    state.gate(true);
+    await expect(state.escalate()).resolves.toEqual(text(expect.stringContaining("refused")));
+    state.gate(true);
+    await expect(state.escalate()).resolves.toEqual(text(expect.stringContaining("Escalating")));
+
+    const floor = setup();
+    await floor.handoff();
+    for (let i = 0; i < 39; i++) floor.call("grep");
+    await expect(floor.escalate()).resolves.toEqual(text(expect.stringContaining("refused")));
+    floor.call("grep");
+    await expect(floor.escalate()).resolves.toEqual(text(expect.stringContaining("Escalating")));
+
+    const recovered = setup();
+    await recovered.handoff();
+    recovered.stuck();
+    recovered.gate(false);
+    await expect(recovered.escalate()).resolves.toEqual(text(expect.stringContaining("refused")));
+  });
+
   it("does not steer for handoff on the cheap tier or after an escalation", async () => {
     const state = setup();
     await state.handoff();
     state.events.length = 0;
     for (let i = 0; i < 40; i++) state.call("read", { path: "src/x.ts" });
     expect(state.events).toEqual([]);
+    state.stuck();
     await state.escalate();
     state.events.length = 0;
     for (let i = 0; i < 40; i++) state.call("read", { path: "src/x.ts" });
