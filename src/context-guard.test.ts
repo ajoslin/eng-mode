@@ -113,40 +113,6 @@ describe("lead write gate", () => {
   });
 });
 
-describe("same-path read short-circuit", () => {
-  it("blocks an identical lead re-read of an unchanged file only", async () => {
-    const h = await harness();
-    const file = join(h.root, "doc.md");
-    await writeFile(file, "one\n");
-    const read = async (path: string, ctx = h.lead) => {
-      const outcome = await h.call({ toolName: "read", input: { path } }, ctx);
-      if (outcome?.block) return outcome;
-      const executed = typeof outcome?.input?.path === "string" ? outcome.input.path : path;
-      const details = executed.includes("://") ? { resolvedPath: file } : { meta: { source: { type: "path", value: file } } };
-      await h.result({ toolName: "read", input: { path: executed }, content: [{ type: "text", text: "one" }], details }, ctx);
-      return outcome;
-    };
-    expect(await read(file)).toBeUndefined();
-    expect(await read(file)).toMatchObject({ block: true, reason: expect.stringContaining("unchanged since it was read") });
-    expect(await read(`${file}:1-1`)).toBeUndefined();
-    expect(await read(`${file}?fresh`)).toEqual({ input: { path: file } });
-    expect(await read(file)).toMatchObject({ block: true });
-    expect(await read(file, h.child)).toBeUndefined();
-
-    await writeFile(file, "one\ntwo\n");
-    expect(await read(file)).toBeUndefined();
-    expect(await read(file)).toMatchObject({ block: true });
-
-    await h.result({ toolName: "write", input: { path: file, content: "" }, content: [{ type: "text", text: "ok" }] }, h.lead);
-    expect(await read(file)).toBeUndefined();
-    expect(await read(file)).toMatchObject({ block: true });
-    await h.result({ toolName: "edit", input: { input: `[${file}#A1B2]\nPUT 1.=1:\n+x` }, content: [{ type: "text", text: "ok" }] }, h.lead);
-    expect(await read(file)).toBeUndefined();
-    expect(await read(file)).toMatchObject({ block: true });
-    h.switchSession();
-    expect(await read(file)).toBeUndefined();
-  });
-});
 
 describe("lead result cap", () => {
   const big = Array.from({ length: 1200 }, (_, i) => `line ${i} ${"x".repeat(24)}`).join("\n");

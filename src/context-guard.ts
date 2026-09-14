@@ -1,4 +1,3 @@
-import { statSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import type {
   ExtensionAPI,
@@ -15,10 +14,6 @@ export const LEAD_WRITES_COMMAND = "eng-lead-writes";
 export const LEAD_WRITE_BLOCK_REASON =
   "Lead writes are blocked for this session. Delegate repository edits to a worker, or /eng-lead-writes allow.";
 
-export function readBlockReason(path: string): string {
-  return `${path} is unchanged since it was read earlier in this session; its content is already in context. Read a narrower range, or append ?fresh to force.`;
-}
-
 /** Inline byte budget per tool for results that persist in the lead's context. */
 export const RESULT_CAPS: Readonly<Record<string, number>> = {
   hub: 6144,
@@ -34,39 +29,18 @@ export const RESULT_CAPS: Readonly<Record<string, number>> = {
 };
 export const DEFAULT_RESULT_CAP = 16384;
 
-interface ReadStamp {
-  readonly resolvedPath: string;
-  readonly mtimeMs: number;
-  readonly size: number;
-}
-
 export interface GuardState {
   leadWrites: "blocked" | "allowed";
-  readonly reads: Map<string, ReadStamp>;
 }
 
-const FRESH_SUFFIX = /[?&]fresh$/;
 const EDIT_HEADERS = /^\[([^\]#]+)#[0-9A-Fa-f]{4}\]/gm;
 
-interface ReadDetails {
-  readonly resolvedPath?: unknown;
-  readonly meta?: {
-    readonly source?: { readonly type?: unknown; readonly value?: unknown };
-    readonly truncation?: { readonly artifactId?: unknown };
-  };
+interface ResultDetails {
+  readonly meta?: { readonly truncation?: { readonly artifactId?: unknown } };
 }
 
-/** `details` is tool-owned; only the fields the guard consumes are checked. */
-function detailsOf(details: unknown): ReadDetails {
-  return typeof details === "object" && details !== null ? (details as ReadDetails) : {};
-}
-
-/** Plain file reads report `meta.source.value`; internal URIs (skill://, artifact://) report `resolvedPath`. */
-function readFilePath(details: unknown): string | undefined {
-  const d = detailsOf(details);
-  if (typeof d.resolvedPath === "string") return d.resolvedPath;
-  const source = d.meta?.source;
-  return source?.type === "path" && typeof source.value === "string" ? source.value : undefined;
+function detailsOf(details: unknown): ResultDetails {
+  return typeof details === "object" && details !== null ? (details as ResultDetails) : {};
 }
 
 /**
@@ -76,15 +50,6 @@ function readFilePath(details: unknown): string | undefined {
  */
 export function isLeadSession(context: ExtensionContext): boolean {
   return context.mode === "tui";
-}
-
-function stat(path: string): { mtimeMs: number; size: number } | undefined {
-  try {
-    const info = statSync(path);
-    return { mtimeMs: info.mtimeMs, size: info.size };
-  } catch {
-    return undefined;
-  }
 }
 
 function writeTargets(event: ToolCallEvent): string[] {
@@ -137,11 +102,10 @@ export function capResultText(fullText: string, cap: number, artifactId: string 
 }
 
 export function registerContextGuard(pi: ExtensionAPI): GuardState {
-  const state: GuardState = { leadWrites: "allowed", reads: new Map() };
+  const state: GuardState = { leadWrites: "allowed" };
   for (const event of ["session_start", "session_switch", "session_branch"] as const) {
     pi.on(event, () => {
       state.leadWrites = "allowed";
-      state.reads.clear();
     });
   }
 
@@ -158,52 +122,17 @@ export function registerContextGuard(pi: ExtensionAPI): GuardState {
 
   pi.on("tool_call", (event, context): ToolCallEventResult | undefined => {
     if (!isLeadSession(context)) return undefined;
-
-    if (event.toolName === "write" || event.toolName === "edit") {
-      if (state.leadWrites === "allowed") return undefined;
-      const artifactsDir = context.sessionManager?.getArtifactsDir();
-      const repositoryTarget = writeTargets(event).some(
-        (target) => !target.includes("://") && !(artifactsDir && isInside(artifactsDir, target)),
-      );
-      return repositoryTarget ? { block: true, reason: LEAD_WRITE_BLOCK_REASON } : undefined;
-    }
-
-    if (event.toolName === "read") {
-      const key = event.input.path;
-      if (typeof key !== "string") return undefined;
-      if (FRESH_SUFFIX.test(key)) {
-        state.reads.delete(key.replace(FRESH_SUFFIX, ""));
-        return { input: { ...event.input, path: key.replace(FRESH_SUFFIX, "") } };
-      }
-      const stamp = state.reads.get(key);
-      if (!stamp) return undefined;
-      const current = stat(stamp.resolvedPath);
-      if (!current || current.mtimeMs !== stamp.mtimeMs || current.size !== stamp.size) {
-        state.reads.delete(key);
-        return undefined;
-      }
-      return { block: true, reason: readBlockReason(key) };
-    }
-    return undefined;
+    if (event.toolName !== "write" && event.toolName !== "edit") return undefined;
+    if (state.leadWrites === "allowed") return undefined;
+    const artifactsDir = context.sessionManager?.getArtifactsDir();
+    const repositoryTarget = writeTargets(event).some(
+      (target) => !target.includes("://") && !(artifactsDir && isInside(artifactsDir, target)),
+    );
+    return repositoryTarget ? { block: true, reason: LEAD_WRITE_BLOCK_REASON } : undefined;
   });
 
   pi.on("tool_result", async (event, context): Promise<ToolResultEventResult | undefined> => {
     if (!isLeadSession(context) || event.isError) return undefined;
-
-    if (event.toolName === "read") {
-      const key = event.input.path;
-      const resolvedPath = readFilePath(event.details);
-      if (typeof key === "string" && typeof resolvedPath === "string") {
-        const current = stat(resolvedPath);
-        if (current) state.reads.set(key.replace(FRESH_SUFFIX, ""), { resolvedPath: resolve(resolvedPath), ...current });
-      }
-    } else if (event.toolName === "write" || event.toolName === "edit") {
-      const written = new Set(writeTargets({ ...event, type: "tool_call" }).map((target) => resolve(target)));
-      for (const [key, stamp] of state.reads) {
-        if (written.has(stamp.resolvedPath)) state.reads.delete(key);
-      }
-    }
-
     const cap = RESULT_CAPS[event.toolName] ?? DEFAULT_RESULT_CAP;
     const textBlocks = event.content.filter((block) => block.type === "text" && typeof block.text === "string");
     if (textBlocks.length === 0) return undefined;
