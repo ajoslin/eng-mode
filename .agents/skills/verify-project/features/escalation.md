@@ -17,4 +17,4 @@ Launch OMP with the local Eng Mode extension. The disposable profile must resolv
 
 ## Gotchas
 
-When the session holds fewer than 20k context tokens, escalation skips compaction (OMP's `prepareCompaction` has nothing to summarize below `keepRecentTokens` and the TUI would render `Compaction failed`), so early escalations show no compaction entry. A handoff shows one only above 80k context tokens. Model switches persist for the rest of the session. Relaunch before other recipes that expect the launch model.
+When the session holds fewer than 20k context tokens, escalation skips compaction (OMP's `prepareCompaction` has nothing to summarize below `keepRecentTokens` and the TUI would render `Compaction failed`), so early escalations show no compaction entry. A handoff shows one only above 80k context tokens. Evidence must quote the exact `bash` command string and one rendered output line from that result. A missing-file `bun test` run currently renders `Test filter "./nonexistent.test.ts" had no matches` rather than `File not found`. Model switches persist for the rest of the session. Relaunch before other recipes that expect the launch model.
