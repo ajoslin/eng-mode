@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "abd30bfb7b0f8a1f189b9b03a2323ea37c26c0eb",
+  "sourceCommit": "1488530967f481e4a63feddc969e75df2ffe03b9",
   "skills": {
     "unslop": {
       "SKILL.md": "6948335a00f9fed7a29204b9f08f74a9d9596d90989fd06f58f02d984ceab6f3"
@@ -47,6 +47,12 @@
     },
     "blast-radius": {
       "SKILL.md": "20cb2945f5fe62055166f745107274af5f19428ca033e53a9b8bc69650d3ded1"
+    },
+    "gh-stack": {
+      "SKILL.md": "e76ca9c872072739dc8a8daf988410eb84a8d3cbf68c121cbdb04f519fb074e3",
+      "references/commands.md": "31049425b8db652e80fa6994d5289f20169f57d7af0a0651fa72c3f25e8fe7c7",
+      "references/stack-design.md": "2cdfe8cf0bfbd06d6c89460a46bbb61351d7a392f6d943f16875cf3714804ccf",
+      "references/troubleshooting.md": "fe1958036e663c7471a0d3efdf1fefe47ee65e06713b13a96e3db95becccdc47"
     }
   }
 }
