@@ -6,6 +6,7 @@ import {
   EXPLORATION_STEER_TYPE,
   isGateCommand,
   registerEscalation,
+  stripEasyModifier,
 } from "./escalation.ts";
 import type {
   ExtensionAPI,
@@ -24,13 +25,15 @@ const STEER = `message:${ESCALATION_STEER_TYPE}:steer`;
 const EXPLORATION_STEER = `message:${EXPLORATION_STEER_TYPE}:steer`;
 
 function setup(
-  options: { resolve?: boolean; activate?: boolean; compactError?: string; contextTokens?: number } = {},
+  options: { resolve?: boolean; activate?: boolean | boolean[]; compactError?: string; contextTokens?: number } = {},
 ) {
   const events: string[] = [];
   const timers: Array<() => unknown> = [];
   let inputHandler: InputHandler | undefined;
   let toolResultHandler: ToolResultHandler | undefined;
+  let easyCommand: ((args: string, context: ExtensionContext) => Promise<void>) | undefined;
   let sessionStart: SessionStartHandler | undefined;
+  let sessionSwitch: SessionStartHandler | undefined;
   const tools = new Map<string, ToolDefinition>();
   const model = {};
   const pi = {
@@ -41,10 +44,15 @@ function setup(
       if (event === "input") inputHandler = value as InputHandler;
       if (event === "tool_result") toolResultHandler = value as ToolResultHandler;
       if (event === "session_start") sessionStart = value as SessionStartHandler;
+      if (event === "session_switch") sessionSwitch = value as SessionStartHandler;
     },
     registerTool: (definition: ToolDefinition) => tools.set(definition.name, definition),
+    registerCommand: (name: string, command: { handler: (args: string, context: ExtensionContext) => Promise<void> }) => {
+      if (name === "easy") easyCommand = command.handler;
+    },
     setModel: async () => {
       events.push("setModel");
+      if (Array.isArray(options.activate)) return options.activate.shift() ?? true;
       return options.activate ?? true;
     },
     setThinkingLevel: (level: string) => events.push(`thinking:${level}`),
@@ -81,14 +89,20 @@ function setup(
     return result;
   }
   const handoff = () => run("handoff", { brief: "edit src/x.ts and run bun test" });
-  const escalate = () => run("escalate", { reason: "concurrency bug", evidence: "two failed bun test runs" });
-  /** Two consecutive gate failures: the cheap tier's mechanical stuckness signal. */
+  const escalate = (evidence = "bun test ./src/x.test.ts\nFAIL expected true, received false") =>
+    run("escalate", { reason: "the attempted fix still fails its regression test", evidence });
   const stuck = () => {
     gate(true);
     gate(true);
   };
   function gate(failed: boolean, command = "bun test ./src/x.test.ts"): void {
-    toolResultHandler?.({ toolName: "bash", input: { command }, isError: false, details: { exitCode: failed ? 1 : 0 } });
+    toolResultHandler?.({
+      toolName: "bash",
+      input: { command },
+      content: failed ? [{ type: "text", text: "FAIL expected true, received false" }] : [{ type: "text", text: "1 pass" }],
+      isError: false,
+      details: { exitCode: failed ? 1 : 0 },
+    });
   }
   function call(toolName: string, input: Record<string, unknown> = {}): void {
     toolResultHandler?.({ toolName, input, isError: false });
@@ -102,7 +116,16 @@ function setup(
       },
     } as unknown as ExtensionContext);
   }
-  return { events, inputHandler, context, handoff, escalate, stuck, gate, call, startSession };
+  function switchSession(current: string | undefined): void {
+    sessionSwitch?.({}, {
+      ...context,
+      models: {
+        resolve: (role: string) => ({ provider: "p", id: role }),
+        current: () => (current === undefined ? undefined : { provider: "p", id: current }),
+      },
+    } as unknown as ExtensionContext);
+  }
+  return { events, inputHandler, easyCommand, context, handoff, escalate, stuck, gate, call, startSession, switchSession };
 }
 
 describe("session start tier", () => {
@@ -121,6 +144,16 @@ describe("session start tier", () => {
     state.startSession(undefined);
     await expect(state.escalate()).resolves.toEqual(text("already on the expert tier"));
   });
+  it("resets routing state when a new session starts or switches", async () => {
+    const state = setup();
+    await state.easyCommand?.("", state.context);
+    state.switchSession(EXPERT_MODEL_ROLE);
+    await expect(state.escalate()).resolves.toEqual(text("already on the expert tier"));
+    await expect(state.handoff()).resolves.toEqual(text(expect.stringContaining("Handing off")));
+
+    state.startSession(EXPERT_MODEL_ROLE);
+    await expect(state.escalate()).resolves.toEqual(text("already on the expert tier"));
+  });
 });
 
 describe("escalation", () => {
@@ -132,10 +165,66 @@ describe("escalation", () => {
     expect(isGateCommand("git status")).toBeFalse();
   });
 
+  it("strips only a boundary easy modifier and preserves prompt formatting", () => {
+    expect(stripEasyModifier("/eng-mode first line\n\n- second line /easy")).toBe("/eng-mode first line\n\n- second line");
+    expect(stripEasyModifier("/easy /eng-mode first line\n  second line")).toBe("/eng-mode first line\n  second line");
+    expect(stripEasyModifier("document /eng-mode and /easy")).toBeUndefined();
+    expect(stripEasyModifier("/eng-mode-help /easy")).toBeUndefined();
+    expect(stripEasyModifier("/eng-mode explain /easy here")).toBeUndefined();
+  });
+
   it("starts Eng Mode on the expert tier at low thinking", async () => {
     const state = setup();
     await expect(state.inputHandler?.({ text: "/eng-mode build the page" }, state.context)).resolves.toBeUndefined();
     expect(state.events).toEqual([`resolve:${EXPERT_MODEL_ROLE}`, "setModel", "thinking:low"]);
+  });
+
+  it("pins the session to the execution tier with the /easy modifier", async () => {
+    const state = setup();
+    await expect(state.inputHandler?.({ text: "/eng-mode build the page /easy" }, state.context)).resolves.toEqual({
+      text: "/eng-mode build the page",
+    });
+    expect(state.events).toEqual([`resolve:${CHEAP_MODEL_ROLE}`, "setModel", "thinking:medium"]);
+
+    state.events.length = 0;
+    await expect(state.inputHandler?.({ text: "/eng-mode continue" }, state.context)).resolves.toBeUndefined();
+    expect(state.events).toEqual([`resolve:${CHEAP_MODEL_ROLE}`, "setModel", "thinking:medium"]);
+    await expect(state.escalate()).resolves.toEqual(text("refused: this session is pinned to the execution tier by /easy"));
+  });
+
+  it("pins the session to the execution tier with the /easy command", async () => {
+    const state = setup();
+    await state.easyCommand?.(" build the page ", state.context);
+    expect(state.events).toEqual([
+      `resolve:${CHEAP_MODEL_ROLE}`,
+      "setModel",
+      "thinking:medium",
+      "prompt:/eng-mode build the page",
+    ]);
+
+    state.events.length = 0;
+    await state.easyCommand?.(" ", state.context);
+    expect(state.events).toEqual([
+      `resolve:${CHEAP_MODEL_ROLE}`,
+      "setModel",
+      "thinking:medium",
+      "notify:info:Easy mode selected for this session.",
+    ]);
+  });
+
+  it("does not pin the session when the easy role cannot be selected", async () => {
+    const state = setup({ activate: false });
+    await expect(state.inputHandler?.({ text: "/eng-mode build /easy" }, state.context)).resolves.toEqual({ handled: true });
+    state.events.length = 0;
+    await expect(state.escalate()).resolves.toEqual(text("already on the expert tier"));
+    expect(state.events).toEqual([]);
+  });
+
+  it("keeps an existing pin when reselecting the easy model fails", async () => {
+    const state = setup({ activate: [true, false] });
+    await state.easyCommand?.("", state.context);
+    await expect(state.inputHandler?.({ text: "/eng-mode retry /easy" }, state.context)).resolves.toEqual({ handled: true });
+    await expect(state.escalate()).resolves.toEqual(text("refused: this session is pinned to the execution tier by /easy"));
   });
 
   it("handles the prompt when the expert role is missing", async () => {
@@ -176,11 +265,11 @@ describe("escalation", () => {
     const result = await state.escalate();
     expect(result).toEqual(text(expect.stringContaining("Escalating")));
     expect(state.events).toEqual([
-      expect.stringMatching(/^compact:.*concurrency bug.*two failed bun test runs/s),
+      expect.stringMatching(/^compact:.*attempted fix.*bun test \.\/src\/x\.test\.ts.*FAIL expected true, received false/s),
       `resolve:${EXPERT_MODEL_ROLE}`,
       "setModel",
       "thinking:low",
-      expect.stringMatching(/^prompt:.*Reason: concurrency bug.*Evidence: two failed bun test runs/s),
+      expect.stringMatching(/^prompt:.*attempted fix.*bun test \.\/src\/x\.test\.ts.*FAIL expected true, received false/s),
     ]);
     state.events.length = 0;
     await expect(state.handoff()).resolves.toEqual(text(expect.stringContaining("refused")));
@@ -223,6 +312,19 @@ describe("escalation", () => {
     expect(state.events).not.toContainEqual(expect.stringContaining("prompt:"));
     state.events.length = 0;
     await expect(state.handoff()).resolves.not.toEqual(text("already on the execution tier"));
+  });
+
+  it("keeps escalation retryable when the expert model cannot be selected", async () => {
+    const state = setup({ activate: [true, false, true] });
+    await state.handoff();
+    state.stuck();
+    state.events.length = 0;
+    await expect(state.escalate()).resolves.toEqual(text(expect.stringContaining("Escalating")));
+    expect(state.events).not.toContainEqual(expect.stringMatching(/^prompt:.*expert tier/));
+
+    state.events.length = 0;
+    await expect(state.escalate()).resolves.toEqual(text(expect.stringContaining("Escalating")));
+    expect(state.events).toContainEqual(expect.stringMatching(/^prompt:.*expert tier/));
   });
 
   it("steers once after two consecutive gate failures on the cheap tier and resets on success", async () => {
@@ -282,6 +384,7 @@ describe("escalation", () => {
     for (let i = 0; i < 39; i++) floor.call("grep");
     await expect(floor.escalate()).resolves.toEqual(text(expect.stringContaining("refused")));
     floor.call("grep");
+    floor.gate(true, "bun test ./src/x.test.ts");
     await expect(floor.escalate()).resolves.toEqual(text(expect.stringContaining("Escalating")));
 
     const recovered = setup();
@@ -289,6 +392,22 @@ describe("escalation", () => {
     recovered.stuck();
     recovered.gate(false);
     await expect(recovered.escalate()).resolves.toEqual(text(expect.stringContaining("refused")));
+  });
+
+  it("refuses escalation evidence that does not quote a real failed attempt", async () => {
+    const fabricated = setup();
+    await fabricated.handoff();
+    fabricated.stuck();
+    await expect(fabricated.escalate("needs expert review to ship")).resolves.toEqual(
+      text("refused: evidence must quote the most recent failed command and one rendered failure line"),
+    );
+
+    const commandOnly = setup();
+    await commandOnly.handoff();
+    commandOnly.stuck();
+    await expect(commandOnly.escalate("bun test ./src/x.test.ts failed")).resolves.toEqual(
+      text("refused: evidence must quote the most recent failed command and one rendered failure line"),
+    );
   });
 
   it("does not steer for handoff on the cheap tier or after an escalation", async () => {

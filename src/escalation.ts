@@ -2,6 +2,16 @@ import type { CustomMessagePayload, ExtensionAPI, ExtensionContext, Model, ToolC
 
 export const CHEAP_MODEL_ROLE = "@eng_mode_easy";
 export const EXPERT_MODEL_ROLE = "@panel_fable";
+const ENG_MODE_PROMPT = /^\s*\/eng-mode(?=\s|$)/;
+const LEADING_EASY = /^\s*\/easy[ \t]+/;
+const TRAILING_EASY = /[ \t]+\/easy[ \t]*$/;
+
+export function stripEasyModifier(prompt: string): string | undefined {
+  const withoutLeadingEasy = prompt.replace(LEADING_EASY, "");
+  if (withoutLeadingEasy !== prompt) return ENG_MODE_PROMPT.test(withoutLeadingEasy) ? withoutLeadingEasy : undefined;
+  if (!ENG_MODE_PROMPT.test(prompt) || !TRAILING_EASY.test(prompt)) return undefined;
+  return prompt.replace(TRAILING_EASY, "");
+}
 
 export const ESCALATION_STEER_TYPE = "eng-mode-escalation-steer";
 export const ESCALATION_STEER_MESSAGE: CustomMessagePayload = {
@@ -30,7 +40,6 @@ const CRITERIA_SENTENCE = `one of: ${ESCALATION_CRITERIA.join("; ")}`;
 
 const GATE_FAILURE_THRESHOLD = 2;
 /**
- * Cheap-tier tool calls before `escalate` is allowed without a gate failure.
  * The Sol run that escalated too soon (romp-dac2c9) had made 17 calls, 3 of
  * them idle waits, with the focused tests green. Forty calls is more than a
  * read-edit-test cycle on every file a typical brief names.
@@ -52,7 +61,7 @@ export const EXPLORATION_STEER_MESSAGE: CustomMessagePayload = {
   attribution: "agent",
 };
 
-const EDIT_TOOLS = new Set(["edit", "write"]);
+const EDIT_TOOL: Record<string, true> = { edit: true, write: true };
 const GATE_COMMAND = /\b(bun test|bun run check|tsgo|pytest|cargo test|go test|npm test|vitest|jest)\b/;
 /** OMP's default `compaction.keepRecentTokens`; below it `compact()` has nothing to summarize and fails. */
 const COMPACTION_KEEP_RECENT_TOKENS = 20_000;
@@ -65,6 +74,7 @@ const HANDOFF_COMPACT_ABOVE_TOKENS = 80_000;
 const ABORT_POLL_MS = 25;
 
 type Tier = "cheap" | "expert";
+type RoutingPolicy = "dynamic" | "easy-pinned";
 
 /**
  * The session starts on the expert tier, may hand off to the cheap tier once,
@@ -76,13 +86,19 @@ type Tier = "cheap" | "expert";
  * after the attempt floor or two consecutive gate failures, never on the brief's
  * criteria alone.
  */
+interface FailedAttempt {
+  readonly command: string;
+  readonly errorExcerpt: string;
+}
 interface EscalationState {
   tier: Tier;
+  policy: RoutingPolicy;
   escalated: boolean;
   gateFailures: number;
   steered: boolean;
   expertCalls: number;
   cheapCalls: number;
+  failedAttempt: FailedAttempt | undefined;
   decided: boolean;
 }
 
@@ -107,6 +123,26 @@ function textResult(text: string): { content: Array<{ type: "text"; text: string
 /** Bash reports a non-zero exit through `details.exitCode`; the event's `isError` only covers thrown tools. */
 function bashFailed(result: ToolResultEvent): boolean {
   return result.isError || (typeof result.details?.exitCode === "number" && result.details.exitCode !== 0);
+}
+
+function failedAttempt(result: ToolResultEvent): FailedAttempt | undefined {
+  if (result.toolName !== "bash" || !bashFailed(result)) return undefined;
+  const command = result.input.command;
+  if (typeof command !== "string") return undefined;
+  const renderedLines = result.content
+    ?.filter((item) => item.type === "text")
+    .flatMap((item) => item.text.split("\n"))
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  const exitCode = result.details?.exitCode;
+  return {
+    command,
+    errorExcerpt: renderedLines?.at(-1) ?? `exit code ${typeof exitCode === "number" ? exitCode : "unknown"}`,
+  };
+}
+
+function evidenceMatchesAttempt(evidence: string, attempt: FailedAttempt): boolean {
+  return evidence.includes(attempt.command) && evidence.includes(attempt.errorExcerpt);
 }
 
 export function buildHandoffFocus(reason: string, evidence: string): string {
@@ -139,11 +175,10 @@ export function buildDelegationBrief(brief: string): string {
   return [
     "You are the execution tier. The expert tier planned this work and handed it to you.",
     `Brief: ${brief}`,
-    "Execute the brief from the handoff summary above and finish it: edit, run the gates, fix what fails. The criteria the expert tier weighed (scope, subsystems, concurrency, algorithm) are not reasons to hand the work back; the expert tier already weighed them when it handed off.",
-    `${ESCALATION_UNLOCK_SENTENCE}. Call it then only if you cannot name what the next attempt would learn that the last did not.`,
+    "Execute the brief from the handoff summary above and finish it: edit, run the gates, and fix what fails. Do not escalate for topic, scope, or a desire for expert review; the expert tier already weighed those before handoff.",
+    `${ESCALATION_UNLOCK_SENTENCE}. Even when unlocked, escalate only when a real attempt failed and you cannot name what the next attempt would learn. Evidence must quote the failed command and one rendered failure line.`,
   ].join("\n");
 }
-
 async function selectTier(
   pi: ExtensionAPI,
   context: Pick<ExtensionContext, "models" | "ui">,
@@ -176,8 +211,22 @@ function tierOf(models: ExtensionContext["models"], current: Model | undefined):
   return undefined;
 }
 
+function initialState(tier: Tier): EscalationState {
+  return {
+    tier,
+    policy: "dynamic",
+    escalated: false,
+    gateFailures: 0,
+    steered: false,
+    expertCalls: 0,
+    cheapCalls: 0,
+    failedAttempt: undefined,
+    decided: false,
+  };
+}
+
 export function registerEscalation(pi: ExtensionAPI): void {
-  const state: EscalationState = { tier: "expert", escalated: false, gateFailures: 0, steered: false, expertCalls: 0, cheapCalls: 0, decided: false };
+  let state = initialState("expert");
 
   for (const [type, label] of [
     [ESCALATION_STEER_TYPE, "Escalation check"],
@@ -186,19 +235,53 @@ export function registerEscalation(pi: ExtensionAPI): void {
     pi.registerMessageRenderer(type, (_message, _options, theme) => new pi.pi.Text(`${theme.fg("accent", "◆")} ${theme.fg("dim", label)}`, 0, 0));
   }
 
-  pi.on("session_start", (_event, context) => {
-    state.tier = tierOf(context.models, context.models.current?.()) ?? "expert";
-  });
+  const resetSessionState = (_event: unknown, context: ExtensionContext): void => {
+    state = initialState(tierOf(context.models, context.models.current?.()) ?? "expert");
+  };
+  pi.on("session_start", resetSessionState);
+  pi.on("session_switch", resetSessionState);
 
   pi.on("input", async (event, context) => {
-    if (state.tier !== "expert" || !event.text.includes("/eng-mode")) return;
+    const easyPrompt = stripEasyModifier(event.text);
+    if (easyPrompt !== undefined) {
+      if (!(await selectTier(pi, context, "cheap"))) return { handled: true };
+      state.policy = "easy-pinned";
+      state.tier = "cheap";
+      return { text: easyPrompt };
+    }
+    if (state.policy === "easy-pinned") {
+      if (!(await selectTier(pi, context, "cheap"))) return { handled: true };
+      return;
+    }
+    if (state.tier !== "expert" || !ENG_MODE_PROMPT.test(event.text)) return;
     if (!(await selectTier(pi, context, "expert"))) return { handled: true };
   });
 
+  if (pi.registerCommand && pi.setModel && pi.setThinkingLevel && pi.sendUserMessage) {
+    const sendUserMessage = pi.sendUserMessage.bind(pi);
+    pi.registerCommand("easy", {
+      description: "Pin this session to Eng Mode's GPT 5.6 Sol execution tier.",
+      async handler(args, context): Promise<void> {
+        if (!(await selectTier(pi, context, "cheap"))) return;
+        state.policy = "easy-pinned";
+        state.tier = "cheap";
+        const prompt = args.trim();
+        if (prompt.length === 0) {
+          context.ui.notify("Easy mode selected for this session.", "info");
+          return;
+        }
+        sendUserMessage(`/eng-mode ${prompt}`);
+      },
+    });
+  }
+
   pi.on("tool_result", (event) => {
     const result = event as ToolResultEvent;
+    if (state.policy === "easy-pinned") return;
     if (state.tier === "expert") return onExpertToolResult(result);
     if (result.toolName !== "escalate") state.cheapCalls += 1;
+    const attempt = failedAttempt(result);
+    if (attempt) state.failedAttempt = attempt;
     if (result.toolName !== "bash") return;
     const command = result.input.command;
     if (typeof command !== "string" || !isGateCommand(command)) return;
@@ -217,7 +300,7 @@ export function registerEscalation(pi: ExtensionAPI): void {
   function onExpertToolResult(result: ToolResultEvent): void {
     if (state.decided || state.escalated) return;
     const path = result.input.path;
-    if (EDIT_TOOLS.has(result.toolName) && !(typeof path === "string" && path.startsWith("xd://"))) {
+    if (EDIT_TOOL[result.toolName] && !(typeof path === "string" && path.startsWith("xd://"))) {
       state.decided = true;
       return;
     }
@@ -233,14 +316,18 @@ export function registerEscalation(pi: ExtensionAPI): void {
    * model whose provider cache already holds the transcript, so the next model's
    * first request carries only the summary and the kept tail.
    */
-  function scheduleSwitch(context: ToolContext, to: Tier, prompt: string, focus: string, compactAbove: number): void {
+  function scheduleSwitch(
+    context: ToolContext,
+    to: Tier,
+    prompt: string,
+    focus: string,
+    compactAbove: number,
+    onSelected?: () => void,
+  ): void {
     if (!context.models || !context.ui || !pi.sendUserMessage) throw new Error("Tier switching requires a session context.");
     const switchContext: SwitchContext = { ...context, models: context.models, ui: context.ui };
     const from = state.tier;
     state.tier = to;
-    state.gateFailures = 0;
-    state.steered = false;
-    state.cheapCalls = 0;
     const schedule = context.setTimeout ?? ((callback: () => unknown) => queueMicrotask(() => void callback()));
     schedule(async () => {
       const usage = switchContext.getContextUsage?.();
@@ -261,6 +348,11 @@ export function registerEscalation(pi: ExtensionAPI): void {
         state.tier = from;
         return;
       }
+      state.gateFailures = 0;
+      state.steered = false;
+      state.failedAttempt = undefined;
+      state.cheapCalls = 0;
+      onSelected?.();
       pi.sendUserMessage?.(prompt);
     }, 0);
   }
@@ -278,15 +370,16 @@ export function registerEscalation(pi: ExtensionAPI): void {
   pi.registerTool({
     name: "escalate",
     label: "Escalate",
-    description: `Hand this session to the expert model, which finishes the task. Compacts the conversation into a handoff first. ${ESCALATION_UNLOCK_SENTENCE}; a refused call changes nothing. Call it then when ${CRITERIA_SENTENCE}, and only if you can say what the next attempt would learn.`,
+    description: `Hand this session to the expert model, which finishes the task. Compacts the conversation into a handoff first. ${ESCALATION_UNLOCK_SENTENCE}; a refused call changes nothing. After it unlocks, call it only when a real command failed and you cannot name what the next attempt would learn.`,
     parameters: z.object({
-      reason: z.string().describe("Which criterion holds and why the cheap tier cannot finish this task."),
-      evidence: z.string().describe("What was tried and what failed: the exact file, command, error, or observation. The expert tier starts from this."),
+      reason: z.string().describe("Why the cheap tier is stuck after a real failed attempt."),
+      evidence: z.string().describe("The exact failed command and one rendered failure line. The expert tier starts from this evidence."),
     }),
     strict: true,
     loadMode: "essential",
     async execute(_toolCallId, input, _signal, _onUpdate, context) {
       if (state.tier === "expert") return textResult("already on the expert tier");
+      if (state.policy === "easy-pinned") return textResult("refused: this session is pinned to the execution tier by /easy");
       if (state.gateFailures < GATE_FAILURE_THRESHOLD && state.cheapCalls < CHEAP_ATTEMPT_FLOOR) {
         return textResult(
           `refused: not stuck yet (${state.cheapCalls} of ${CHEAP_ATTEMPT_FLOOR} tool calls, ${state.gateFailures} of ${GATE_FAILURE_THRESHOLD} consecutive gate failures). Keep executing the brief: edit, run the gates, fix what fails.`,
@@ -295,8 +388,19 @@ export function registerEscalation(pi: ExtensionAPI): void {
       if (!context) throw new Error("Tier switching requires a session context.");
       const reason = typeof input.reason === "string" ? input.reason : "";
       const evidence = typeof input.evidence === "string" ? input.evidence : "";
-      state.escalated = true;
-      scheduleSwitch(context, "expert", buildEscalationBrief(reason, evidence), buildHandoffFocus(reason, evidence), COMPACTION_KEEP_RECENT_TOKENS);
+      if (!state.failedAttempt || !evidenceMatchesAttempt(evidence, state.failedAttempt)) {
+        return textResult("refused: evidence must quote the most recent failed command and one rendered failure line");
+      }
+      scheduleSwitch(
+        context,
+        "expert",
+        buildEscalationBrief(reason, evidence),
+        buildHandoffFocus(reason, evidence),
+        COMPACTION_KEEP_RECENT_TOKENS,
+        () => {
+          state.escalated = true;
+        },
+      );
       return textResult("Escalating to the expert model. This turn ends; a fresh turn continues on the new model.");
     },
   });
