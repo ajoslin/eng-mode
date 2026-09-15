@@ -41,6 +41,8 @@ Where a loop recipe applies, invoke `loop` with `op: status` and confirm `{ "ava
 
 ## Feature map
 
+Read [features/README.md](features/README.md) first. Then drive each mapped feature:
+
 - [Loop lifecycle](features/loop-lifecycle.md)
 - [Durable goal objective](features/goal-objective.md)
 - [Repository contract gate](features/repository-contracts.md)
