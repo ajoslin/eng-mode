@@ -88,7 +88,7 @@ type RoutingPolicy = "dynamic" | "easy-pinned";
  */
 interface FailedAttempt {
   readonly command: string;
-  readonly errorExcerpt: string;
+  readonly errorLines: readonly [string, ...string[]];
 }
 interface EscalationState {
   tier: Tier;
@@ -135,14 +135,16 @@ function failedAttempt(result: ToolResultEvent): FailedAttempt | undefined {
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
   const exitCode = result.details?.exitCode;
-  return {
-    command,
-    errorExcerpt: renderedLines?.at(-1) ?? `exit code ${typeof exitCode === "number" ? exitCode : "unknown"}`,
-  };
+  const fallback = `exit code ${typeof exitCode === "number" ? exitCode : "unknown"}`;
+  if (!renderedLines || renderedLines.length === 0) return { command, errorLines: [fallback] };
+  const [firstLine, ...remainingLines] = renderedLines;
+  if (firstLine === undefined) return { command, errorLines: [fallback] };
+  return { command, errorLines: [firstLine, ...remainingLines] };
 }
 
 function evidenceMatchesAttempt(evidence: string, attempt: FailedAttempt): boolean {
-  return evidence.includes(attempt.command) && evidence.includes(attempt.errorExcerpt);
+  const evidenceLines = evidence.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+  return evidenceLines.includes(attempt.command) && attempt.errorLines.some((line) => evidenceLines.includes(line));
 }
 
 export function buildHandoffFocus(reason: string, evidence: string): string {
