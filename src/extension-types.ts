@@ -49,6 +49,7 @@ export interface BeforeAgentStartEvent {
 export interface ToolResultEvent {
   readonly toolName: string;
   readonly input: Record<string, unknown>;
+  readonly content?: ReadonlyArray<{ readonly type: "text"; readonly text: string } | { readonly type: "image" }>;
   readonly isError: boolean;
   readonly details?: { readonly exitCode?: number };
 }

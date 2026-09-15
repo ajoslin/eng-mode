@@ -47,3 +47,4 @@ Where a loop recipe applies, invoke `loop` with `op: status` and confirm `{ "ava
 - [Durable orchestration store](features/orchestration-store.md)
 - [Automatic expert lens](features/expert-lens.md)
 - [Model tier handoff and escalation](features/escalation.md)
+- [Easy session pin](features/easy-mode.md)
