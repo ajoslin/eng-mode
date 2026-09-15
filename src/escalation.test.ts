@@ -99,7 +99,9 @@ function setup(
     toolResultHandler?.({
       toolName: "bash",
       input: { command },
-      content: failed ? [{ type: "text", text: "FAIL expected true, received false" }] : [{ type: "text", text: "1 pass" }],
+      content: failed
+        ? [{ type: "text", text: "FAIL expected true, received false\n1 test failed\nRan 2 tests in 20ms" }]
+        : [{ type: "text", text: "1 pass" }],
       isError: false,
       details: { exitCode: failed ? 1 : 0 },
     });
@@ -410,6 +412,24 @@ describe("escalation", () => {
     );
   });
 
+  it("accepts any rendered failure line rather than only the output footer", async () => {
+    const state = setup();
+    await state.handoff();
+    state.stuck();
+    await expect(state.escalate("bun test ./src/x.test.ts\n1 test failed")).resolves.toEqual(
+      text(expect.stringContaining("Escalating")),
+    );
+  });
+
+
+  it("requires the command and failure as complete evidence lines", async () => {
+    const state = setup();
+    await state.handoff();
+    state.stuck();
+    await expect(state.escalate("bun test ./src/x.test.ts\n11 test failed")).resolves.toEqual(
+      text("refused: evidence must quote the most recent failed command and one rendered failure line"),
+    );
+  });
   it("does not steer for handoff on the cheap tier or after an escalation", async () => {
     const state = setup();
     await state.handoff();
