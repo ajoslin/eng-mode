@@ -1,6 +1,6 @@
 ---
 name: pr-cockpit
-description: PR workflow adapter using PR Cockpit for cached state, reviews, waits, and independent merges; GitHub CLI for PR creation and CI reruns; and Graphite for dependent stacks.
+description: PR workflow adapter using PR Cockpit for cached state, reviews, waits, and independent merges; GitHub CLI for PR creation and CI reruns; and gh stack for dependent stacks.
 ---
 
 # PR Cockpit forge adapter
@@ -21,9 +21,9 @@ Before the first forge operation in a session, confirm the command exists with `
 | Branch update, metadata changes, and independent merge | PR Cockpit |
 | Create an independent PR | GitHub CLI |
 | Rerun GitHub Actions | GitHub CLI |
-| Create, submit, restack, and land dependent stacks | Graphite |
+| Create, submit, restack, and land dependent stacks | gh-stack |
 
-This is explicit composition inside one selected provider. It is not permission to substitute tools. Use `gh` and `gt` only for the operations assigned to them below. Return to PR Cockpit for observation after every GitHub or Graphite mutation.
+This is explicit composition inside one selected provider. It is not permission to substitute tools. Use `gh` and `gh stack` only for the operations assigned to them below. Return to PR Cockpit for observation after every GitHub or `gh stack` mutation.
 
 ## Delivery interface
 
@@ -40,9 +40,9 @@ After `listen` returns, re-read full JSON and classify the event. Watcher exit a
 
 For independent merge-when-ready, Shipping requests GitHub auto-merge with `pr-cockpit auto-merge REF enable`. Confirm arming only when a fresh JSON snapshot still names the requested head and reports GitHub auto-merge active. Disarm with `pr-cockpit auto-merge REF disable` and confirm it absent at the same head. `cockpit-auto-merge` is separate local automation, not this merge-when-ready operation. Command success or stale cached state is not confirmation.
 
-For dependent stacks, one named stack owner is the topology owner. Only that owner runs Graphite's documented topology, append, merge-when-ready, or disarm operations. Freeze order through Graphite, then observe every affected PR through Cockpit. Confirm Graphite arming only when fresh Cockpit JSON at each recorded head reports the request active. Confirm disarming reports it absent. After each `ADVANCE`, compare the next PR's current head/base with its frozen snapshot before rearming `listen`.
+For dependent stacks, one named stack owner is the topology owner. Only that owner runs `gh-stack` topology, append, merge, or disarm operations. Freeze order through `gh stack view --json`, then observe every affected PR through Cockpit. Confirm stacked landing only when fresh Cockpit JSON at each recorded head reports merged or queued. After each `ADVANCE`, compare the next PR's current head/base with its frozen snapshot before rearming `listen`.
 
-If this skill or `graphite` does not document a required operation, stop. A failed or unsupported operation never authorizes another provider or an improvised command.
+If this skill or `gh-stack` does not document a required operation, stop. A failed or unsupported operation never authorizes another provider or an improvised command.
 
 ## Read
 
@@ -150,25 +150,25 @@ These are not a repository-wide merge queue and do not model dependent-stack ord
 
 ## Dependent stacks
 
-Graphite exclusively owns dependent-stack topology: parentage, creation, submission, restacking, and ordered landing. Read the `graphite` skill before using `gt`. Workers never run `gt`. One stack owner serializes topology changes.
+`gh stack` exclusively owns dependent-stack topology: parentage, creation, submission, restacking, and ordered landing. Read the `gh-stack` skill before using `gh stack`. Workers never run `gh stack`. One stack owner serializes topology changes.
 
 Always use non-interactive commands. Typical operations include:
 
 ```sh
-gt --no-interactive log short --stack --reverse
-gt --no-interactive info BRANCH
-gt track -p PARENT
-gt --no-interactive create BRANCH
-gt submit --no-interactive
-gt submit --merge-when-ready --always --update-only --no-interactive
+gh stack view --json
+gh stack init BRANCH
+gh stack add BRANCH
+gh stack submit --auto
+gh stack rebase
+gh stack merge PR --yes
 ```
 
-Do not emulate a stack with unrelated `gh pr create --base` calls. Do not use GitHub auto-merge on dependent PRs when it can merge a child before its parent. After every Graphite mutation, read affected PR state through PR Cockpit.
+Do not emulate a stack with unrelated `gh pr create --base` calls. Do not use GitHub auto-merge on dependent PRs when it can merge a child before its parent. After every `gh stack` mutation, read affected PR state through PR Cockpit.
 
 ## Failure rules
 
 - Unknown PR Cockpit commands or invalid options exit `2`. Runtime or mutation failures exit `1`. Treat either as failure.
 - A failed PR Cockpit read does not authorize a `gh` read fallback.
 - A failed GitHub PR creation or CI rerun does not authorize another creation or rerun path.
-- A failed Graphite operation does not authorize manual stack emulation.
+- A failed `gh stack` operation does not authorize manual stack emulation.
 - Never mix another forge provider into the operation routing defined here.

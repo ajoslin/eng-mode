@@ -35,7 +35,7 @@ There is no separate lint command.
 
 The product verification contract is `verify-project`. Use it for user-visible OMP extension behavior; unit tests alone do not prove that OMP can load and drive the tool.
 
-Before handoff, run `unslop`, then `no-comments`, then `bun run check`. Use `interrogate` for cross-cutting runtime or lifecycle changes. GitHub work uses `better-github-skill`; stacked delivery uses `graphite`.
+Before handoff, run `unslop`, then `no-comments`, then `bun run check`. Use `interrogate` for cross-cutting runtime or lifecycle changes. GitHub work uses `better-github-skill`; stacked delivery uses `gh-stack`.
 
 ## Safety
 

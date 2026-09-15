@@ -64,7 +64,7 @@ describe("eng_orch executable entrypoint", () => {
     expect(result).toMatchObject({
       decision: "proceed",
       mode: "code-producing",
-      forgeProvider: "github-graphite",
+      forgeProvider: "github",
     });
   });
 
@@ -72,7 +72,7 @@ describe("eng_orch executable entrypoint", () => {
     const canonicalRepository = await root();
     await contract(canonicalRepository, "project-standards", "pr-cockpit");
     await contract(canonicalRepository, "verify-project");
-    await contract(canonicalRepository, "project-standards", "github-graphite", ".omp");
+    await contract(canonicalRepository, "project-standards", "github", ".omp");
     await contract(canonicalRepository, "verify-project", undefined, ".omp");
 
     const canonical = await executeEngOrch({ action: "contracts", repositoryRoot: canonicalRepository });

@@ -39,7 +39,7 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 ## 5. Project contracts
 
 1. Run `eng_orch contracts` and report the structured decision, per-contract source paths, and returned `forgeProvider` skill name.
-2. Validate existing `project-standards` and `verify-project` contracts from canonical `.agents/skills` or the backwards-compatible `.omp/skills` fallback. Never overwrite them. Unknown `forge-provider` values are blocking errors. Missing selection deliberately resolves to `github-graphite` for existing repositories.
+2. Validate existing `project-standards` and `verify-project` contracts from canonical `.agents/skills` or the backwards-compatible `.omp/skills` fallback. Never overwrite them. Unknown `forge-provider` values are blocking errors. Missing selection deliberately resolves to `github` for existing repositories.
 3. After explicit repository inspection, setup may create only an `UNCONFIGURED` sentinel (`SKILL.md` whose body is the single line `UNCONFIGURED`) under canonical `.agents/skills` for an absent contract, so the gap is explicit tool output rather than silence. It never infers a verification contract from package scripts. Real contract authoring routes through `create-verification-skill` and the repository owners.
 
 ## 6. Runtime validation

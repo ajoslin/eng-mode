@@ -89,7 +89,7 @@ describe("eng_orch contract frontmatter", () => {
     const repositoryRoot = await repository("\n");
     for (const metadata of [
       "name: project-standards\nname: other",
-      "name: project-standards\nforge-provider: pr-cockpit\nforge-provider: github-graphite",
+      "name: project-standards\nforge-provider: pr-cockpit\nforge-provider: github",
       "name: project-standards\nforge-provider: [pr-cockpit]",
       "name: [unterminated",
     ]) {

@@ -45,7 +45,7 @@ To update, run the install command again, restart OMP, and rerun `setup-eng-mode
 
 Eng Mode supplies the reusable workflow. Each repository owns:
 
-- `.agents/skills/project-standards/SKILL.md` — repository law and selected tooling; optional `forge-provider` frontmatter selects `github-graphite` or `pr-cockpit`, defaulting to `github-graphite` when absent;
+- `.agents/skills/project-standards/SKILL.md` — repository law and selected tooling; optional `forge-provider` frontmatter selects `github` or `pr-cockpit`, defaulting to `github` when absent;
 - `.agents/skills/verify-project/SKILL.md` — the real product-verification surface.
 
 Legacy repositories may keep these contracts under `.omp/skills`; new and migrated repositories use `.agents/skills`.

@@ -6,7 +6,7 @@ import { z } from "zod";
 export const contractNames = ["project-standards", "verify-project"] as const;
 export type ContractName = typeof contractNames[number];
 
-export type ForgeProviderName = "github-graphite" | "pr-cockpit";
+export type ForgeProviderName = "github" | "pr-cockpit";
 
 export type ContractParseStatus =
   | "ok"
@@ -81,10 +81,10 @@ export function decideRepositoryContracts(
   const contracts = [standards, verification];
   const configuredForgeProvider =
     standards.parse === "ok"
-      ? standards.forgeProvider ?? "github-graphite"
+      ? standards.forgeProvider ?? "github"
       : null;
   const forgeProvider: ForgeProviderName | null =
-    configuredForgeProvider === "github-graphite" ||
+    configuredForgeProvider === "github" ||
     configuredForgeProvider === "pr-cockpit"
       ? configuredForgeProvider
       : null;

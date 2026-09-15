@@ -23,7 +23,7 @@ A prompt containing `/eng-mode` starts the lead on the expert tier: `@panel_fabl
 
 Eng procedure is global. The repository owns standards, forge workflow selection, product verification, domain law, production restrictions, and specialized delivery behavior through two native project contracts:
 
-- `project-standards`. The index over repository law, commands, review agents, and repository-selected skills. Its `forge-provider` frontmatter selects the PR workflow adapter. Missing selection preserves `github-graphite` for existing repositories. An explicit provider never falls back.
+- `project-standards`. The index over repository law, commands, review agents, and repository-selected skills. Its `forge-provider` frontmatter selects the PR workflow adapter. Missing selection preserves `github` for existing repositories. An explicit provider never falls back.
 - `verify-project`. The product verification contract: launch, drive, evidence, health gate, and feature map for the project's real user surface.
 
 At Eng Mode entry, call the `eng_orch` tool's `contracts` action before repository mutation or behavioral claims, and obey its structured decision:

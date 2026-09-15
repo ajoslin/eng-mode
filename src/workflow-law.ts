@@ -21,7 +21,7 @@ const verificationSchema = z.object({
 }).strict();
 const stackReadySchema = z.object({ state: id, requiredEvidence: z.array(id).min(1), requiredMutation: id }).strict();
 const babysitSchema = z.object({ actor: id, forbiddenMutations: z.array(id), forbiddenCapabilities: z.array(id) }).strict();
-const capabilityOwnerSchema = z.enum(["provider", "external-skill", "graphite"]);
+const capabilityOwnerSchema = z.enum(["provider", "external-skill", "gh-stack"]);
 const capabilitySchema = z.object({
   id,
   owner: capabilityOwnerSchema,

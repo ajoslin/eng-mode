@@ -18,15 +18,15 @@ sourceRefs:
   - id: orchestrate
     path: skills/eng-mode/playbooks/orchestrate.md
     heading: Orchestrate
-  - id: github-graphite
-    path: skills/github-graphite/SKILL.md
-    heading: GitHub and Graphite
+  - id: github
+    path: skills/github/SKILL.md
+    heading: GitHub
   - id: pr-cockpit
     path: skills/pr-cockpit/SKILL.md
     heading: PR Cockpit forge adapter
-  - id: graphite
-    path: skills/graphite/SKILL.md
-    heading: Graphite
+  - id: gh-stack
+    path: skills/gh-stack/SKILL.md
+    heading: gh-stack
 actors:
   - id: operator
   - id: lead
@@ -121,8 +121,8 @@ babysit:
     - force-push
     - restack
 providers:
-  - id: github-graphite
-    sourceRef: github-graphite
+  - id: github
+    sourceRef: github
     capabilities:
       - id: snapshot
         owner: external-skill
@@ -143,16 +143,16 @@ providers:
         owner: provider
         confirmationEvidence: [provider-snapshot]
       - id: arm-confirmation
-        owner: graphite
+        owner: gh-stack
         confirmationEvidence: [provider-arm-confirmation]
       - id: topology
-        owner: graphite
+        owner: gh-stack
         confirmationEvidence: [topology-append-receipt]
       - id: merge-when-ready-request
-        owner: graphite
+        owner: gh-stack
         confirmationEvidence: [provider-arm-confirmation]
       - id: disarm
-        owner: graphite
+        owner: gh-stack
         confirmationEvidence: [provider-snapshot]
       - id: compare-head-base
         owner: external-skill
@@ -176,23 +176,23 @@ providers:
         owner: provider
         confirmationEvidence: [provider-snapshot]
       - id: arm-confirmation
-        owner: graphite
+        owner: gh-stack
         confirmationEvidence: [provider-arm-confirmation]
       - id: topology
-        owner: graphite
+        owner: gh-stack
         confirmationEvidence: [topology-append-receipt]
       - id: merge-when-ready-request
-        owner: graphite
+        owner: gh-stack
         confirmationEvidence: [provider-arm-confirmation]
       - id: disarm
-        owner: graphite
+        owner: gh-stack
         confirmationEvidence: [provider-snapshot]
       - id: compare-head-base
         owner: provider
         confirmationEvidence: [head-sha, base-sha]
     requirements: [snapshot, watch, rearm, frozen-queue, arm-confirmation, topology, merge-when-ready-request, disarm, compare-head-base]
 references:
-  skills: [eng-mode, github-graphite, pr-cockpit, graphite, better-github-skill]
+  skills: [eng-mode, github, pr-cockpit, gh-stack, better-github-skill]
   agents: [implementation-agent, judgment-agent]
   playbooks: [babysit, shipping, autopilot-full, autopilot-stack, orchestrate]
   tools: [goal, loop, eng_orch]

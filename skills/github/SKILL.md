@@ -1,11 +1,11 @@
 ---
-name: github-graphite
-description: GitHub and Graphite forge adapter for PR reads, waits, creation, review, merges, CI reruns, and dependent stacks.
+name: github
+description: GitHub forge adapter for PR reads, waits, creation, review, merges, CI reruns, and dependent stacks via gh stack.
 ---
 
-# GitHub and Graphite
+# GitHub
 
-Use `better-github-skill` for GitHub operations and `graphite` for dependent-stack topology and landing. Do not mix another forge provider into an operation.
+Use `better-github-skill` for GitHub operations and `gh-stack` for dependent-stack topology and landing. Do not mix another forge provider into an operation.
 
 ## Delivery interface
 
@@ -22,7 +22,7 @@ Arm `gh pr checks REF --watch --fail-fast` or `gh run watch RUN_ID`, record `WAI
 
 For an independent PR, Shipping may request merge-when-ready with `gh pr merge REF --auto`. Confirm arming only when a fresh `gh pr view REF --json headRefOid,baseRefName,autoMergeRequest` still names the requested head and reports a non-null request. Disarm with `gh pr merge REF --disable-auto`, then confirm the same field is null at the same head. A command success or stale snapshot is not confirmation.
 
-For a dependent stack, the single stacker named for that stack owns every topology read and mutation. The stacker uses the operations in `graphite`. Nobody else appends, tracks, submits, syncs, restacks, requests merge-when-ready, or disarms it.
+For a dependent stack, the single stacker named for that stack owns every topology read and mutation. The stacker uses the operations in `gh-stack`. Nobody else appends, submits, syncs, rebases, or merges it.
 
 If this skill or either routed skill does not document a required operation, stop. A failed or unsupported operation never authorizes another provider or an improvised command.
 
@@ -32,9 +32,9 @@ If this skill or either routed skill does not document a required operation, sto
 - **Wait:** `gh pr checks REF --watch --fail-fast` or `gh run watch RUN_ID`. Use native goal mode only when the request requires continued watching across runs.
 - **Open:** native `github` `pr_create`, after the Opening a PR gates.
 - **Review:** use the review and thread commands documented by `better-github-skill`. Pass every comment or review body through a file payload, never shell-interpolated text.
-- **Merge:** `gh pr merge REF` for an independent PR. Stacked PRs use Graphite landing instead.
+- **Merge:** `gh pr merge REF` for an independent PR. Stacked PRs use `gh stack merge`.
 - **Rerun CI:** after the active playbook permits a retry, run `gh run rerun RUN_ID --failed`, then `gh run watch RUN_ID`.
 
 ## Dependent stacks
 
-Read `graphite` and follow its commands exactly. Graphite owns parentage, submit, restack, and stacked landing. GitHub continues to own PR state, checks, and review conversations.
+Read `gh-stack` and follow its commands exactly. `gh stack` owns parentage, submit, rebase, and stacked landing. GitHub continues to own PR state, checks, and review conversations.
