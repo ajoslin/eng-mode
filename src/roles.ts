@@ -20,7 +20,7 @@ export const genericRoleSources = {
 
 export const easyRoleName = "eng_mode_easy";
 
-export const panelRoleNames = ["panel_opus", "panel_sol", "panel_fable", "panel_grok"] as const;
+export const panelRoleNames = ["panel_opus", "panel_sol", "panel_fable", "panel_deepseek"] as const;
 export type PanelRoleName = (typeof panelRoleNames)[number];
 
 export const retiredRoleNames = ["boja_fast", "boja_code", "boja_judgment", "boja_adversary"] as const;

@@ -35,7 +35,7 @@ Use the repository or session's configured `interrogate reviewers` list of proje
 | `panel-opus` | Anthropic Opus |
 | `panel-sol` | OpenAI Sol |
 | `panel-fable` | Anthropic Fable |
-| `panel-grok` | xAI Grok |
+| `panel-deepseek` | DeepSeek V4 Pro |
 
 Before the batch, resolve every configured seat. If its configured model or role is unavailable, recover it through the runtime resolver. Choose the closest available equivalent, preferring the same family and highest reasoning tier, record the substitution, and then dispatch. Treat resolver-owned `auto` or parent-inheritance as valid, not broken configuration. If no equivalent resolves, drop that seat and report it. Do not block the review or silently duplicate another seat.
 

@@ -1,8 +1,8 @@
 ---
-name: panel-grok
-description: Eng interrogate panel seat. Grok. Read-only review only.
+name: panel-deepseek
+description: Eng interrogate panel seat. DeepSeek. Read-only review only.
 model:
-  - "@panel_grok"
+  - "@panel_deepseek"
   - "@adversary"
   - "@review"
 tools: [read, grep, glob, lsp]

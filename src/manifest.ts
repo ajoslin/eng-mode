@@ -68,7 +68,7 @@ export const agentNames = [
   "panel-opus",
   "panel-sol",
   "panel-fable",
-  "panel-grok",
+  "panel-deepseek",
 ] as const;
 
 export type SkillName = (typeof skillNames)[number];
@@ -105,7 +105,7 @@ export const agentModelChains: Readonly<Record<AgentName, readonly string[]>> = 
   "panel-opus": ["@panel_opus", "@adversary", "@review"],
   "panel-sol": ["@panel_sol", "@adversary", "@review"],
   "panel-fable": ["@panel_fable", "@adversary", "@review"],
-  "panel-grok": ["@panel_grok", "@adversary", "@review"],
+  "panel-deepseek": ["@panel_deepseek", "@adversary", "@review"],
 };
 
 export const playbookNames = [
