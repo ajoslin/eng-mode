@@ -10,7 +10,7 @@ Launch OMP with the local Eng Mode extension. Use this checkout for the configur
 
 ## Driving it with OMP TUI
 
-1. Invoke `eng_orch` with `action: contracts`, `repositoryRoot` set to this checkout, and `mode: code-producing`. Confirm `decision: "proceed"`, both contracts report `parse: "ok"`, and `forgeProvider` names the configured provider.
+1. Invoke `eng_orch` with `action: contracts`, `repositoryRoot` set to this checkout, and `mode: code-producing`. Confirm `decision: "proceed"`, both contracts report `parse: "ok"`, and `forgeProvider` is `"github"`. This checkout declares no `forge-provider` in `project-standards`, so that value is the default applied to any valid standards contract, not declared metadata.
 2. For missing-contract cases, use an empty fixture root. In `code-producing` mode, confirm missing `project-standards` returns `blocked-standards`. In `read-only` mode, confirm it returns `standards-unavailable-read-only`.
 3. For malformed standards, create `.agents/skills/project-standards/SKILL.md` in a fresh fixture root with content that has no YAML frontmatter. Invoke `contracts` in `code-producing` mode. Confirm `project-standards` reports `parse: "malformed"` and the decision is `blocked-standards`.
 4. For unconfigured standards, write only `UNCONFIGURED` to that canonical path in another fresh fixture. Confirm `parse: "unconfigured"` and `decision: "unconfigured"`.
@@ -20,3 +20,5 @@ Launch OMP with the local Eng Mode extension. Use this checkout for the configur
 ## Gotchas
 
 Never alter this checkout to create a failure case. Each call only reads its fixture. After capturing the structured results, delete only the temporary fixture roots and the disposable profile.
+
+Two parse states have no fixture in this recipe: `unreadable` (the file exists but cannot be read) and `wrong-name` (valid frontmatter whose `name` is not the contract name). Either state on `project-standards` decides `blocked-standards` in both modes; on `verify-project` it decides `inconclusive-verification`. When the canonical `.agents/skills/<name>/SKILL.md` is absent, the observer falls back to `.omp/skills/<name>/SKILL.md`; a result whose `expectedPath` is under `.omp/skills` came from that fallback. Both files absent reports the canonical path with `parse: "missing"`.
