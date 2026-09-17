@@ -17,4 +17,4 @@ Launch OMP with the local Eng Mode extension. The disposable profile must resolv
 
 ## Gotchas
 
-The classifier defaults to ordinary when `@tiny` is unavailable, credentials are missing, the classifier errors, or its output is not exactly `expert`. Such a run does not verify expert injection. A missing `Expert lens` on the first turn usually means the key was not exported, not a product regression. Without the no-tools clause, the agent may open an `ask` dialog that holds the composer until dismissed. Stop the managed process and remove the disposable profile after capturing both turns.
+The classifier defaults to ordinary when `@tiny` is unavailable, credentials are missing, the classifier errors or exceeds its 5-second deadline, or its trimmed, lowercased output is not `expert`. Such a run does not verify expert injection. A missing `Expert lens` on the first turn usually means the key was not exported, not a product regression. Without the no-tools clause, the agent may open an `ask` dialog that holds the composer until dismissed. Stop the managed process and remove the disposable profile after capturing both turns.
