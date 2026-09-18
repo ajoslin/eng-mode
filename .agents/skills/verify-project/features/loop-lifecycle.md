@@ -10,8 +10,8 @@ Launch OMP with the local Eng Mode extension. Instruct the agent to invoke `loop
 
 ## Driving it with OMP TUI
 
-1. Start the loop and capture the rendered running state.
-2. Count the initial response and two bounded continuations. Capture three `LOOP_TICK` responses in total, followed by `Loop limit reached. Loop mode disabled.`. That notice is a transient status-bar line, not a transcript message; capture the terminal output when it appears.
+1. Start the loop and capture the rendered running state. While the loop is active the status bar shows `↻ Loop running <done>/<limit>`.
+2. Count the initial response and two bounded continuations. Capture three `LOOP_TICK` responses in total, followed by `Loop limit reached. Loop mode disabled.`. That notice is a transient status-bar line, not a transcript message; capture the terminal output when it appears. The session JSONL shows the continuations as repeated `Reply exactly LOOP_TICK` user turns.
 3. Invoke `loop` with `op: status`. Confirm the rendered result is `{ "available": true, "enabled": false }`.
 4. In one agent turn, start another bounded loop and invoke `pause` immediately before yielding control. Confirm `state: "paused"` and `prompt: null`.
 5. Invoke `resume` with a replacement prompt. Confirm `state: "running"` and the replacement prompt.

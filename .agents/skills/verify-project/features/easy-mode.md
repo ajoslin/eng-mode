@@ -17,4 +17,4 @@ Launch OMP with the local Eng Mode extension. The disposable profile must resolv
 
 ## Gotchas
 
-The modifier applies only when the prompt contains `/eng-mode` and `/easy` stands alone as a word. `/easy-mode` and prompts without `/eng-mode` are unchanged. A missing or unavailable role renders an error and does not pin the session. Relaunch before recipes that require the expert-tier launch model.
+The modifier applies only when the prompt contains `/eng-mode` and `/easy` stands alone as a word. `/easy-mode` and prompts without `/eng-mode` are unchanged. A missing or unavailable role renders an error and does not pin the session. A pinned session is already on the execution tier, so `handoff` there returns `already on the execution tier`. Relaunch before recipes that require the expert-tier launch model.
