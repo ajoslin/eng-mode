@@ -37,7 +37,7 @@ Restart OMP. Then open every repository where you use Eng Mode and run:
 setup-eng-mode
 ```
 
-**Run `setup-eng-mode` in every repository.** It checks the plugin, model roles, agent chains, worktree isolation, and that repository's standards and verification contracts.
+**Run `setup-eng-mode` in every repository.** It checks the plugin, model roles, agent chains, worktree isolation, and that repository's standards and verification contracts. It also installs and enables the companion [`compact-adviser`](https://github.com/kunchenguid/compact-adviser) plugin in `auto` mode when a `TYPESAFE_API_KEY` is available, and leaves it disabled otherwise (`bun run compact-adviser` from this checkout does the same gate on its own).
 
 To update, run the install command again, restart OMP, and rerun `setup-eng-mode` in each repository.
 

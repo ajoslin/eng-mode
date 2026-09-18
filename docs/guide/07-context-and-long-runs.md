@@ -2,7 +2,7 @@
 
 Context is a working set, not an archive.
 
-- Compaction compresses an oversized conversation.
+- Compaction compresses an oversized conversation. `compact-adviser` (installed by `setup-eng-mode` when a TypeSafe key exists, mode `auto`) compacts at Jev-judged checkpoints; `/compact-adviser status` shows the key source and cooldown, `/compact-adviser hint` or `off` overrides the default.
 - Checkpoint/rewind branches exploration; only conversation context rewinds, not files or processes.
 - `artifact://` and `local://` hold large reports, matrices, and payloads behind stable references.
 - Subagent handoffs return findings, evidence, decisions, and blockers—not transcripts.

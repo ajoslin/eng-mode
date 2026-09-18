@@ -12,5 +12,6 @@
 - **Context grows:** checkpoint, artifact matrices, delegate bulk reading, rewind with one evidence report.
 - **Loop does not continue:** inspect `loop` status. Resume a paused loop with its prompt, or start a stopped loop with a new limit.
 - **Learning project ambiguous:** configure exact team/project ID or key/name. `capture-learning` refuses ambiguity and searches before creation.
+- **`/compact-adviser` missing or `Key: missing`:** set `TYPESAFE_API_KEY` (env or a `.env` OMP loads), then rerun `bun --cwd "$HOME/dev/eng-mode" run compact-adviser` and restart. Without a key setup leaves the plugin disabled on purpose.
 
 For cross-session work, preserve goal, fixed point, evidence, risks, and next action.
