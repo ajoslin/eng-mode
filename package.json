@@ -24,6 +24,8 @@
     "sync-skills": "bun src/sync-skills.ts sync",
     "sync-skills:check": "bun src/sync-skills.ts check",
     "compact-adviser": "bun src/compact-adviser.ts",
+    "jev-sift": "bun src/jev-sift.ts",
+    "jev-sift:eval": "bun src/jev-sift-eval.ts",
     "test": "bun test ./src",
     "typecheck": "bunx tsgo -p tsconfig.json",
     "check": "bun run workflow-law:check && bun run test && bun run typecheck"
