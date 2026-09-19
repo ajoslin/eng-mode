@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it } from "bun:test";
+import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { decide, observeKeySource, removeMcpConfig, setup, upsertMcpConfig, type Paths } from "./jev-sift.ts";
+import { artifactMatches, decide, observeKeySource, removeMcpConfig, setup, upsertMcpConfig, type Paths } from "./jev-sift.ts";
 
 const roots: string[] = [];
 
@@ -67,11 +68,54 @@ describe("jev-sift key gate", () => {
         const file = join(directory, ".env");
         await writeFile(file, `${name}_OLD=ignored\nOTHER=${name}\n${name}=\n`);
         expect(observeKeySource(p, {})).toBe("missing");
-        await writeFile(file, `${name}=\ndeclare -x ${name}="test-dotenv"\n`);
+        await writeFile(file, `${name}=\nexport ${name}="test-dotenv"\n`);
         expect(observeKeySource(p, {})).toBe(".env");
         await rm(file);
       }
     }
+  });
+
+  it("does not fall back to the default keyfile when a custom file is missing or blank", async () => {
+    const p = await paths();
+    const directory = join(p.home, ".config", "jev-sift");
+    await mkdir(directory, { recursive: true });
+    await writeFile(join(directory, "api-key"), "default-test-key");
+    const custom = join(p.home, "custom-key");
+    await writeFile(join(directory, "config.json"), JSON.stringify({ apiKeyFile: custom }));
+    expect(observeKeySource(p, {})).toBe("missing");
+    await writeFile(custom, " \n");
+    expect(observeKeySource(p, {})).toBe("missing");
+    await writeFile(custom, "custom-test-key");
+    expect(observeKeySource(p, {})).toBe("keyfile");
+  });
+
+  it("reads a custom config and its environment key, including OMP dotenv", async () => {
+    const p = await paths();
+    const config = join(p.home, "custom-config.json");
+    await writeFile(config, JSON.stringify({ apiKeyEnv: "CUSTOM_JEV_KEY" }));
+    expect(observeKeySource(p, { JEV_SIFT_CONFIG: config, CUSTOM_JEV_KEY: "test-custom" })).toBe("env");
+    expect(observeKeySource(p, { JEV_SIFT_CONFIG: config, TYPESAFE_API_KEY: "test-fallback" })).toBe("env");
+    await writeFile(join(p.cwd, ".env"), "export CUSTOM_JEV_KEY=test-dotenv\n");
+    expect(observeKeySource(p, { JEV_SIFT_CONFIG: config })).toBe(".env");
+  });
+
+  it("rejects declare-only dotenv without rejecting an OMP-compatible assignment", async () => {
+    const p = await paths();
+    const file = join(p.cwd, ".env");
+    await writeFile(file, "declare -x JEV_API_KEY=test-jev\n declare -x TYPESAFE_API_KEY=test-typesafe\n");
+    expect(observeKeySource(p, {})).toBe("missing");
+    await writeFile(file, "export JEV_API_KEY=test-jev\ndeclare -x JEV_API_KEY=\n");
+    expect(observeKeySource(p, {})).toBe(".env");
+  });
+
+  it("does not expose invalid key configuration values in errors", async () => {
+    const p = await paths();
+    const config = join(p.home, "invalid-config.json");
+    await writeFile(config, '{"apiKeyEnv":"private-test-value"');
+    expect(() => observeKeySource(p, { JEV_SIFT_CONFIG: config })).toThrow("Invalid jev-sift key configuration");
+
+    const missing = join(p.home, "missing-config.json");
+    expect(() => observeKeySource(p, { JEV_SIFT_CONFIG: missing })).toThrow("Invalid jev-sift key configuration");
   });
 });
 
@@ -118,6 +162,20 @@ describe("jev-sift MCP config", () => {
 });
 
 describe("jev-sift local setup", () => {
+  it("fails closed on an existing lock and can proceed after its owner releases it", async () => {
+    const p = await paths();
+    const original = '{"mcpServers":{"jev-sift":{"command":"old"},"other":{"command":"keep"}}}';
+    await writeFile(p.mcpConfig, original);
+    await writeFile(`${p.mcpConfig}.lock`, "other-owner");
+    expect(() => setup(p, {})).toThrow();
+    expect(await readFile(p.mcpConfig, "utf8")).toBe(original);
+    expect(await readFile(`${p.mcpConfig}.lock`, "utf8")).toBe("other-owner");
+    await rm(`${p.mcpConfig}.lock`);
+    expect(setup(p, {})).toEqual(["unregister"]);
+    expect(JSON.parse(await readFile(p.mcpConfig, "utf8"))).toEqual({ mcpServers: { other: { command: "keep" } } });
+    await expect(readFile(`${p.mcpConfig}.lock`, "utf8")).rejects.toThrow();
+  });
+
   it("removes a keyless registration without installing or changing another server", async () => {
     const p = await paths();
     await writeFile(p.mcpConfig, '{"keep":true,"mcpServers":{"jev-sift":{"command":"old"},"other":{"command":"keep"}}}');
@@ -138,5 +196,38 @@ describe("jev-sift local setup", () => {
     await writeFile(p.mcpConfig, malformed);
     expect(() => setup(p, {})).toThrow();
     expect(await readFile(p.mcpConfig, "utf8")).toBe(malformed);
+  });
+});
+
+describe("jev-sift tracked artifact", () => {
+  it("reports a missing install root as not matching", async () => {
+    const p = await paths();
+    expect(artifactMatches(p.installRoot)).toBe(false);
+  });
+
+  it("reports an artifact without a checkout as not matching but rejects a malformed checkout", async () => {
+    const p = await paths();
+    await mkdir(join(p.installRoot, "dist"), { recursive: true });
+    await writeFile(join(p.installRoot, "dist", "server.mjs"), "export const server = true;\n");
+    expect(artifactMatches(p.installRoot)).toBe(false);
+    await mkdir(join(p.installRoot, ".git"));
+    expect(() => artifactMatches(p.installRoot)).toThrow("Unable to read or update the pinned jev-sift checkout");
+  });
+
+  it("rejects a modified or missing artifact even when the revision is unchanged", async () => {
+    const p = await paths();
+    await mkdir(join(p.installRoot, "dist"), { recursive: true });
+    const file = join(p.installRoot, "dist", "server.mjs");
+    await writeFile(file, "export const server = true;\n");
+    const git = (...args: string[]) => execFileSync("git", ["-C", p.installRoot, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+    git("init");
+    git("add", "dist/server.mjs");
+    git("-c", "user.name=Test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false", "commit", "-m", "fixture");
+    const revision = git("rev-parse", "HEAD");
+    expect(artifactMatches(p.installRoot, revision)).toBe(true);
+    await writeFile(file, "export const server = false;\n");
+    expect(artifactMatches(p.installRoot, revision)).toBe(false);
+    await rm(file);
+    expect(artifactMatches(p.installRoot, revision)).toBe(false);
   });
 });

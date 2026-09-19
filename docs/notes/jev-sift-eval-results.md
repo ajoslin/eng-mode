@@ -12,7 +12,7 @@ Token estimates use ceil(file characters/4). Saved tokens count downstream file 
 
 Provider input tokens for corpus: 24277. MCP smoke usage is excluded.
 
-Total evaluation wall-clock milliseconds: 2966.3. Includes corpus loading, live credential loading and MCP smoke when applicable, and all classifications; excludes report rendering and output.
+Total evaluation wall-clock milliseconds: 2932.1. Includes corpus loading, live credential loading and MCP smoke when applicable, and all classifications; excludes report rendering and output.
 
 MCP smoke: Passed initialize, tools/list, classify_status, and one live classify call.
 
@@ -22,7 +22,7 @@ Micro-aggregate over 24 query/file decisions, not an average of query percentage
 
 | Threshold | Precision | Recall | FP | FP rate | Misses | Miss rate | Cost of miss (tokens) | Retained/baseline tokens | Saved tokens | Classifier-output overhead (tokens) | Net estimated tokens saved | Savings |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0.3 | 56.3% | 100.0% | 7 | 46.7% | 0 | 0.0% | 0 | 14138/17908 | 3770 | 480 | 3290 | 21.1% |
+| 0.3 | 56.3% | 100.0% | 7 | 46.7% | 0 | 0.0% | 0 | 14169/17908 | 3739 | 480 | 3259 | 20.9% |
 | 0.5 | 81.8% | 100.0% | 2 | 13.3% | 0 | 0.0% | 0 | 11596/17908 | 6312 | 480 | 5832 | 35.2% |
 | 0.7 | 80.0% | 88.9% | 2 | 13.3% | 1 | 11.1% | 1072 | 10524/17908 | 7384 | 480 | 6904 | 41.2% |
 | 0.9 | 100.0% | 66.7% | 0 | 0.0% | 3 | 33.3% | 1939 | 6082/17908 | 11826 | 480 | 11346 | 66.0% |
@@ -52,9 +52,9 @@ Labels: Direct diagnosis and fix guidance is relevant; read-only explanation and
 | skills/diagnosing-bugs/SKILL.md | yes | 0.9700 | 2503 |
 | skills/eng-mode/playbooks/bug-fix.md | yes | 0.9600 | 705 |
 | skills/principle-fix-root-causes/SKILL.md | yes | 0.9400 | 321 |
-| skills/eng-mode/playbooks/investigation.md | no | 0.3200 | 232 |
-| skills/eng-mode/playbooks/prototype.md | no | 0.1500 | 634 |
-| package.json | no | 0.1900 | 297 |
+| skills/eng-mode/playbooks/investigation.md | no | 0.3100 | 232 |
+| skills/eng-mode/playbooks/prototype.md | no | 0.1400 | 634 |
+| package.json | no | 0.1800 | 297 |
 
 ## Prepare and land a PR
 
@@ -64,7 +64,7 @@ Labels: Readiness review and authorized landing are relevant; repairing a softwa
 
 | Threshold | Precision | Recall | FP | FP rate | Misses | Miss rate | Cost of miss (tokens) | Retained/baseline tokens | Saved tokens | Classifier-output overhead (tokens) | Net estimated tokens saved | Savings |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0.3 | 50.0% | 100.0% | 2 | 50.0% | 0 | 0.0% | 0 | 3656/4587 | 931 | 120 | 811 | 20.3% |
+| 0.3 | 66.7% | 100.0% | 1 | 25.0% | 0 | 0.0% | 0 | 2982/4587 | 1605 | 120 | 1485 | 35.0% |
 | 0.5 | 100.0% | 100.0% | 0 | 0.0% | 0 | 0.0% | 0 | 2277/4587 | 2310 | 120 | 2190 | 50.4% |
 | 0.7 | 100.0% | 50.0% | 0 | 0.0% | 1 | 50.0% | 1072 | 1205/4587 | 3382 | 120 | 3262 | 73.7% |
 | 0.9 | 100.0% | 50.0% | 0 | 0.0% | 1 | 50.0% | 1072 | 1205/4587 | 3382 | 120 | 3262 | 73.7% |
@@ -78,10 +78,10 @@ Labels: Readiness review and authorized landing are relevant; repairing a softwa
 
 | Repository path | Relevant label | Probability | Estimated tokens |
 | --- | --- | --- | --- |
-| skills/eng-mode/playbooks/shipping.md | yes | 0.9200 | 1205 |
-| skills/eng-mode/playbooks/babysit.md | yes | 0.6000 | 1072 |
+| skills/eng-mode/playbooks/shipping.md | yes | 0.9100 | 1205 |
+| skills/eng-mode/playbooks/babysit.md | yes | 0.6200 | 1072 |
 | skills/eng-mode/playbooks/bug-fix.md | no | 0.3800 | 705 |
-| skills/eng-mode/playbooks/refactoring.md | no | 0.3100 | 674 |
+| skills/eng-mode/playbooks/refactoring.md | no | 0.2900 | 674 |
 | skills/eng-mode/playbooks/prototype.md | no | 0.0600 | 634 |
 | package.json | no | 0.1700 | 297 |
 
@@ -108,11 +108,11 @@ Labels: Skill authoring and deciding how to encode recurring instructions are re
 | Repository path | Relevant label | Probability | Estimated tokens |
 | --- | --- | --- | --- |
 | skills/eng-mode/playbooks/authoring-a-skill.md | yes | 0.9300 | 674 |
-| skills/principle-encode-lessons-in-structure/SKILL.md | yes | 0.8800 | 565 |
-| skills/diagnosing-bugs/SKILL.md | no | 0.7200 | 2503 |
-| skills/eng-mode/playbooks/babysit.md | no | 0.7200 | 1072 |
-| skills/eng-mode/playbooks/prototype.md | no | 0.4700 | 634 |
-| package.json | no | 0.4300 | 297 |
+| skills/principle-encode-lessons-in-structure/SKILL.md | yes | 0.8700 | 565 |
+| skills/diagnosing-bugs/SKILL.md | no | 0.7100 | 2503 |
+| skills/eng-mode/playbooks/babysit.md | no | 0.7400 | 1072 |
+| skills/eng-mode/playbooks/prototype.md | no | 0.4300 | 634 |
+| package.json | no | 0.4400 | 297 |
 
 ## Migrate an internal API
 
@@ -122,7 +122,7 @@ Labels: Behavior-preserving refactoring and caller cutover guidance are relevant
 
 | Threshold | Precision | Recall | FP | FP rate | Misses | Miss rate | Cost of miss (tokens) | Retained/baseline tokens | Saved tokens | Classifier-output overhead (tokens) | Net estimated tokens saved | Savings |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0.3 | 100.0% | 100.0% | 0 | 0.0% | 0 | 0.0% | 0 | 976/2884 | 1908 | 120 | 1788 | 66.2% |
+| 0.3 | 66.7% | 100.0% | 1 | 25.0% | 0 | 0.0% | 0 | 1681/2884 | 1203 | 120 | 1083 | 41.7% |
 | 0.5 | 100.0% | 100.0% | 0 | 0.0% | 0 | 0.0% | 0 | 976/2884 | 1908 | 120 | 1788 | 66.2% |
 | 0.7 | 100.0% | 100.0% | 0 | 0.0% | 0 | 0.0% | 0 | 976/2884 | 1908 | 120 | 1788 | 66.2% |
 | 0.9 | 100.0% | 50.0% | 0 | 0.0% | 1 | 50.0% | 302 | 674/2884 | 2210 | 120 | 2090 | 76.6% |
@@ -138,7 +138,7 @@ Labels: Behavior-preserving refactoring and caller cutover guidance are relevant
 | --- | --- | --- | --- |
 | skills/eng-mode/playbooks/refactoring.md | yes | 0.9400 | 674 |
 | skills/principle-migrate-callers-then-delete-legacy-apis/SKILL.md | yes | 0.8300 | 302 |
-| skills/eng-mode/playbooks/bug-fix.md | no | 0.2900 | 705 |
-| skills/eng-mode/playbooks/authoring-a-skill.md | no | 0.1300 | 674 |
+| skills/eng-mode/playbooks/bug-fix.md | no | 0.3200 | 705 |
+| skills/eng-mode/playbooks/authoring-a-skill.md | no | 0.1200 | 674 |
 | skills/eng-mode/playbooks/investigation.md | no | 0.2900 | 232 |
-| package.json | no | 0.1000 | 297 |
+| package.json | no | 0.1100 | 297 |
