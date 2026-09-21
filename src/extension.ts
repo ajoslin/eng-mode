@@ -5,7 +5,6 @@ import {
   registerAutoMode,
 } from "./auto-mode.ts";
 import type { ExtensionAPI } from "./extension-types.ts";
-import { registerEscalation } from "./escalation.ts";
 import { registerEngOrchestration } from "./eng-orchestrator.ts";
 import { EXPERT_DECISION_GUIDANCE, EXPERT_DECISION_MESSAGE, registerExpertLens } from "./expert-lens.ts";
 import { registerGoalTool } from "./goal-tool.ts";
@@ -21,7 +20,6 @@ export { actionNames, executeEngOrch } from "./eng-orchestrator.ts";
 
 export default function engModeExtension(pi: OmpExtensionAPI & ExtensionAPI): void {
   registerExpertLens(pi);
-  registerEscalation(pi);
   registerAutoMode(pi, EXPERT_DECISION_GUIDANCE, EXPERT_DECISION_MESSAGE);
   registerGoalTool(pi);
   registerLoopTool(pi);

@@ -28,13 +28,7 @@ export interface ToolContext {
     params: Record<string, unknown>,
     options?: { signal?: AbortSignal; onUpdate?: unknown },
   ) => Promise<unknown>;
-  readonly compact?: (instructions: string) => Promise<void>;
-  readonly getContextUsage?: () => { tokens: number } | undefined;
-  readonly abort?: () => void;
-  readonly isIdle?: () => boolean;
-  readonly setTimeout?: (callback: () => unknown, ms?: number) => unknown;
-  readonly ui?: ExtensionContext["ui"];
-  readonly models?: ExtensionContext["models"];
+
 }
 
 export interface CustomMessagePayload {
@@ -46,31 +40,13 @@ export interface CustomMessagePayload {
 export interface BeforeAgentStartEvent {
   readonly prompt: string;
 }
-export interface ToolResultEvent {
-  readonly toolName: string;
-  readonly input: Record<string, unknown>;
-  readonly content?: ReadonlyArray<{ readonly type: "text"; readonly text: string } | { readonly type: "image" }>;
-  readonly isError: boolean;
-  readonly details?: { readonly exitCode?: number };
-}
-export interface InputEvent {
-  readonly text: string;
-}
-export interface InputEventResult {
-  readonly handled?: boolean;
-  readonly text?: string;
-}
 export type Model = Parameters<typeof completeSimple>[0];
 export interface ExtensionContext {
   readonly models: {
     resolve(spec: string): Model | undefined;
-    current?(): Model | undefined;
   };
   readonly modelRegistry: {
     getApiKey(model: Parameters<typeof completeSimple>[0]): Promise<string | undefined>;
-  };
-  readonly ui: {
-    notify(message: string, type?: "info" | "warning" | "error"): void;
   };
 }
 
@@ -94,24 +70,9 @@ export interface ExtensionAPI {
   readonly zod: SchemaBuilder;
   readonly pi: { readonly Text: TextComponentConstructor; readonly InteractiveMode?: unknown };
   registerTool(tool: ToolDefinition): void;
-  registerCommand?(
-    name: string,
-    options: {
-      readonly description?: string;
-      readonly handler: (args: string, context: ExtensionContext) => Promise<void>;
-    },
-  ): void;
   registerMessageRenderer(
     customType: string,
     renderer: (_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown,
   ): void;
-  sendUserMessage?(content: string): void;
-  sendMessage?(
-    message: CustomMessagePayload,
-    options?: { readonly deliverAs?: "steer" | "followUp" | "nextTurn"; readonly triggerTurn?: boolean },
-  ): void;
-  setModel?(model: Parameters<typeof completeSimple>[0]): Promise<boolean>;
-  setThinkingLevel?(level: "low" | "medium"): void;
-  on(event: "input", handler: (event: InputEvent, context: ExtensionContext) => Promise<InputEventResult | void> | InputEventResult | void): void;
   on(event: string, handler: (event: unknown, context: ExtensionContext) => unknown): void;
 }

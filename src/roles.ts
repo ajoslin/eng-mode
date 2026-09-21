@@ -18,8 +18,6 @@ export const genericRoleSources = {
   fast: "boja_fast",
 } as const;
 
-export const easyRoleName = "eng_mode_easy";
-
 export const panelRoleNames = ["panel_opus", "panel_sol", "panel_fable", "panel_deepseek"] as const;
 export type PanelRoleName = (typeof panelRoleNames)[number];
 
@@ -125,7 +123,6 @@ export function prepareRoles(input: PrepareRolesInput): PrepareRolesResult {
   for (const role of panelRoleNames) {
     stage(role, input.panelSelectors?.[role]);
   }
-  stage(easyRoleName, roles["panel_sol"] ?? input.panelSelectors?.panel_sol);
 
   if (conflicts.length > 0 || invalid.length > 0) {
     return {
@@ -267,7 +264,6 @@ export function applyRoleStageToFile(
 
 export const roles = {
   genericRoleSources,
-  easyRoleName,
   panelRoleNames,
   retiredRoleNames,
   preservedRoleNames,

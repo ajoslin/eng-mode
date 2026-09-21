@@ -7,9 +7,9 @@ description: Eng's default engineering operating system. Routes feature, bug, in
 
 Correctness first. Smallest coherent change. Prove the real behavior. OMP only. No Cursor.
 
-## Model tier
+## Model selection
 
-A prompt containing `/eng-mode` starts the lead on the expert tier: `@panel_fable` at low thinking. `/easy` or an `/eng-mode … /easy` modifier pins the whole session to `@eng_mode_easy` at medium thinking; the pin refuses escalation, so Fable never leads that session. In normal sessions, the `handoff` tool moves execution to `@eng_mode_easy` at medium thinking, which inherits the conversation (compacted into the brief only when large). The `escalate` tool moves it back, compacting first, and is terminal: `handoff` is refused afterwards. On the cheap tier `escalate` is refused until the session shows stuckness: two consecutive failing gate runs, or forty tool calls on that tier. Even then, evidence must quote a real failed command and one rendered failure line; topic, scope, or a desire for expert review never unlocks escalation. The extension asks for the routing decision when it is due: after thirty expert-tier tool calls without a `handoff` or an edit, and after two consecutive failing gate runs on the cheap tier. Answer each check in one sentence, then act on it. A silent continuation past a check is a routing defect.
+Eng Mode keeps the operator's selected model and thinking level. It does not switch the lead between model tiers or ask for routing decisions. Subagent definitions own their model routing.
 
 ## Start
 

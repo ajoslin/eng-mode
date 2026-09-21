@@ -13,15 +13,17 @@ Install dependencies with `bun install --frozen-lockfile`. Select a configured m
 omp --profile eng-mode-verification-<unique-suffix> --model <provider/model> --no-extensions -e "$PWD/src/extension.ts"
 ```
 
-The disposable profile must resolve the selected model, the `@tiny` classifier role, and `eng_mode_easy`. Copy the workstation `config.yml` and `models.yml` into the profile's `agent/` directory before launch. A disposable profile has no broker credentials. Export the `@tiny` provider's API key into the launch environment without recording the value. When `@tiny` is an OpenRouter model, use `OPENROUTER_API_KEY="$(omp token openrouter)"`. Readiness is the OMP composer accepting input. Stop only the managed process that this run started. Remove the disposable profile after evidence is captured.
+The disposable profile must resolve the selected model and the `@tiny` classifier role. Copy the workstation `config.yml` and `models.yml` into the profile's `agent/` directory before launch. A disposable profile has no broker credentials. Export the `@tiny` provider's API key into the launch environment without recording the value. When `@tiny` is an OpenRouter model, use `OPENROUTER_API_KEY="$(omp token openrouter)"`. Readiness is the OMP composer accepting input. Stop only the managed process that this run started. Remove the disposable profile after evidence is captured.
 
 ## Doctor
 
-Before driving the TUI, run `bun run check`. In the TUI, send `/tools` and confirm `escalate`, `handoff`, `loop`, `goal`, and `xd://eng_orch` are present. A load error, missing tool, or duplicate-tool warning fails the health gate; do not continue with behavioral claims.
+Before driving the TUI, run `bun run check`. In the TUI, send `/tools` and confirm `loop`, `goal`, and `xd://eng_orch` are present, with no Eng Mode `escalate` or `handoff` tools. A load error, missing required tool, or duplicate-tool warning fails the health gate; do not continue with behavioral claims.
 
 ## Drive
 
 Interact through the managed PTY, not internal function calls. Ask the agent to invoke one named tool with explicit arguments, then inspect the rendered result. Follow the recipe in each mapped feature file. `eng_orch` is an `xd://` device: the transcript shows it as a `write` to `xd://eng_orch` with the JSON arguments as content, and the tool result is the rendered JSON. Send each drive as one composer line; a multi-line paste stays in the composer without submitting.
+
+For model selection, launch with an explicit model and thinking level, then submit `/eng-mode Reply exactly MODEL_OK and stop.` Confirm the selected model and thinking level remain unchanged. Eng Mode must not register `/easy`, inject tier-routing prompts, or switch models after tool failures.
 
 ## Evidence
 
@@ -46,5 +48,3 @@ Where a loop recipe applies, invoke `loop` with `op: status` and confirm `{ "ava
 - [Repository contract gate](features/repository-contracts.md)
 - [Durable orchestration store](features/orchestration-store.md)
 - [Automatic expert lens](features/expert-lens.md)
-- [Model tier handoff and escalation](features/escalation.md)
-- [Easy session pin](features/easy-mode.md)
