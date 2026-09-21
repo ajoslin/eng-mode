@@ -11,7 +11,7 @@ The context window is finite and non-renewable within a session. Every token sho
 **Why:** Context overflow degrades reasoning quality, creates compression artifacts, and halts progress.
 
 **Two tools, one rule.** Exploration either leaves the lead's context or never enters it.
-- **`scout` when the answer is a report.** The lead does not need to see the raw material: mapping unknown code, parsing a transcript or trace, summarizing logs or a diff. Fan out, keep only the returned pointers and findings.
+- **`scout` when the answer is a report.** Delegate code mapping, trace analysis, or log and diff summaries when the lead does not need the raw material. Give the scout a question and required evidence; keep its findings and source pointers. One scout is enough for one investigation.
 - **`checkpoint`→`rewind` when the lead must see it.** The lead needs to read the actual lines to decide the next edit or judge a result, and the reads would otherwise stay in context forever. Open `checkpoint` before the first exploratory call; `rewind` with the findings. Never nest one inside another; never yield inside one.
 - Not both for the same question. A scout's report does not need a checkpoint around it; a checkpointed read does not need a scout.
 

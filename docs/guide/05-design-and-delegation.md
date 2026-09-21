@@ -1,6 +1,6 @@
 # Design, delegation, and OMP workflows
 
-Parallelism earns its cost only for independent slices, competing attempts, or explicit stage barriers.
+Use a worker when the lead needs the result and evidence, not the execution details. One worker can save lead context without parallelism. Keep trivial work inline and decisions with the lead. Split work only when ownership is independent; use `arena` for competing attempts.
 
 | Mechanism | Shape | Use |
 |---|---|---|

@@ -9,8 +9,8 @@
    - **Blocking first steps.** Finish gates before fan-out.
    - **Independent workstreams.** Parallelize disjoint files, subsystems, or layers whose merged union is intended.
    - **Shared mutable state.** Split the write target first. Serialize only when one shared writer is a real invariant.
-   - **Smallest safe decomposition.** Name the smallest coherent slices. If one worker is safest, state why.
-5. Give implementation to a typed agent with exact file and symbol scope, the canonical data shape and organizing structure, caller migrations, and observable success criteria. The lead reads the resulting diff against the brief and source before accepting it. Keep code-coupled work, such as one feature or migration, under one owner. That owner may fan out independent work only after the blocking gate. Parent-level fan-out is for independent artifacts, investigations, or experiments.
+   - **Smallest safe decomposition.** Keep coupled work under one worker. Split only for independent ownership.
+5. Give implementation to a typed agent using Eng Mode's brief requirements. The lead reviews the diff against the brief and source. The worker may delegate independent work after blocking gates pass. Parent-level fan-out is for independent artifacts, investigations, or experiments.
 6. Implement the smallest end-to-end slice. Apply the stack-specific and test-law skills that `project-standards` names. Migrate every caller and delete obsolete paths. Do not leave compatibility routes.
 7. Prove user-visible behavior on the actual surface through `verify-project` where mapped. Wrong-surface, failed-health-gate, unmapped-path, or shared-stack evidence is `INCONCLUSIVE`. Add a permanent test only for an uncovered observable contract.
 8. Build, verify, and commit each small unit before the next, following `principle-sequence-verifiable-units`. Revisit the throughput checkpoint at each phase boundary and assign a fresh owner rather than chaining interrupts across phases.
