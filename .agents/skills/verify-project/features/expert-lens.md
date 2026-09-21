@@ -12,7 +12,7 @@ Launch OMP with the local Eng Mode extension. The disposable profile must resolv
 
 1. Enter a prompt that requires a material choice among plausible alternatives and forbids tool use, such as `Choose the storage architecture for this service. Answer in two sentences without reading files or using tools.`
 2. Before the agent response, capture the rendered custom message labeled `Expert lens`.
-3. Treat the agent's stated trade-offs and challenge to its initial choice as supporting evidence only. The rendered contract proves the `Expert lens` label, not the hidden guidance text.
+3. Treat the agent's stated trade-offs and challenge to its initial choice as supporting evidence only. The rendered contract proves the `Expert lens` label, not the hidden guidance text. The session file records the injection as a `custom_message` entry with `customType: eng-mode-expert-decision-guidance`; its absence on a turn is the negative proof for step 4.
 4. In a fresh turn, enter the self-contained no-write request `Rewrite the supplied heading "SYSTEM SETTINGS" in sentence case. Reply with only the rewritten heading. Do not inspect or edit files.` Confirm that no `Expert lens` message renders for that turn.
 
 ## Gotchas
