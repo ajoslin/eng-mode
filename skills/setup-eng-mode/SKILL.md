@@ -12,6 +12,7 @@ Setup is a validator and orchestrator, never an installer of duplicate machinery
 1. Report the extension's own load state. Whether this session runs from a fresh `omp -e <path>` process-local load or a persistent plugin link, and whether the `omp-plugins` provider is enabled.
 2. Pin the exact expected absolute extension root. Provenance passes only when every shipped skill and agent resolves from that exact root, not merely from any Eng package.
 3. Verify tool discovery. The `eng_orch` tool is callable and one live `init` against a throwaway store succeeds.
+4. Run the companion-plugin gate: `bun --cwd "$HOME/dev/eng-mode" run compact-adviser`. It resolves `TYPESAFE_API_KEY` exactly as [compact-adviser](https://github.com/kunchenguid/compact-adviser) does (process env, key saved through `/compact-adviser`, then `.env` in the launch directory, agent directory, config root, and home). With a key it installs `npm:compact-adviser` into the `omp-plugins` set, enables it, and seeds `<agent>/compact-adviser.json` with mode `auto` once; without a key it disables the plugin and changes nothing else. Report the printed `Key:` source and the enabled state. Never enable the plugin without a key; the adviser has no fallback judge.
 
 ## 2. Shadows and collisions
 
