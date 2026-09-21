@@ -23,7 +23,7 @@ Before driving the TUI, run `bun run check`. In the TUI, send `/tools` and confi
 
 Interact through the managed PTY, not internal function calls. Ask the agent to invoke one named tool with explicit arguments, then inspect the rendered result. Follow the recipe in each mapped feature file. `eng_orch` is an `xd://` device: the transcript shows it as a `write` to `xd://eng_orch` with the JSON arguments as content, and the tool result is the rendered JSON. Send each drive as one composer line; a multi-line paste stays in the composer without submitting.
 
-For model selection, launch with an explicit model and thinking level, then submit `/eng-mode Reply exactly MODEL_OK and stop.` Confirm the selected model and thinking level remain unchanged. Eng Mode must not register `/easy`, inject tier-routing prompts, or switch models after tool failures.
+For model selection, launch with an explicit model and thinking level. In a fresh session submit `/easy Reply exactly MODEL_OK and stop.` Confirm the model switches to `eng_mode_easy` and thinking stays unchanged. In a separate fresh session submit an ordinary prompt, then a later prompt containing `/easy`; neither may switch models. Eng Mode must not inject tier-routing prompts or switch models after tool failures.
 
 ## Evidence
 

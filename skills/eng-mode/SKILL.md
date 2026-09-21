@@ -9,7 +9,7 @@ Correctness first. Smallest coherent change. Prove the real behavior. OMP only. 
 
 ## Model selection
 
-Eng Mode keeps the operator's selected model and thinking level. It does not switch the lead between model tiers or ask for routing decisions. Subagent definitions own their model routing.
+Eng Mode keeps the operator's selected model and thinking level unless the initial prompt contains `/easy`, which selects the configured `eng_mode_easy` role while preserving thinking level. Later prompts do not trigger this switch. Subagent definitions own their model routing.
 
 ## Start
 
