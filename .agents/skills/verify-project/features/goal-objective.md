@@ -20,4 +20,4 @@ Launch OMP with the local Eng Mode extension in a disposable profile. Ask the ag
 
 ## Gotchas
 
-The wrapper delegates to OMP's same-name native tool. The wrapper's own schema requires a create budget of at least `500000000`; the native tool accepts any positive integer. Goal state owns the objective and accounting, not repeated turns. Token counts after create grow with each turn. Always drop the disposable goal before removing the profile.
+The wrapper delegates to OMP's same-name native tool. `token_budget` is optional on the wrapper; a supplied value below `500000000` fails schema validation, and an omitted value is forwarded as `500000000` on `create`. `complete` appends a `Goal achieved.` usage line after the status block. Goal state owns the objective and accounting, not repeated turns. Token counts after create grow with each turn. Always drop the disposable goal before removing the profile.
