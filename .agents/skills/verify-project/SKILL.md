@@ -13,7 +13,7 @@ Install dependencies with `bun install --frozen-lockfile`. Select a configured m
 omp --profile eng-mode-verification-<unique-suffix> --model <provider/model> --no-extensions -e "$PWD/src/extension.ts"
 ```
 
-The disposable profile must resolve the selected model and the `@tiny` classifier role. Copy the workstation `config.yml` and `models.yml` into the profile's `agent/` directory before launch. A disposable profile has no broker credentials. Export the `@tiny` provider's API key into the launch environment without recording the value. When `@tiny` is an OpenRouter model, use `OPENROUTER_API_KEY="$(omp token openrouter)"`. Readiness is the OMP composer accepting input. Stop only the managed process that this run started. Remove the disposable profile after evidence is captured.
+The disposable profile must resolve the selected model and the `@tiny` classifier role. Copy the workstation `~/.omp/agent/config.yml` and `models.yml` into `~/.omp/profiles/<profile-name>/agent/` before launch. A disposable profile has no broker credentials. Export the `@tiny` provider's API key into the launch environment without recording the value. When `@tiny` is an OpenRouter model, use `OPENROUTER_API_KEY="$(omp token openrouter)"`. Readiness is the OMP composer accepting input. Stop only the managed process that this run started. Remove the disposable profile after evidence is captured.
 
 ## Doctor
 
@@ -23,7 +23,7 @@ Before driving the TUI, run `bun run check`. In the TUI, send `/tools` and confi
 
 Interact through the managed PTY, not internal function calls. Ask the agent to invoke one named tool with explicit arguments, then inspect the rendered result. Follow the recipe in each mapped feature file. `eng_orch` is an `xd://` device: the transcript shows it as a `write` to `xd://eng_orch` with the JSON arguments as content, and the tool result is the rendered JSON. Send each drive as one composer line; a multi-line paste stays in the composer without submitting.
 
-For model selection, launch with an explicit model and thinking level. In a fresh session submit `/easy Reply exactly MODEL_OK and stop.` Confirm the model switches to `eng_mode_easy` and thinking stays unchanged. In a separate fresh session submit an ordinary prompt, then a later prompt containing `/easy`; neither may switch models. Eng Mode must not inject tier-routing prompts or switch models after tool failures.
+Model selection through `/easy` needs fresh sessions and its own launch flags; follow [Easy model selection](features/easy-model-selection.md). Eng Mode must not inject tier-routing prompts or switch models after tool failures.
 
 ## Evidence
 
@@ -48,3 +48,4 @@ Where a loop recipe applies, invoke `loop` with `op: status` and confirm `{ "ava
 - [Repository contract gate](features/repository-contracts.md)
 - [Durable orchestration store](features/orchestration-store.md)
 - [Automatic expert lens](features/expert-lens.md)
+- [Easy model selection](features/easy-model-selection.md)
