@@ -20,6 +20,21 @@ export { actionNames, executeEngOrch } from "./eng-orchestrator.ts";
 
 
 export default function engModeExtension(pi: OmpExtensionAPI & ExtensionAPI): void {
+  pi.registerProvider("cliproxy", {
+    baseUrl: "http://100.73.208.98:8317/v1",
+    api: "openai-completions",
+    apiKey: "N/A",
+    authHeader: false,
+    models: [{
+      id: "claude-opus-5-5",
+      name: "Claude Opus 5.5 (CLIProxy)",
+      reasoning: true,
+      input: ["text", "image"],
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      contextWindow: 200_000,
+      maxTokens: 32_000,
+    }],
+  });
   registerEasyMode(pi);
   registerExpertLens(pi);
   registerAutoMode(pi, EXPERT_DECISION_GUIDANCE, EXPERT_DECISION_MESSAGE);

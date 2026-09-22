@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { existsSync, realpathSync } from "node:fs";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { parse } from "yaml";
 import engModeExtension, {
   classifierOutputNeedsExpertGuidance,
   executeEngOrch,
@@ -10,6 +11,8 @@ import engModeExtension, {
   parsePromptClassification,
 } from "./extension.ts";
 import { MINIMUM_GOAL_TOKEN_BUDGET } from "./goal-tool.ts";
+import { agentModelChains, agentNames } from "./manifest.ts";
+import { prepareRoles, resolveAgentChains } from "./roles.ts";
 
 const roots: string[] = [];
 
@@ -56,6 +59,34 @@ async function contract(
 
 describe("eng_orch executable entrypoint", () => {
   type RegisteredTool = Parameters<Parameters<typeof engModeExtension>[0]["registerTool"]>[0];
+  it("resolves the package-owned Opus primary without a workstation role", () => {
+    const roles = { adversary: "other/reviewer", review: "backup/reviewer" };
+    expect(resolveAgentChains(roles).find((entry) => entry.agent === "panel-opus")).toEqual({
+      agent: "panel-opus",
+      chain: ["cliproxy/claude-opus-5-5:low", "@adversary", "@review"],
+      primary: "cliproxy/claude-opus-5-5:low",
+      fallback: false,
+      unresolved: [],
+    });
+    expect(resolveAgentChains(roles).find((entry) => entry.agent === "panel-sol")).toMatchObject({
+      primary: "@adversary",
+      fallback: true,
+      unresolved: ["@panel_sol"],
+    });
+  });
+
+  it("prepares workstation roles without creating or overwriting panel_opus", () => {
+    const roles = {
+      code: "local/code", judgment: "local/judgment", adversary: "local/adversary", fast: "local/fast",
+      panel_sol: "local/sol", panel_fable: "local/fable", panel_deepseek: "local/deepseek",
+    };
+    expect(prepareRoles({ roles })).toMatchObject({ status: "applied", roles, added: {}, needsSelection: [] });
+    const existing = { ...roles, panel_opus: "operator/opus" };
+    expect(prepareRoles({ roles: existing, panelSelectors: { panel_opus: "ignored/opus" } })).toMatchObject({
+      status: "applied", roles: existing, added: {}, conflicts: [],
+    });
+  });
+
   it("returns the repository contract decision with the default forge provider", async () => {
     const repositoryRoot = await root();
     await contract(repositoryRoot, "project-standards");
@@ -160,7 +191,7 @@ describe("eng_orch executable entrypoint", () => {
     expect(await executeEngOrch({ action: "init", store: explicitStore, spawner: "session" })).toEqual({ store: explicitStore });
   });
 
-  it("registers goal, loop, and eng_orch from one entrypoint", async () => {
+  it("registers the keyless Opus primary, goal, loop, and eng_orch from one entrypoint", async () => {
     const repositoryRoot = await root();
     await contract(repositoryRoot, "project-standards");
     await contract(repositoryRoot, "verify-project");
@@ -178,6 +209,8 @@ describe("eng_orch executable entrypoint", () => {
     let beforeAgentStartHandler: BeforeAgentStartHandler | undefined;
     let expertRenderer: ((_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown) | undefined;
     const registered = new Map<string, RegisteredTool>();
+    type ProviderConfig = Parameters<Parameters<typeof engModeExtension>[0]["registerProvider"]>[1];
+    const providers = new Map<string, ProviderConfig>();
     const registeredCommands: Record<string, (args: string, context: unknown) => Promise<void>> = {};
     let tokenBudgetMinimum: number | undefined;
     const chain = {
@@ -230,6 +263,7 @@ describe("eng_orch executable entrypoint", () => {
     await withRepo(async (repositoryRoot, homeDir) => {
       engModeExtension({
         pi: { Text: TestText, InteractiveMode: TestInteractiveMode },
+        registerProvider: (name: string, config: ProviderConfig) => providers.set(name, config),
         registerMessageRenderer: (customType: string, renderer: unknown) => {
           if (customType === "eng-mode-expert-decision-guidance") {
             expertRenderer = renderer as typeof expertRenderer;
@@ -251,6 +285,24 @@ describe("eng_orch executable entrypoint", () => {
       expect(existsSync(join(homeDir, ".agents"))).toBeFalse();
       expect(existsSync(join(repositoryRoot, ".agents"))).toBeFalse();
     });
+    expect([...providers.keys()]).toEqual(["cliproxy"]);
+    expect(providers.get("cliproxy")).toMatchObject({
+      baseUrl: "http://100.73.208.98:8317/v1",
+      api: "openai-completions",
+      apiKey: "N/A",
+      authHeader: false,
+      models: [{ id: "claude-opus-5-5", reasoning: true }],
+    });
+    for (const agent of agentNames) {
+      const source = await readFile(join(import.meta.dir, "..", "agents", `${agent}.md`), "utf8");
+      const frontmatter = parse(source.split("---")[1] ?? "");
+      expect(frontmatter.model).toEqual(agentModelChains[agent]);
+    }
+    const [selector = ""] = agentModelChains["panel-opus"];
+    const [provider = "", modelWithEffort = ""] = selector.split("/");
+    const [model, effort] = modelWithEffort.split(":");
+    expect(providers.get(provider)?.models?.find((entry) => entry.id === model)?.id).toBe("claude-opus-5-5");
+    expect(effort).toBe("low");
     expect(registered.get("loop")).toMatchObject({ strict: true, loadMode: "essential" });
     expect(beforeAgentStartHandler).toBeDefined();
     await expect(beforeAgentStartHandler?.({ prompt: "Explore these files and report findings" }, unavailableClassifier)).resolves.toEqual({});

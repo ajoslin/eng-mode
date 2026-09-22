@@ -33,7 +33,7 @@ export interface RoleConflict {
 export interface AgentChainResolution {
   readonly agent: AgentName;
   readonly chain: readonly string[];
-  /** First chain entry whose role key resolves; null when nothing resolves. */
+  /** First concrete selector or entry whose role key resolves; null when nothing resolves. */
   readonly primary: string | null;
   /** True when the resolving entry is not the chain's first entry. */
   readonly fallback: boolean;
@@ -73,8 +73,7 @@ export function resolveAgentChains(
     const unresolved: string[] = [];
     let primary: string | null = null;
     for (const entry of chain) {
-      const key = entry.startsWith("@") ? entry.slice(1) : entry;
-      const value = roles[key];
+      const value = entry.startsWith("@") ? roles[entry.slice(1)] : entry;
       if (typeof value === "string" && value.trim().length > 0) {
         if (primary === null) primary = entry;
       } else {
@@ -121,6 +120,7 @@ export function prepareRoles(input: PrepareRolesInput): PrepareRolesResult {
     stage(role, oldValid ? old : undefined);
   }
   for (const role of panelRoleNames) {
+    if (role === "panel_opus") continue;
     stage(role, input.panelSelectors?.[role]);
   }
 

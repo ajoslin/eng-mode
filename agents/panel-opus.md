@@ -2,7 +2,7 @@
 name: panel-opus
 description: Eng interrogate panel seat. Opus. Read-only review only.
 model:
-  - "@panel_opus"
+  - "cliproxy/claude-opus-5-5:low"
   - "@adversary"
   - "@review"
 tools: [read, grep, glob, lsp]

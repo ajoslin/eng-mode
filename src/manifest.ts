@@ -102,7 +102,7 @@ export const agentModelChains: Readonly<Record<AgentName, readonly string[]>> = 
   "implementation-agent": ["@code", "@judgment", "@smol"],
   "judgment-agent": ["@judgment", "@code", "@smol"],
   "comment-sicko": ["@flash", "@review"],
-  "panel-opus": ["@panel_opus", "@adversary", "@review"],
+  "panel-opus": ["cliproxy/claude-opus-5-5:low", "@adversary", "@review"],
   "panel-sol": ["@panel_sol", "@adversary", "@review"],
   "panel-fable": ["@panel_fable", "@adversary", "@review"],
   "panel-deepseek": ["@panel_deepseek", "@adversary", "@review"],

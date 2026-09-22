@@ -41,6 +41,8 @@ setup-eng-mode
 
 To update, run the install command again, restart OMP, and rerun `setup-eng-mode` in each repository.
 
+The shipped `panel-opus` agent uses the package-owned `cliproxy/claude-opus-5-5:low` primary, then `@adversary` and `@review`. The extension registers CLIProxy at `http://100.73.208.98:8317/v1` with OMP's keyless `N/A` sentinel; no credentials or workstation configuration changes are required. Other agents keep their role-based routing. The Opus primary requires network access to that endpoint.
+
 ## What belongs in each repository
 
 Eng Mode supplies the reusable workflow. Each repository owns:
