@@ -15,7 +15,7 @@ Launch OMP with the local Eng Mode extension. Instruct the agent to invoke `loop
 3. Invoke `loop` with `op: status`. Confirm the rendered result is `{ "available": true, "enabled": false }`.
 4. In one agent turn, start another bounded loop and invoke `pause` immediately before yielding control. Confirm `state: "paused"` and `prompt: null`.
 5. Invoke `resume` with a replacement prompt. Confirm `state: "running"` and the replacement prompt.
-6. Invoke `stop`, then `status`. Confirm both render `{ "available": true, "enabled": false }`.
+6. Invoke `stop`, then `status`. Confirm both render `{ "available": true, "enabled": false }`. `stop` also shows the transient status-bar line `Loop stopped.`.
 
 ## Gotchas
 

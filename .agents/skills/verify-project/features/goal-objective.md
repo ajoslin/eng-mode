@@ -15,9 +15,10 @@ Launch OMP with the local Eng Mode extension in a disposable profile. Ask the ag
 3. Invoke `create` with a falsifiable disposable objective and `token_budget: 500000000`. Confirm the rendered `Goal: <objective>`, `Status: active`, and `Tokens: 0 used / 500000000 budget`.
 4. Invoke `get` and confirm the same objective is active.
 5. Invoke `resume`, then `get`. Confirm the objective remains active.
-6. Invoke `complete`, then `get`. Confirm both render `Status: complete`.
-7. Invoke `drop`. Confirm it renders `Status: dropped`. Invoke `get` and confirm `No active goal.`.
+6. Invoke `complete`, then `get`. Confirm both render `Status: complete`. A completed goal is terminal: `resume` renders the error `Goal is already complete.` and a second `complete` renders `goal is already complete`.
+7. Invoke `drop`. Dropping a completed goal renders `No active goal.`. Invoke `get` and confirm `No active goal.`.
+8. Invoke `create` again with a second disposable objective, then `drop` while it is active. Confirm `Status: dropped`. Invoke `get` and confirm `No active goal.`.
 
 ## Gotchas
 
-The wrapper delegates to OMP's same-name native tool. The wrapper's own schema requires a create budget of at least `500000000`; the native tool accepts any positive integer. Goal state owns the objective and accounting, not repeated turns. Token counts after create grow with each turn. Always drop the disposable goal before removing the profile.
+The wrapper delegates to OMP's same-name native tool. The wrapper's own schema requires a create budget of at least `500000000`; the native tool accepts any positive integer. Goal state owns the objective and accounting, not repeated turns. Token counts after create grow with each turn, and each render adds a `Remaining tokens:` line. Always drop the disposable goal before removing the profile.

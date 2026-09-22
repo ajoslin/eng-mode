@@ -21,7 +21,7 @@ Use `<store>` for the same temporary store path in every call.
 7. Invoke `{ action: "gate_park", store: <store>, id: "verify-gate", question: "Continue verification?", options: "yes|no", defaultAnswer: "yes" }`. Invoke `{ action: "gate_list", store: <store> }` and confirm it shows the open gate. Invoke `{ action: "gate_resolve", store: <store>, id: "verify-gate", answer: "yes" }` and capture its returned answer. Later, use `status` to confirm the resolved gate.
 8. Treat frontier mutation as `verified-unreachable` unless a dedicated non-production GitHub repository, disposable nonempty `gh stack`, and GitHub authentication are available. If available, invoke `{ action: "frontier_set", store: <store>, repo: <disposable-repository-path>, prs: <disposable-stack-prs> }` with the actual PR identifiers from that stack. Invoke `{ action: "frontier_show", store: <store> }` and confirm it renders those identifiers and SHAs. Never use this checkout or production identifiers.
 9. Invoke `{ action: "standing_add", store: <store>, line: "Use disposable verification data" }`, then `{ action: "standing_show", store: <store> }`. Confirm the numbered line renders.
-10. Invoke `{ action: "status", store: <store> }`. Confirm the result renders units, ledger, gates including the resolved gate, frontier, `summary`, and `changed`.
+10. Invoke `{ action: "status", store: <store> }`. Confirm the result renders units, ledger, gates including the resolved gate, frontier, `summary`, and `changed`. `changed` diffs against the previous `status` render, not the latest mutation: after the initial `status` in step 1 it reads `units done 0->1; ledger type-check-only 0->1`, and a first render reads `first render`.
 
 ## Gotchas
 
