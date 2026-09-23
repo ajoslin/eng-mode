@@ -1,5 +1,3 @@
-import { completeSimple } from "@oh-my-pi/pi-ai";
-
 export interface OptionalSchema {
   optional(): unknown;
   describe(text: string): OptionalSchema;
@@ -28,7 +26,6 @@ export interface ToolContext {
     params: Record<string, unknown>,
     options?: { signal?: AbortSignal; onUpdate?: unknown },
   ) => Promise<unknown>;
-
 }
 
 export interface CustomMessagePayload {
@@ -40,14 +37,21 @@ export interface CustomMessagePayload {
 export interface BeforeAgentStartEvent {
   readonly prompt: string;
 }
-export type Model = Parameters<typeof completeSimple>[0];
-export interface ExtensionContext {
-  readonly models: {
-    resolve(spec: string): Model | undefined;
-  };
-  readonly modelRegistry: {
-    getApiKey(model: Parameters<typeof completeSimple>[0]): Promise<string | undefined>;
-  };
+/**
+ * Fired before a tool executes; the handler may block it via ToolCallEventResult.
+ * `input` is the raw execution arguments (shape varies by toolName).
+ */
+export interface ToolCallEvent {
+  readonly type: "tool_call";
+  readonly toolCallId: string;
+  readonly toolName: string;
+  readonly input: Record<string, unknown>;
+}
+export interface ToolCallEventResult {
+  /** If true, block the tool from executing. */
+  readonly block?: boolean;
+  /** Reason for blocking, returned to the LLM as the failure. */
+  readonly reason?: string;
 }
 
 export interface ToolDefinition {
@@ -74,5 +78,5 @@ export interface ExtensionAPI {
     customType: string,
     renderer: (_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown,
   ): void;
-  on(event: string, handler: (event: unknown, context: ExtensionContext) => unknown): void;
+  on(event: string, handler: (event: unknown) => unknown): void;
 }

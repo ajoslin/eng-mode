@@ -33,7 +33,7 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 
 ## 4. Agents and panel resolution
 
-1. Verify each shipped agent (`implementation-agent`, `judgment-agent`, `comment-sicko`, `panel-opus`, `panel-sol`, `panel-fable`, `panel-deepseek`) is discoverable and every agent role chain resolves end to end. No shipped agent may contain a concrete provider-qualified selector. The workstation config supplies concrete models.
+1. Verify each shipped agent (`implementation-agent`, `judgment-agent`, `design-agent`, `comment-sicko`, `panel-opus`, `panel-sol`, `panel-fable`, `panel-deepseek`) is discoverable and every agent role chain resolves end to end. No shipped agent may contain a concrete provider-qualified selector. The workstation config supplies concrete models. `design-agent` uses OMP's `designer` role and falls through to `@judgment` when it is unset.
 2. Resolve every chain through all referenced role keys, flag entries that resolve identically to an earlier entry, and require at least one fallback after the primary to use a different provider where the workstation allows it. `comment-sicko` must retain a resolvable fallback.
 3. Report each panel seat's actual `resolvedModel` and fallback status. Never claim full-roster or cross-vendor diversity from nominal seat names. Report actual resolved models and refuse to claim diversity the resolution does not show.
 

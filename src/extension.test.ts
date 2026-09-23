@@ -7,9 +7,9 @@ import engModeExtension, {
   classifierOutputNeedsExpertGuidance,
   executeEngOrch,
   EXPERT_DECISION_GUIDANCE,
-  parsePromptClassification,
 } from "./extension.ts";
 import { MINIMUM_GOAL_TOKEN_BUDGET } from "./goal-tool.ts";
+import type { OperationClassifier } from "./typesafe.ts";
 
 const roots: string[] = [];
 
@@ -164,10 +164,7 @@ describe("eng_orch executable entrypoint", () => {
     const repositoryRoot = await root();
     await contract(repositoryRoot, "project-standards");
     await contract(repositoryRoot, "verify-project");
-    type BeforeAgentStartHandler = (
-      event: { prompt: string },
-      context: typeof unavailableClassifier,
-    ) => Promise<{
+    type BeforeAgentStartHandler = (event: { prompt: string }) => Promise<{
       message?: {
         customType: string;
         content: string;
@@ -199,15 +196,12 @@ describe("eng_orch executable entrypoint", () => {
       boolean: () => chain,
       array: () => chain,
     };
-    let classifierCalls = 0;
-    const unavailableClassifier = {
-      models: {
-        resolve: (_spec: "@tiny") => {
-          classifierCalls += 1;
-          return undefined;
-        },
-      },
-      modelRegistry: { getApiKey: async (_model: never) => undefined },
+    const fakeClassifier: OperationClassifier = {
+      classifyDanger: async () => ({ kind: "error" }),
+      classifyExpert: async (prompt: string) => ({
+        kind: "classified",
+        lens: prompt.includes("architecture") ? "expert" : "ordinary",
+      }),
     };
     class TestText {
       constructor(readonly text: string, readonly paddingX: number, readonly paddingY: number) {}
@@ -245,7 +239,7 @@ describe("eng_orch executable entrypoint", () => {
           registeredCommands[name] = options.handler;
         },
         registerTool: (tool: RegisteredTool) => registered.set(tool.name, tool),
-      } as unknown as Parameters<typeof engModeExtension>[0]);
+      } as unknown as Parameters<typeof engModeExtension>[0], fakeClassifier);
       expect([...registered.keys()]).toEqual(["goal", "loop", "eng_orch"]);
       expect(Object.keys(registeredCommands)).toEqual([]);
       expect(existsSync(join(homeDir, ".agents"))).toBeFalse();
@@ -253,15 +247,16 @@ describe("eng_orch executable entrypoint", () => {
     });
     expect(registered.get("loop")).toMatchObject({ strict: true, loadMode: "essential" });
     expect(beforeAgentStartHandler).toBeDefined();
-    await expect(beforeAgentStartHandler?.({ prompt: "Explore these files and report findings" }, unavailableClassifier)).resolves.toEqual({});
-    expect(classifierCalls).toBe(1);
-    await expect(beforeAgentStartHandler?.({ prompt: EXPERT_DECISION_GUIDANCE }, unavailableClassifier)).resolves.toEqual({});
-    expect(classifierCalls).toBe(1);
-    await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" }, unavailableClassifier)).resolves.toEqual({});
-    expect(classifierCalls).toBe(2);
-    expect(parsePromptClassification("ordinary")).toBe("ordinary");
-    expect(parsePromptClassification("expert\n")).toBe("expert");
-    expect(parsePromptClassification("maybe")).toBeUndefined();
+    await expect(beforeAgentStartHandler?.({ prompt: "Explore these files and report findings" })).resolves.toEqual({});
+    await expect(beforeAgentStartHandler?.({ prompt: EXPERT_DECISION_GUIDANCE })).resolves.toEqual({});
+    await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" })).resolves.toEqual({
+      message: {
+        customType: "eng-mode-expert-decision-guidance",
+        content: EXPERT_DECISION_GUIDANCE,
+        display: true,
+        attribution: "agent",
+      },
+    });
     expect(classifierOutputNeedsExpertGuidance("ordinary")).toBeFalse();
     expect(classifierOutputNeedsExpertGuidance("expert")).toBeTrue();
     expect(classifierOutputNeedsExpertGuidance(undefined)).toBeFalse();
