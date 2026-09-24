@@ -6,7 +6,7 @@ Classify a consequential decision prompt and inject the expert-decision guidance
 
 ## How to get to it (user POV)
 
-Launch OMP with the local Eng Mode extension. The disposable profile must resolve both the selected session model and the `@tiny` model used by the classifier. A disposable profile has no broker credentials. Export the `@tiny` provider's API key into the launch environment before starting OMP. When `@tiny` is an OpenRouter model, use `OPENROUTER_API_KEY="$(omp token openrouter)"`.
+Launch OMP with the local Eng Mode extension with `TYPESAFE_API_KEY` exported into the launch environment. The classifier is TypeSafe AI (`jev-latest` through `src/typesafe.ts`), not an OMP model role. Without the key the classifier reports `disabled` and no lens renders.
 
 ## Driving it with OMP TUI
 
@@ -17,4 +17,4 @@ Launch OMP with the local Eng Mode extension. The disposable profile must resolv
 
 ## Gotchas
 
-The classifier defaults to ordinary when `@tiny` is unavailable, credentials are missing, the classifier errors or exceeds its 5-second deadline, or its trimmed, lowercased output is not `expert`. Such a run does not verify expert injection. A missing `Expert lens` on the first turn usually means the key was not exported, not a product regression. Without the no-tools clause, the agent may open an `ask` dialog that holds the composer until dismissed. Stop the managed process and remove the disposable profile after capturing both turns.
+No lens renders when `TYPESAFE_API_KEY` is unset (verdict `disabled`), when the classifier throws or exceeds its 5-second deadline (verdict `error`), or when it returns `ordinary`. Such a run does not verify expert injection. A missing `Expert lens` on the first turn usually means the key was not exported, not a product regression. Without the key, step 1 still proves the fail-open path: the turn runs normally with no `Expert lens` message. Without the no-tools clause, the agent may open an `ask` dialog that holds the composer until dismissed. Stop the managed process and remove the disposable profile after capturing both turns.
