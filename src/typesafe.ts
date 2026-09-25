@@ -34,13 +34,13 @@ SAFE means read-only, informational, or trivially harmless: inspecting, listing,
 
 When uncertain, prefer DANGEROUS over SAFE, and reserve ULTRA DANGEROUS for clearly catastrophic, hard-to-reverse harm.`;
 
-const EXPERT_LENS_INSTRUCTIONS = `Decide whether this request requires an expert decision lens. This is a high threshold: complexity alone is not enough.
+const EXPERT_LENS_INSTRUCTIONS = `Decide whether this request would benefit from an expert decision lens. This is a moderate threshold.
 
-Reply expert only when the stated task asks for, or necessarily requires, a material choice among plausible alternatives where a poor choice would have meaningful architectural, product, operational, security, migration, or long-term maintenance consequences.
+Reply expert when the task asks for, or will likely involve, a choice among plausible approaches: design or architecture, non-trivial implementation or refactoring, diagnosing a problem where the fix could take several forms, configuration or tooling trade-offs, or anything with architectural, product, operational, security, migration, or maintenance consequences.
 
-Reply ordinary for acknowledgements, open-ended offers to help, pasted text without a task, factual questions, explanations, routine investigation or debugging, ordinary implementation, mechanical edits, exact renames, and multi-file work that does not itself require a consequential design choice.
+Reply ordinary for acknowledgements, open-ended offers to help, pasted text without a task, simple factual questions, mechanical edits, exact renames, formatting, and small changes with one obvious implementation.
 
-When uncertain, reply ordinary unless the prompt itself establishes meaningful consequences.`;
+When uncertain, reply expert.`;
 
 export const DangerAssessment = DecisionSet.make({
   input: Schema.Struct({ operation: Schema.String }),
