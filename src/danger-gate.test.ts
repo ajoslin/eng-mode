@@ -1,14 +1,14 @@
 import { describe, expect, it } from "bun:test";
-import { registerDangerGate, ULTRA_DANGEROUS_BLOCK_REASON } from "./danger-gate.ts";
-import type { ExtensionAPI, ToolCallEvent, ToolCallEventResult } from "./extension-types.ts";
+import { registerDangerGate, ULTRA_DANGEROUS_BLOCK_REASON, ULTRA_DANGEROUS_DENIED_REASON } from "./danger-gate.ts";
+import type { EventContext, ExtensionAPI, ToolCallEvent, ToolCallEventResult } from "./extension-types.ts";
 import type { DangerVerdict, OperationClassifier } from "./typesafe.ts";
 
-type ToolCallHandler = (event: ToolCallEvent) => Promise<ToolCallEventResult | void>;
+type ToolCallHandler = (event: ToolCallEvent, ctx?: EventContext) => Promise<ToolCallEventResult | void>;
 
 function captureToolCall(): { pi: ExtensionAPI; handler: ToolCallHandler | undefined } {
   let handler: ToolCallHandler | undefined;
   const pi = {
-    on: (_event: string, value: (event: unknown) => unknown) => {
+    on: (_event: string, value: (event: unknown, ctx?: EventContext) => unknown) => {
       handler = value as ToolCallHandler;
     },
   } as ExtensionAPI;
@@ -16,6 +16,23 @@ function captureToolCall(): { pi: ExtensionAPI; handler: ToolCallHandler | undef
     pi,
     get handler() {
       return handler;
+    },
+  };
+}
+
+/** A UI that answers every confirm with `answer` and records what it was asked. */
+function attachedUser(answer: boolean): { ctx: EventContext; asked: string[] } {
+  const asked: string[] = [];
+  return {
+    asked,
+    ctx: {
+      hasUI: true,
+      ui: {
+        confirm: async (_title, message) => {
+          asked.push(message);
+          return answer;
+        },
+      },
     },
   };
 }
@@ -32,13 +49,47 @@ function event(toolName: string, input: Record<string, unknown>): ToolCallEvent 
 }
 
 describe("registerDangerGate", () => {
-  it("blocks an ultra-dangerous bash command", async () => {
+  it("blocks an ultra-dangerous bash command when no user is attached", async () => {
     const captured = captureToolCall();
     registerDangerGate(captured.pi, fakeClassifier({ kind: "classified", level: "ultra_dangerous" }));
     await expect(captured.handler?.(event("bash", { command: "git push --force origin main" }))).resolves.toEqual({
       block: true,
       reason: ULTRA_DANGEROUS_BLOCK_REASON,
     });
+    await expect(
+      captured.handler?.(event("bash", { command: "git push --force origin main" }), {
+        hasUI: false,
+        ui: { confirm: async () => true },
+      }),
+    ).resolves.toEqual({ block: true, reason: ULTRA_DANGEROUS_BLOCK_REASON });
+  });
+
+  it("runs an ultra-dangerous command the attached user approves", async () => {
+    const captured = captureToolCall();
+    const user = attachedUser(true);
+    registerDangerGate(captured.pi, fakeClassifier({ kind: "classified", level: "ultra_dangerous" }));
+    await expect(
+      captured.handler?.(event("bash", { command: "quantg stack down --drop" }), user.ctx),
+    ).resolves.toBeUndefined();
+    expect(user.asked).toEqual(["bash: quantg stack down --drop"]);
+  });
+
+  it("blocks an ultra-dangerous command the attached user declines", async () => {
+    const captured = captureToolCall();
+    const user = attachedUser(false);
+    registerDangerGate(captured.pi, fakeClassifier({ kind: "classified", level: "ultra_dangerous" }));
+    await expect(captured.handler?.(event("bash", { command: "rm -rf ~/data" }), user.ctx)).resolves.toEqual({
+      block: true,
+      reason: ULTRA_DANGEROUS_DENIED_REASON,
+    });
+  });
+
+  it("never asks the user about a non-ultra operation", async () => {
+    const captured = captureToolCall();
+    const user = attachedUser(false);
+    registerDangerGate(captured.pi, fakeClassifier({ kind: "classified", level: "dangerous" }));
+    await expect(captured.handler?.(event("write", { path: "src/main.ts" }), user.ctx)).resolves.toBeUndefined();
+    expect(user.asked).toEqual([]);
   });
 
   it("allows a safe bash command", async () => {

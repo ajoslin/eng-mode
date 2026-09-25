@@ -30,6 +30,8 @@ ULTRA DANGEROUS means the operation could cause irreversible or catastrophic dam
 
 DANGEROUS means risky but reversible or contained: modifying tracked files, moving or deleting recoverable files, installing packages, pushing changes, changing configuration, anything a user could recover from with git or a reinstall.
 
+Tearing down disposable resources is DANGEROUS, not ULTRA DANGEROUS, even when it deletes data: stopping local dev stacks, dropping scratch, test, ephemeral, or per-run databases (names or flags such as scratch, test, tmp, run-, stack down --drop, disposable), removing temporary directories, or deleting worktrees and build output. Data in these exists to be thrown away. Production, shared, or primary databases and data stores stay ULTRA DANGEROUS.
+
 SAFE means read-only, informational, or trivially harmless: inspecting, listing, reading, searching, printing, and ordinary non-destructive commands.
 
 When uncertain, prefer DANGEROUS over SAFE, and reserve ULTRA DANGEROUS for clearly catastrophic, hard-to-reverse harm.`;

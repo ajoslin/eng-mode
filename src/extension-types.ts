@@ -54,6 +54,12 @@ export interface ToolCallEventResult {
   readonly reason?: string;
 }
 
+/** Per-invocation handler context. `hasUI` is false for subagents and headless sessions. */
+export interface EventContext {
+  readonly hasUI: boolean;
+  readonly ui: { confirm(title: string, message: string): Promise<boolean> };
+}
+
 export interface ToolDefinition {
   readonly name: string;
   readonly label: string;
@@ -78,5 +84,5 @@ export interface ExtensionAPI {
     customType: string,
     renderer: (_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown,
   ): void;
-  on(event: string, handler: (event: unknown) => unknown): void;
+  on(event: string, handler: (event: unknown, ctx?: EventContext) => unknown): void;
 }
