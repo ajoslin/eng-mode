@@ -1,162 +1,126 @@
 import { describe, expect, it } from "bun:test";
-import { registerDangerGate, ULTRA_DANGEROUS_BLOCK_REASON, ULTRA_DANGEROUS_DENIED_REASON } from "./danger-gate.ts";
-import type { EventContext, ExtensionAPI, ToolCallEvent, ToolCallEventResult } from "./extension-types.ts";
-import type { DangerVerdict, OperationClassifier } from "./typesafe.ts";
+import {
+  CLASSIFIER_UNAVAILABLE_REASON,
+  HIGHLY_DANGEROUS_BLOCK_REASON,
+  registerDangerGate,
+  USER_DECLINED_REASON,
+} from "./danger-gate.ts";
+import type { ExtensionAPI, ExtensionEventContext, ToolCallEvent, ToolCallEventResult } from "./extension-types.ts";
+import type { DangerContext, DangerVerdict, OperationClassifier } from "./typesafe.ts";
 
-type ToolCallHandler = (event: ToolCallEvent, ctx?: EventContext) => Promise<ToolCallEventResult | void>;
+type Handler = (event: unknown, ctx: ExtensionEventContext) => unknown;
 
-function captureToolCall(): { pi: ExtensionAPI; handler: ToolCallHandler | undefined } {
-  let handler: ToolCallHandler | undefined;
-  const pi = {
-    on: (_event: string, value: (event: unknown, ctx?: EventContext) => unknown) => {
-      handler = value as ToolCallHandler;
-    },
-  } as ExtensionAPI;
-  return {
-    pi,
-    get handler() {
-      return handler;
-    },
-  };
+interface Harness {
+  readonly prompt: (text: string) => void;
+  readonly call: (event: ToolCallEvent, ctx: ExtensionEventContext) => Promise<ToolCallEventResult | void>;
+  readonly seen: DangerContext[];
 }
 
-/** A UI that answers every confirm with `answer` and records what it was asked. */
-function attachedUser(answer: boolean): { ctx: EventContext; asked: string[] } {
-  const asked: string[] = [];
-  return {
-    asked,
-    ctx: {
-      hasUI: true,
-      ui: {
-        confirm: async (_title, message) => {
-          asked.push(message);
-          return answer;
-        },
-      },
+function harness(verdict: DangerVerdict | (() => Promise<DangerVerdict>)): Harness {
+  const handlers: Record<string, Handler> = {};
+  const pi = { on: (name: string, handler: Handler) => (handlers[name] = handler) } as unknown as ExtensionAPI;
+  const seen: DangerContext[] = [];
+  const classifier: OperationClassifier = {
+    classifyDanger: async (context) => {
+      seen.push(context);
+      return typeof verdict === "function" ? verdict() : verdict;
     },
-  };
-}
-
-function fakeClassifier(danger: DangerVerdict): OperationClassifier {
-  return {
-    classifyDanger: async () => danger,
     classifyExpert: async () => ({ kind: "error" }),
   };
+  registerDangerGate(pi, classifier);
+  return {
+    prompt: (text) => void handlers.before_agent_start?.({ prompt: text }, headless()),
+    call: async (event, ctx) => (await handlers.tool_call?.(event, ctx)) as ToolCallEventResult | void,
+    seen,
+  };
 }
 
-function event(toolName: string, input: Record<string, unknown>): ToolCallEvent {
-  return { type: "tool_call", toolCallId: "1", toolName, input };
+function headless(): ExtensionEventContext {
+  return { hasUI: false, cwd: "/repo", ui: { confirm: async () => false } };
 }
+
+function interactive(answers: boolean[]): ExtensionEventContext & { asked: string[] } {
+  const asked: string[] = [];
+  return {
+    hasUI: true,
+    cwd: "/repo",
+    asked,
+    ui: {
+      confirm: async (_title, message) => {
+        asked.push(message);
+        return answers.shift() ?? false;
+      },
+    },
+  };
+}
+
+function bash(command: unknown): ToolCallEvent {
+  return { type: "tool_call", toolCallId: "1", toolName: "bash", input: { command } };
+}
+
+const FLAGGED: DangerVerdict = { kind: "classified", level: "highly_dangerous" };
 
 describe("registerDangerGate", () => {
-  it("blocks an ultra-dangerous bash command when no user is attached", async () => {
-    const captured = captureToolCall();
-    registerDangerGate(captured.pi, fakeClassifier({ kind: "classified", level: "ultra_dangerous" }));
-    await expect(captured.handler?.(event("bash", { command: "git push --force origin main" }))).resolves.toEqual({
-      block: true,
-      reason: ULTRA_DANGEROUS_BLOCK_REASON,
-    });
-    await expect(
-      captured.handler?.(event("bash", { command: "git push --force origin main" }), {
-        hasUI: false,
-        ui: { confirm: async () => true },
-      }),
-    ).resolves.toEqual({ block: true, reason: ULTRA_DANGEROUS_BLOCK_REASON });
+  it("passes the user's request and cwd to the classifier", async () => {
+    const gate = harness({ kind: "classified", level: "safe" });
+    gate.prompt("dump the dev database");
+    await expect(gate.call(bash("pg_dump devdb"), headless())).resolves.toBeUndefined();
+    expect(gate.seen).toEqual([{ operation: "bash: pg_dump devdb", userRequest: "dump the dev database", cwd: "/repo" }]);
   });
 
-  it("runs an ultra-dangerous command the attached user approves", async () => {
-    const captured = captureToolCall();
-    const user = attachedUser(true);
-    registerDangerGate(captured.pi, fakeClassifier({ kind: "classified", level: "ultra_dangerous" }));
-    await expect(
-      captured.handler?.(event("bash", { command: "quantg stack down --drop" }), user.ctx),
-    ).resolves.toBeUndefined();
-    expect(user.asked).toEqual(["bash: quantg stack down --drop"]);
-  });
-
-  it("blocks an ultra-dangerous command the attached user declines", async () => {
-    const captured = captureToolCall();
-    const user = attachedUser(false);
-    registerDangerGate(captured.pi, fakeClassifier({ kind: "classified", level: "ultra_dangerous" }));
-    await expect(captured.handler?.(event("bash", { command: "rm -rf ~/data" }), user.ctx)).resolves.toEqual({
+  it("blocks a flagged call when no user can be asked", async () => {
+    const gate = harness(FLAGGED);
+    await expect(gate.call(bash("git push --force origin main"), headless())).resolves.toEqual({
       block: true,
-      reason: ULTRA_DANGEROUS_DENIED_REASON,
+      reason: HIGHLY_DANGEROUS_BLOCK_REASON,
     });
   });
 
-  it("never asks the user about a non-ultra operation", async () => {
-    const captured = captureToolCall();
-    const user = attachedUser(false);
-    registerDangerGate(captured.pi, fakeClassifier({ kind: "classified", level: "dangerous" }));
-    await expect(captured.handler?.(event("write", { path: "src/main.ts" }), user.ctx)).resolves.toBeUndefined();
-    expect(user.asked).toEqual([]);
+  it("asks the user instead of blocking, and runs on approval", async () => {
+    const gate = harness(FLAGGED);
+    const ctx = interactive([true]);
+    await expect(gate.call(bash("git push --force origin main"), ctx)).resolves.toBeUndefined();
+    expect(ctx.asked).toHaveLength(1);
   });
 
-  it("allows a safe bash command", async () => {
-    const captured = captureToolCall();
-    registerDangerGate(captured.pi, fakeClassifier({ kind: "classified", level: "safe" }));
-    await expect(captured.handler?.(event("bash", { command: "git status" }))).resolves.toBeUndefined();
+  it("blocks with a do-not-retry reason when the user declines", async () => {
+    const gate = harness(FLAGGED);
+    await expect(gate.call(bash("rm -rf ~"), interactive([false]))).resolves.toEqual({
+      block: true,
+      reason: USER_DECLINED_REASON,
+    });
   });
 
-  it("allows a dangerous (non-ultra) operation", async () => {
-    const captured = captureToolCall();
-    registerDangerGate(captured.pi, fakeClassifier({ kind: "classified", level: "dangerous" }));
-    await expect(captured.handler?.(event("write", { path: "src/main.ts" }))).resolves.toBeUndefined();
+  it("remembers approval for the identical operation only", async () => {
+    const gate = harness(FLAGGED);
+    const ctx = interactive([true, false]);
+    await gate.call(bash("git push --force origin main"), ctx);
+    await expect(gate.call(bash("git push --force origin main"), ctx)).resolves.toBeUndefined();
+    await expect(gate.call(bash("git push --force origin release"), ctx)).resolves.toEqual({
+      block: true,
+      reason: USER_DECLINED_REASON,
+    });
+    expect(ctx.asked).toHaveLength(2);
   });
 
-  it("does not gate read-only tools", async () => {
-    const captured = captureToolCall();
-    let calls = 0;
-    const counting: OperationClassifier = {
-      classifyExpert: async () => ({ kind: "error" }),
-      classifyDanger: async () => {
-        calls += 1;
-        return { kind: "classified", level: "ultra_dangerous" };
-      },
-    };
-    registerDangerGate(captured.pi, counting);
-    await expect(captured.handler?.(event("read", { path: "src/main.ts" }))).resolves.toBeUndefined();
-    expect(calls).toBe(0);
+  it("asks when the classifier fails, and blocks headless", async () => {
+    const gate = harness(async () => {
+      throw new Error("boom");
+    });
+    await expect(gate.call(bash("make"), headless())).resolves.toEqual({ block: true, reason: CLASSIFIER_UNAVAILABLE_REASON });
+    await expect(gate.call(bash("make"), interactive([true]))).resolves.toBeUndefined();
   });
 
   it("allows everything when the classifier is disabled (no key)", async () => {
-    const captured = captureToolCall();
-    registerDangerGate(captured.pi, fakeClassifier({ kind: "disabled" }));
-    await expect(captured.handler?.(event("bash", { command: "git push --force origin main" }))).resolves.toBeUndefined();
+    const gate = harness({ kind: "disabled" });
+    await expect(gate.call(bash("rm -rf ~"), headless())).resolves.toBeUndefined();
   });
 
-  it("fails closed on classifier error when configured", async () => {
-    const captured = captureToolCall();
-    registerDangerGate(captured.pi, fakeClassifier({ kind: "error" }));
-    const result = await captured.handler?.(event("eval", { language: "py", code: "print('hello')" }));
-    expect(result?.block).toBeTrue();
-  });
-
-  it("fails closed when the classifier throws", async () => {
-    const captured = captureToolCall();
-    const throwing: OperationClassifier = {
-      classifyExpert: async () => ({ kind: "error" }),
-      classifyDanger: async () => {
-        throw new Error("boom");
-      },
-    };
-    registerDangerGate(captured.pi, throwing);
-    const result = await captured.handler?.(event("edit", { path: "src/main.ts" }));
-    expect(result?.block).toBeTrue();
-  });
-
-  it("skips gating when the operation cannot be described", async () => {
-    const captured = captureToolCall();
-    let calls = 0;
-    const counting: OperationClassifier = {
-      classifyExpert: async () => ({ kind: "error" }),
-      classifyDanger: async () => {
-        calls += 1;
-        return { kind: "classified", level: "ultra_dangerous" };
-      },
-    };
-    registerDangerGate(captured.pi, counting);
-    await expect(captured.handler?.(event("bash", { command: 42 }))).resolves.toBeUndefined();
-    expect(calls).toBe(0);
+  it("does not gate read-only tools or undescribable operations", async () => {
+    const gate = harness(FLAGGED);
+    const read: ToolCallEvent = { type: "tool_call", toolCallId: "1", toolName: "read", input: { path: "x" } };
+    await expect(gate.call(read, headless())).resolves.toBeUndefined();
+    await expect(gate.call(bash(42), headless())).resolves.toBeUndefined();
+    expect(gate.seen).toHaveLength(0);
   });
 });

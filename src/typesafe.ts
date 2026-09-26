@@ -3,8 +3,15 @@ import { TypeSafeClient, TypeSafeDecisionModel } from "@effect-agent/ai-typesafe
 import { Effect, Layer, Option, Schema } from "effect";
 import { FetchHttpClient } from "effect/unstable/http";
 
-export const DANGER_LEVELS = ["safe", "dangerous", "ultra_dangerous"] as const;
+export const DANGER_LEVELS = ["safe", "highly_dangerous"] as const;
 export type DangerLevel = (typeof DANGER_LEVELS)[number];
+
+/** What the classifier sees: the concrete operation plus the context that authorizes it. */
+export interface DangerContext {
+  readonly operation: string;
+  readonly userRequest: string;
+  readonly cwd: string;
+}
 
 export const EXPERT_LENSES = ["ordinary", "expert"] as const;
 export type ExpertLens = (typeof EXPERT_LENSES)[number];
@@ -23,18 +30,20 @@ export type ExpertVerdict =
 
 const DEFAULT_TIMEOUT_MS = 5_000;
 const MAX_OPERATION_CHARS = 4_000;
+const MAX_REQUEST_CHARS = 2_000;
 
-const DANGER_INSTRUCTIONS = `Classify the danger level of this autonomous-agent operation. You are gating an autonomous AI coding agent before it executes. Judge the concrete, irreversible or catastrophic harm this operation could cause if it runs.
+const DANGER_INSTRUCTIONS = `An AI coding agent is about to run this operation on a developer's machine. Answer highly_dangerous ONLY if it matches this list:
 
-ULTRA DANGEROUS means the operation could cause irreversible or catastrophic damage that the user cannot trivially undo: permanent data loss, deleting or overwriting files without a backup, destructive git history rewrite or force-push, dropping databases or tables, formatting or wiping disks, credential or key exfiltration to a remote host, disabling production systems, installing or executing untrusted remote code, or broad destructive shell operations on important paths.
+- Deleting or overwriting data with no backup or git recovery: rm -rf on home, root, or broad paths; wiping disks; deleting untracked work.
+- Destroying git history: force-push to a shared or main branch, deleting remote branches, filter-repo on pushed history.
+- Dropping, truncating, or bulk-deleting data in a production or shared database.
+- Mutating production infrastructure: deploys, terraform apply/destroy, kubectl delete, cloud resource deletion.
+- Sending secrets, keys, or credentials to a remote host or third party.
+- Piping untrusted remote code into a shell (curl | sh from unknown sources).
 
-DANGEROUS means risky but reversible or contained: modifying tracked files, moving or deleting recoverable files, installing packages, pushing changes, changing configuration, anything a user could recover from with git or a reinstall.
+Everything else is safe, including: reading, dumping, migrating, or restoring local or dev databases; tearing down disposable resources (local dev stacks, scratch, test, tmp, or per-run databases, temp directories, worktrees, build output); reading credentials from a password manager (op, 1Password, keychain) for local use; installing packages; editing files; normal git commits and pushes; running tests and builds.
 
-Tearing down disposable resources is DANGEROUS, not ULTRA DANGEROUS, even when it deletes data: stopping local dev stacks, dropping scratch, test, ephemeral, or per-run databases (names or flags such as scratch, test, tmp, run-, stack down --drop, disposable), removing temporary directories, or deleting worktrees and build output. Data in these exists to be thrown away. Production, shared, or primary databases and data stores stay ULTRA DANGEROUS.
-
-SAFE means read-only, informational, or trivially harmless: inspecting, listing, reading, searching, printing, and ordinary non-destructive commands.
-
-When uncertain, prefer DANGEROUS over SAFE, and reserve ULTRA DANGEROUS for clearly catastrophic, hard-to-reverse harm.`;
+The user's latest request is authoritative context: an operation the user explicitly asked for is safe unless it hits production or destroys unrecoverable data. Judge the operation, not keywords.`;
 
 const EXPERT_LENS_INSTRUCTIONS = `Decide whether this request would benefit from an expert decision lens. This is a moderate threshold.
 
@@ -45,11 +54,11 @@ Reply ordinary for acknowledgements, open-ended offers to help, pasted text with
 When uncertain, reply expert.`;
 
 export const DangerAssessment = DecisionSet.make({
-  input: Schema.Struct({ operation: Schema.String }),
+  input: Schema.Struct({ operation: Schema.String, userRequest: Schema.String, cwd: Schema.String }),
   questions: {
     danger: DecisionQuery.choice({
       instructions: DANGER_INSTRUCTIONS,
-      options: { safe: null, dangerous: null, ultra_dangerous: null },
+      options: { safe: null, highly_dangerous: null },
     }),
   },
 });
@@ -75,7 +84,7 @@ const Live = TypeSafeDecisionModel.model("jev-latest").pipe(
 
 /** A typed classifier backed by TypeSafe AI (`TYPESAFE_API_KEY`). */
 export interface OperationClassifier {
-  classifyDanger(operation: string, timeoutMs?: number): Promise<DangerVerdict>;
+  classifyDanger(context: DangerContext, timeoutMs?: number): Promise<DangerVerdict>;
   classifyExpert(prompt: string, timeoutMs?: number): Promise<ExpertVerdict>;
 }
 
@@ -87,9 +96,9 @@ function isConfigured(): boolean {
 export function makeClassifier(): OperationClassifier {
   const configured = isConfigured();
 
-  function evaluateDanger(operation: string, timeoutMs: number): Promise<Option.Option<DangerLevel>> {
+  function evaluateDanger(context: DangerContext, timeoutMs: number): Promise<Option.Option<DangerLevel>> {
     const effect = DecisionModel.DecisionModel.pipe(
-      Effect.flatMap((model) => model.evaluate(DangerAssessment, { operation })),
+      Effect.flatMap((model) => model.evaluate(DangerAssessment, context)),
       Effect.map((result) => result.answers.danger.choice),
       Effect.timeoutOption(`${timeoutMs} millis`),
       Effect.provide(Live),
@@ -108,9 +117,13 @@ export function makeClassifier(): OperationClassifier {
   }
 
   return {
-    async classifyDanger(operation, timeoutMs = DEFAULT_TIMEOUT_MS) {
+    async classifyDanger(context, timeoutMs = DEFAULT_TIMEOUT_MS) {
       if (!configured) return { kind: "disabled" };
-      const bounded = operation.slice(0, MAX_OPERATION_CHARS);
+      const bounded: DangerContext = {
+        operation: context.operation.slice(0, MAX_OPERATION_CHARS),
+        userRequest: context.userRequest.slice(-MAX_REQUEST_CHARS),
+        cwd: context.cwd,
+      };
       try {
         const result = await evaluateDanger(bounded, timeoutMs);
         return Option.match(result, {

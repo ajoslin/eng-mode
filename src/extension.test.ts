@@ -231,7 +231,7 @@ describe("eng_orch executable entrypoint", () => {
         },
         zod,
         on: (event: string, handler: unknown) => {
-          if (event === "before_agent_start") {
+          if (event === "before_agent_start" && beforeAgentStartHandler === undefined) {
             beforeAgentStartHandler = handler as BeforeAgentStartHandler;
           }
         },
