@@ -1,10 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-  CLASSIFIER_UNAVAILABLE_REASON,
-  HIGHLY_DANGEROUS_BLOCK_REASON,
-  registerDangerGate,
-  USER_DECLINED_REASON,
-} from "./danger-gate.ts";
+import { HIGHLY_DANGEROUS_BLOCK_REASON, registerDangerGate } from "./danger-gate.ts";
 import type { ExtensionAPI, ExtensionEventContext, ToolCallEvent, ToolCallEventResult } from "./extension-types.ts";
 import type { DangerContext, DangerVerdict, OperationClassifier } from "./typesafe.ts";
 
@@ -39,7 +34,7 @@ function headless(): ExtensionEventContext {
   return { hasUI: false, cwd: "/repo", ui: { confirm: async () => false } };
 }
 
-function interactive(answers: boolean[]): ExtensionEventContext & { asked: string[] } {
+function interactive(): ExtensionEventContext & { asked: string[] } {
   const asked: string[] = [];
   return {
     hasUI: true,
@@ -48,7 +43,7 @@ function interactive(answers: boolean[]): ExtensionEventContext & { asked: strin
     ui: {
       confirm: async (_title, message) => {
         asked.push(message);
-        return answers.shift() ?? false;
+        return true;
       },
     },
   };
@@ -68,47 +63,28 @@ describe("registerDangerGate", () => {
     expect(gate.seen).toEqual([{ operation: "bash: pg_dump devdb", userRequest: "dump the dev database", cwd: "/repo" }]);
   });
 
-  it("blocks a flagged call when no user can be asked", async () => {
+  it("denies a flagged call without asking, even when a user is present", async () => {
     const gate = harness(FLAGGED);
-    await expect(gate.call(bash("git push --force origin main"), headless())).resolves.toEqual({
-      block: true,
-      reason: HIGHLY_DANGEROUS_BLOCK_REASON,
-    });
+    const ctx = interactive();
+    const blocked = { block: true, reason: HIGHLY_DANGEROUS_BLOCK_REASON };
+    await expect(gate.call(bash("git push --force origin main"), ctx)).resolves.toEqual(blocked);
+    await expect(gate.call(bash("git push --force origin main"), headless())).resolves.toEqual(blocked);
+    expect(ctx.asked).toHaveLength(0);
   });
 
-  it("asks the user instead of blocking, and runs on approval", async () => {
-    const gate = harness(FLAGGED);
-    const ctx = interactive([true]);
-    await expect(gate.call(bash("git push --force origin main"), ctx)).resolves.toBeUndefined();
-    expect(ctx.asked).toHaveLength(1);
-  });
+  it("retries a failed classification once, then allows the call", async () => {
+    const results: DangerVerdict[] = [{ kind: "error" }, { kind: "classified", level: "safe" }];
+    const recovering = harness(async () => results.shift() ?? FLAGGED);
+    await expect(recovering.call(bash("make"), interactive())).resolves.toBeUndefined();
+    expect(recovering.seen).toHaveLength(2);
 
-  it("blocks with a do-not-retry reason when the user declines", async () => {
-    const gate = harness(FLAGGED);
-    await expect(gate.call(bash("rm -rf ~"), interactive([false]))).resolves.toEqual({
-      block: true,
-      reason: USER_DECLINED_REASON,
-    });
-  });
-
-  it("remembers approval for the identical operation only", async () => {
-    const gate = harness(FLAGGED);
-    const ctx = interactive([true, false]);
-    await gate.call(bash("git push --force origin main"), ctx);
-    await expect(gate.call(bash("git push --force origin main"), ctx)).resolves.toBeUndefined();
-    await expect(gate.call(bash("git push --force origin release"), ctx)).resolves.toEqual({
-      block: true,
-      reason: USER_DECLINED_REASON,
-    });
-    expect(ctx.asked).toHaveLength(2);
-  });
-
-  it("asks when the classifier fails, and blocks headless", async () => {
-    const gate = harness(async () => {
+    const down = harness(async () => {
       throw new Error("boom");
     });
-    await expect(gate.call(bash("make"), headless())).resolves.toEqual({ block: true, reason: CLASSIFIER_UNAVAILABLE_REASON });
-    await expect(gate.call(bash("make"), interactive([true]))).resolves.toBeUndefined();
+    const ctx = interactive();
+    await expect(down.call(bash("make"), ctx)).resolves.toBeUndefined();
+    expect(down.seen).toHaveLength(2);
+    expect(ctx.asked).toHaveLength(0);
   });
 
   it("allows everything when the classifier is disabled (no key)", async () => {
