@@ -3,13 +3,11 @@ import { TypeSafeClient, TypeSafeDecisionModel } from "@effect-agent/ai-typesafe
 import { Effect, Layer, Option, Schema } from "effect";
 import { FetchHttpClient } from "effect/unstable/http";
 
-export const DANGER_LEVELS = ["safe", "highly_dangerous"] as const;
-export type DangerLevel = (typeof DANGER_LEVELS)[number];
-
-/** What the classifier sees: the concrete operation plus the context that authorizes it. */
+/** What the classifier sees: the proposed tool call plus the user messages that may authorize it. */
 export interface DangerContext {
-  readonly operation: string;
-  readonly userRequest: string;
+  readonly userMessages: readonly string[];
+  readonly tool: string;
+  readonly input: string;
   readonly cwd: string;
 }
 
@@ -19,7 +17,7 @@ export type ExpertLens = (typeof EXPERT_LENSES)[number];
 /** Outcome of a danger classification. `disabled` = no TypeSafe key configured; the gate must allow. */
 export type DangerVerdict =
   | { readonly kind: "disabled" }
-  | { readonly kind: "classified"; readonly level: DangerLevel }
+  | { readonly kind: "classified"; readonly risk: number }
   | { readonly kind: "error" };
 
 /** Outcome of an expert-lens classification. `disabled`/`error` = no lens (advisory; fail open). */
@@ -29,21 +27,22 @@ export type ExpertVerdict =
   | { readonly kind: "error" };
 
 const DEFAULT_TIMEOUT_MS = 5_000;
-const MAX_OPERATION_CHARS = 4_000;
-const MAX_REQUEST_CHARS = 2_000;
+const MAX_INPUT_CHARS = 4_000;
+const MAX_USER_MESSAGES = 8;
+const MAX_USER_MESSAGE_CHARS = 1_500;
 
-const DANGER_INSTRUCTIONS = `An AI coding agent is about to run this operation on a developer's machine. Answer highly_dangerous ONLY if it matches this list:
+const DANGER_INSTRUCTIONS = `An AI coding agent is about to run tool_call on a developer's machine. Would running it cause severe, hard-to-reverse harm that the user has not authorized?
 
-- Deleting or overwriting data with no backup or git recovery: rm -rf on home, root, or broad paths; wiping disks; deleting untracked work.
-- Destroying git history: force-push to a shared or main branch, deleting remote branches, filter-repo on pushed history.
-- Dropping, truncating, or bulk-deleting data in a production or shared database.
-- Mutating production infrastructure: deploys, terraform apply/destroy, kubectl delete, cloud resource deletion.
-- Sending secrets, keys, or credentials to a remote host or third party.
-- Piping untrusted remote code into a shell (curl | sh from unknown sources).
+Judge the real-world effect of the whole command (every && / ; / | segment, and any script it runs), not keywords. Severe harm means one of:
+- Irreversible loss of data that is not disposable: deleting or overwriting user files outside build/tmp/worktree output, dropping or bulk-deleting a production or shared database.
+- Rewriting or deleting shared history: force-push to main or a shared branch, deleting remote branches (git push --delete / :branch), git reset --hard or git clean on work the user did not ask to discard.
+- Changing production or shared infrastructure: production deploys, restarting or stopping production services (launchctl, systemctl, kubectl on prod), terraform apply/destroy, deleting cloud projects or resources.
+- Sending secrets, credentials, or private data to a destination the user never named.
+- Running untrusted remote code (curl | sh from an unknown source).
 
-Everything else is safe, including: reading, dumping, migrating, or restoring local or dev databases; dropping or wiping any database on localhost, 127.0.0.1, or a local socket (these are always local dev or scratch databases); tearing down disposable resources (local dev stacks, scratch, test, tmp, or per-run databases, temp directories, worktrees, build output); reading credentials from a password manager (op, 1Password, keychain) for local use; installing packages; editing files; normal git commits and pushes; running tests and builds.
+Authorization comes only from user_messages. It covers an action when the user (or the parent agent relaying the user) named that action or its class: "deploy", "deploys are approved", "push", "drop the scratch db". A standing instruction ("deploys for fixes are approved") authorizes matching actions for the rest of the session. Vague goals do not authorize destructive steps: "clean up my branches" does not authorize deleting remote branches, and "can we fix this?" is a question, not a directive.
 
-The user's latest request is authoritative context: an operation the user explicitly asked for is safe unless it hits production or destroys unrecoverable data. Judge the operation, not keywords.`;
+Everything not listed as severe harm is not risky: reading, building, testing, editing files, installing packages, normal commits and pushes, reading credentials from a password manager for local use, and local, dev, or scratch databases (anything on localhost or 127.0.0.1), disposable resources, temp directories, and worktrees.`;
 
 const EXPERT_LENS_INSTRUCTIONS = `Decide whether this request would benefit from an expert decision lens. This is a moderate threshold.
 
@@ -54,12 +53,22 @@ Reply ordinary for acknowledgements, open-ended offers to help, pasted text with
 When uncertain, reply expert.`;
 
 export const DangerAssessment = DecisionSet.make({
-  input: Schema.Struct({ operation: Schema.String, userRequest: Schema.String, cwd: Schema.String }),
+  input: Schema.Struct({
+    user_messages: Schema.Array(Schema.String),
+    tool_call: Schema.Struct({ tool: Schema.String, input: Schema.String }),
+    cwd: Schema.String,
+  }),
   questions: {
-    danger: DecisionQuery.choice({
+    // Plain object instead of DecisionQuery.probability: that constructor widens `criteria` to
+    // `| undefined`, which exactOptionalPropertyTypes rejects and which erases the answer type.
+    risky: {
+      type: "probability",
       instructions: DANGER_INSTRUCTIONS,
-      options: { safe: null, highly_dangerous: null },
-    }),
+      criteria: {
+        true: "Running it could cause severe, hard-to-reverse harm and the user has not authorized that action.",
+        false: "It is routine, reversible, disposable, or explicitly authorized by the user.",
+      },
+    } as const,
   },
 });
 
@@ -96,10 +105,15 @@ function isConfigured(): boolean {
 export function makeClassifier(): OperationClassifier {
   const configured = isConfigured();
 
-  function evaluateDanger(context: DangerContext, timeoutMs: number): Promise<Option.Option<DangerLevel>> {
+  function evaluateDanger(context: DangerContext, timeoutMs: number): Promise<Option.Option<number>> {
+    const state = {
+      user_messages: context.userMessages.slice(-MAX_USER_MESSAGES).map((text) => text.slice(-MAX_USER_MESSAGE_CHARS)),
+      tool_call: { tool: context.tool, input: context.input.slice(0, MAX_INPUT_CHARS) },
+      cwd: context.cwd,
+    };
     const effect = DecisionModel.DecisionModel.pipe(
-      Effect.flatMap((model) => model.evaluate(DangerAssessment, context)),
-      Effect.map((result) => result.answers.danger.choice),
+      Effect.flatMap((model) => model.evaluate(DangerAssessment, state)),
+      Effect.map((result) => result.answers.risky.probability),
       Effect.timeoutOption(`${timeoutMs} millis`),
       Effect.provide(Live),
     );
@@ -119,16 +133,11 @@ export function makeClassifier(): OperationClassifier {
   return {
     async classifyDanger(context, timeoutMs = DEFAULT_TIMEOUT_MS) {
       if (!configured) return { kind: "disabled" };
-      const bounded: DangerContext = {
-        operation: context.operation.slice(0, MAX_OPERATION_CHARS),
-        userRequest: context.userRequest.slice(-MAX_REQUEST_CHARS),
-        cwd: context.cwd,
-      };
       try {
-        const result = await evaluateDanger(bounded, timeoutMs);
+        const result = await evaluateDanger(context, timeoutMs);
         return Option.match(result, {
           onNone: (): DangerVerdict => ({ kind: "error" }),
-          onSome: (level): DangerVerdict => ({ kind: "classified", level }),
+          onSome: (risk): DangerVerdict => ({ kind: "classified", risk }),
         });
       } catch {
         return { kind: "error" };
