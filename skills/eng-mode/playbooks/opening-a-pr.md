@@ -8,7 +8,7 @@ Invoke this playbook only at the end of a code-producing playbook whose delivery
 
 **Review the history.** Inspect the base-to-HEAD commit list and diff before opening. Reorder or combine only commits you own so each commit is landable and the sequence tells the review story. Stage only the intended paths, run the project pre-commit pass, then use `git commit -m "<message>"`. Amend a just-made commit when the fix belongs there. Otherwise create a new commit. Do not rewrite shared history.
 
-**Choose one PR or a stack.** Use one PR for ordinary coherent work. When dependent, independently understandable layers would make a large change materially easier to review, use only the selected provider's documented stack workflow. Do not split work by an arbitrary size threshold. Do not stack small work by default.
+**Choose one PR or a stack.** Follow `gh-stack` **When to stack**. Around 1,000–3,000 lines of hand-written logic, encourage a stack split by reviewable concern. Mechanical bulk (codemods, renames, moves, generated code, lockfiles) may ship as one PR at any size. It is never a size gate. When you stack, use only the selected provider's documented stack workflow.
 
 **Write for the reviewer.** Run `no-comments` on the diff before review. Apply `technical-writing`, then `unslop`, to the PR title and body. Use a Conventional Commits title in the form `type(scope): subject`, with `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, or `perf`. Name the changed area as the scope. Keep the subject short and imperative, name a real symbol when useful, and omit a trailing period.
 
