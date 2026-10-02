@@ -22,7 +22,7 @@ Arm `gh pr checks REF --watch --fail-fast` or `gh run watch RUN_ID`, record `WAI
 
 For an independent PR, Shipping lands one of two ways. Both pin the snapshot head.
 
-- **Already `READY`:** submit an async merge (below). Treat it as the merge-when-ready request. Arming is confirmed when the response is `pending` with `details.expected_head_sha` equal to the pinned head, or already `merged` / `enqueued`.
+- **Already `READY`:** submit an async merge (below). Treat it as the merge-when-ready request. Arming is confirmed when the response is `pending` with `details.expected_head_sha` equal to the pinned head. An immediate `merged` or `enqueued` carries no head, so confirm it with a fresh `gh pr view REF --json headRefOid,state` whose `headRefOid` equals the pinned head. A different head is a blocker, not a landing of the frozen SHA.
 - **Checks still running:** request auto-merge with `gh pr merge REF --auto --match-head-commit HEAD`. The async API does not wait for checks; it evaluates rules when it runs and fails. Confirm arming only when a fresh `gh pr view REF --json headRefOid,baseRefName,autoMergeRequest` still names the requested head and reports a non-null request. Disarm with `gh pr merge REF --disable-auto`, then confirm the same field is null at the same head.
 
 A command success or stale snapshot is not confirmation.
