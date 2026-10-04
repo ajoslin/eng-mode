@@ -64,7 +64,9 @@ The core playbook ideas are pstack's:
 > - **Refactoring:** “a behavior-preserving change to structure or shape.”
 > - **Performance:** “trace a measured slowness and improve it against a baseline.”
 
-This tree ships **24 playbooks** (pstack's 23 plus Eng Mode's Pre-PR gates) and **23 principle skills**, including `principle-attack-the-premise` and `principle-test-behavior-not-implementation`. `/eng-mode` reads a principle leaf only when it governs a decision. Each leaf is also invocable as `/principle-<name>`. See [pstack's full playbook list](https://github.com/cursor/plugins/blob/main/pstack/README.md#just-use-poteto-mode). Upstream copyright and MIT license terms are preserved in [`LICENSE`](LICENSE).
+This tree ships **24 playbooks** (pstack's 23 plus Eng Mode's Pre-PR gates) and **24 principle skills**, including `principle-attack-the-premise` and `principle-test-behavior-not-implementation`. `/eng-mode` reads a principle leaf only when it governs a decision. Each leaf is also invocable as `/principle-<name>`. See [pstack's full playbook list](https://github.com/cursor/plugins/blob/main/pstack/README.md#just-use-poteto-mode). Upstream copyright and MIT license terms are preserved in [`LICENSE`](LICENSE).
+
+Synced with pstack 0.15.9 ([cursor/plugins `e43c7ee`](https://github.com/cursor/plugins/tree/e43c7ee/pstack)). That sync adds `/correct` (make the mistakes agents keep repeating impossible, through architecture, types, lint, and tests before docs), `/benchmark-checklist`, and `principle-explain-the-number`, and makes `architect` screen designs for agent-friendliness.
 
 ## Development
 

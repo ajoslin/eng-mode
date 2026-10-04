@@ -22,8 +22,9 @@ Before launching workers, put these phases in the lead's finite task list:
 1. State one done predicate and name the aggregate artifact or report.
 2. Choose partition, race, or mixed shape. For a race, declare `first pass`, `rank all`, or `best-of` and its comparison criteria before dispatch.
 3. Set N from the request or derive it from the declared slices and arms. Record N separately from whatever concurrency the runtime provides. Do not invent a fixed maximum.
-4. Give every worker one named, writable output destination. Outputs must not overlap. Writers either own disjoint exclusive paths, or use `isolated: true` only after verifying OMP task isolation is configured and only when every isolated change belongs in the merged result. Race artifacts that are not all meant to merge use separate worker-owned outputs instead of isolated parent-tree writes.
-5. Pick the most specific OMP agent type for each worker: `scout`, `sonic`, `implementation-agent`, `judgment-agent`, `reviewer`, `security-reviewer`, or another applicable specialist.
+4. When workers verify or measure commits, each brief names the exact SHAs. A measurement brief also names the method (sample count, what one sample is, order). The worker records both in its result.
+5. Give every worker one named, writable output destination. Outputs must not overlap. Writers either own disjoint exclusive paths, or use `isolated: true` only after verifying OMP task isolation is configured and only when every isolated change belongs in the merged result. Race artifacts that are not all meant to merge use separate worker-owned outputs instead of isolated parent-tree writes.
+6. Pick the most specific OMP agent type for each worker: `scout`, `sonic`, `implementation-agent`, `judgment-agent`, `reviewer`, `security-reviewer`, or another applicable specialist.
 
 ## Fan out
 
@@ -34,7 +35,7 @@ Dispatch all N independent workers in one `task` batch. Shared batch `context` s
 - the exact slice or race arm
 - the worker's owned output destination
 - the scoped verification to perform, while skipping formatters, linters, and project-wide suites
-- the report contract: `PASS`, `ISSUES`, or `BLOCKED`, with evidence and the output location
+- the report contract: `PASS`, `ISSUES`, or `BLOCKED`, with evidence and the output location. A worker that can prove a defect reports `ISSUES` and lists every issue it can prove, not only the first.
 
 Continue lead work while workers run. Task results deliver asynchronously. Use `hub` only for needed messages and completion notifications. Never poll workers.
 
@@ -44,7 +45,7 @@ Do not aggregate partial arrivals. Declare the drain complete only after every o
 
 ## Aggregate
 
-Start only after the declared drain. Read every terminal result and owned output. Coverage requires a result for every mandatory slice. For a race, the lead applies the selection rule declared during Frame, records why the selected arm won, and applies that arm's output to the canonical target when application is part of the requested work. Do not paste raw worker dumps or let a worker self-select the winner.
+Start only after the declared drain. Read every terminal result and owned output. Drop a result that does not record the SHAs and method its brief names, and respawn that worker once. After a second miss, record a gap. A gap does not count as a pass. Coverage requires a result for every mandatory slice. For a race, the lead applies the selection rule declared during Frame, records why the selected arm won, and applies that arm's output to the canonical target when application is part of the requested work. Do not paste raw worker dumps or let a worker self-select the winner.
 
 The lead reviews integration and validates the aggregate once on the required surface. Worker summaries are evidence pointers, not proof by themselves.
 
