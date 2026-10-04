@@ -103,7 +103,7 @@ describe("pstack 0.15.0 port contracts", () => {
     const { skillNames } = await import("./manifest.ts");
     expect(skillNames).toContain("principle-attack-the-premise");
     expect(skillNames).toContain("principle-test-behavior-not-implementation");
-    expect(skillNames.filter((name) => name.startsWith("principle-"))).toHaveLength(23);
+    expect(skillNames.filter((name) => name.startsWith("principle-"))).toHaveLength(24);
 
     const skill = await read("skills/eng-mode/SKILL.md");
     expect(skill).toContain("`principle-attack-the-premise`");
@@ -117,7 +117,7 @@ describe("pstack 0.15.0 port contracts", () => {
 
     const { readdirSync, readFileSync } = await import("node:fs");
     const principleDirs = readdirSync(join(root, "skills")).filter((name) => name.startsWith("principle-"));
-    expect(principleDirs).toHaveLength(23);
+    expect(principleDirs).toHaveLength(24);
     for (const name of principleDirs) {
       const text = readFileSync(join(root, "skills", name, "SKILL.md"), "utf8");
       expect(text).toContain(`Use for /${name}.`);
@@ -166,5 +166,31 @@ describe("goal and loop ownership", () => {
     expect(skill).toContain("`loop` owns bounded repetition.");
     expect(autonomous).toContain("invoke `loop` with a fixed heartbeat");
     expect(autonomous).toContain("stop `loop`, then complete `goal`");
+  });
+});
+
+describe("pstack 0.15.9 port contracts", () => {
+  it("registers /correct, /benchmark-checklist, and explain-the-number and routes them from Eng Mode", async () => {
+    const { skillNames } = await import("./manifest.ts");
+    expect(skillNames).toContain("correct");
+    expect(skillNames).toContain("benchmark-checklist");
+    expect(skillNames).toContain("principle-explain-the-number");
+
+    const skill = await read("skills/eng-mode/SKILL.md");
+    expect(skill).toContain("the `correct` skill");
+    expect(skill).toContain("the `benchmark-checklist` skill");
+    expect(skill).toContain("`principle-explain-the-number`");
+    expect(skill).toContain("Fresh agents by default.");
+  });
+
+  it("vets perf numbers and orders perf hypotheses by the performance mantras", async () => {
+    const perf = await read("skills/eng-mode/playbooks/perf-issue.md");
+    expect(perf).toContain("`benchmark-checklist`");
+    expect(perf).toContain("1. Don't do it.");
+    expect(perf).not.toContain("eight strategy families");
+
+    const hillclimb = await read("skills/eng-mode/playbooks/hillclimb.md");
+    expect(hillclimb).toContain("`benchmark-checklist`");
+    expect(hillclimb).toContain("performance mantras");
   });
 });
