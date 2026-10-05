@@ -79,8 +79,8 @@ omp plugin link "$PWD"
 
 The thin extension entrypoint, `src/extension.ts`, registers independent modules:
 
-- `auto-mode.ts` classifies main and task/subagent prompts with the configured high-threshold `@tiny` evaluator;
-- `expert-lens.ts` renders expert-decision guidance and restores it after context compaction;
+- `auto-mode.ts` classifies main and task/subagent prompts with high-threshold TypeSafe AI (`jev-latest`) classification. It reads the active session branch and skips classification while the last guidance is followed by fewer than 50,000 non-cached assistant input and output tokens and no compaction or `/clear` boundary;
+- `expert-lens.ts` renders expert-decision guidance;
 - `goal-tool.ts` registers `goal`;
 - `loop-tool.ts` registers `loop`;
 - `eng-orchestrator.ts` registers the repository-contract gate and durable orchestration store;

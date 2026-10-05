@@ -44,13 +44,13 @@ Authorization comes only from user_messages. It covers an action when the user (
 
 Everything not listed as severe harm is not risky: reading, building, testing, editing files, installing packages, normal commits and pushes, reading credentials from a password manager for local use, and local, dev, or scratch databases (anything on localhost or 127.0.0.1), disposable resources, temp directories, and worktrees.`;
 
-const EXPERT_LENS_INSTRUCTIONS = `Decide whether this request would benefit from an expert decision lens. This is a moderate threshold.
+const EXPERT_LENS_INSTRUCTIONS = `Decide whether this request requires an expert decision lens. This is a high threshold: complexity alone is not enough.
 
-Reply expert when the task asks for, or will likely involve, a choice among plausible approaches: design or architecture, non-trivial implementation or refactoring, diagnosing a problem where the fix could take several forms, configuration or tooling trade-offs, or anything with architectural, product, operational, security, migration, or maintenance consequences.
+Reply expert only when the stated task asks for, or necessarily requires, a material choice among plausible alternatives where a poor choice would have meaningful architectural, product, operational, security, migration, or long-term maintenance consequences.
 
-Reply ordinary for acknowledgements, open-ended offers to help, pasted text without a task, simple factual questions, mechanical edits, exact renames, formatting, and small changes with one obvious implementation.
+Reply ordinary for acknowledgements, open-ended offers to help, pasted text without a task, factual questions, explanations, routine investigation or debugging, ordinary implementation, mechanical edits, exact renames, and multi-file work that does not itself require a consequential design choice.
 
-When uncertain, reply expert.`;
+When uncertain, reply ordinary unless the prompt itself establishes meaningful consequences.`;
 
 export const DangerAssessment = DecisionSet.make({
   input: Schema.Struct({
