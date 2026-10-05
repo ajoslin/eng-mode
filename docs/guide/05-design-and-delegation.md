@@ -18,3 +18,9 @@ Use normal tasks when work needs follow-up. Use eval agents only when the comple
 Before fan-out, fix ownership, shared interfaces, output schema, and integration policy. Concurrent writers need disjoint paths or verified isolation. Subagents skip shared validation; the lead integrates and verifies once.
 
 Do not use arena for coverage, swarm for competing designs, hub with disposed eval children, or delegation for top-level product judgment.
+
+Never take the first design. Ask for a few prototypes and pick from evidence you can see. Prototypes answer open questions by running something. Don't spend reviewers on an abstract plan. `/interrogate` belongs on a diff.
+
+For a package or API other code will use, write the README or a tutorial first, then work back to the implementation. The doc is the target the agent checks itself against.
+
+Ask for a written plan only after the design settles. Each planned PR ends in proof. The Multi-phase plan playbook writes the plan and does not implement it.

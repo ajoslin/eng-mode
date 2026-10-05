@@ -14,6 +14,14 @@ Read once in order:
 8. [Complex-monorepo adoption](worked-complex-monorepo.md)
 9. [Troubleshooting](troubleshooting.md)
 
+When you're stuck, or can't tell which skill fits, type `/eng-help` with your question:
+
+```text
+/eng-help which skill should i use to review this branch?
+```
+
+It answers, hands you a prompt to send, and links the skill or guide page the answer came from. It does not start the work, because an Eng Mode run spends real tokens, so you send the prompt when you're ready. It runs only when you type it.
+
 ## One rule
 
 State the result and finish condition, not a ceremony:

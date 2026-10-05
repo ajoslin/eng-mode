@@ -40,6 +40,7 @@ The contracts decision is auditable on-disk validation, not model self-report. `
 
 ## Router
 
+- How Eng Mode, playbooks, or skills work, or which one to use: the `eng-help` skill. It answers and does not start the work.
 - Read-only mechanics or architecture: `playbooks/investigation.md`, then `how`.
 - Historical rationale: `playbooks/investigation.md`, then `why`. ADRs are first-class evidence.
 - Reported defect: `playbooks/bug-fix.md`, which imports `diagnosing-bugs`.

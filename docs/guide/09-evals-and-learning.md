@@ -10,6 +10,14 @@ Eval retains state across cells and exposes tools, structured display, `completi
 
 A behavior-changing skill or prompt needs organic requests, sanitized labels and paths, one hidden rubric, equal environments, and one judge scoring all arms on one calibration. Retain artifact and transcript provenance. Compute failures, win rate, variance, and judge agreement, but read every output before promotion.
 
+## Correct the repo, not the next prompt
+
+Start smaller than you think. Prompt plainly, watch where agents fail, and add a skill or a check when the same failure shows up twice.
+
+When you correct agents for the same mistake again, `/correct` changes the repo so the next agent can't make it. Rank the options by how well they hold: architecture first, then types or a lint whose error names the fix, then a test, then a doc. Human review is not on the list. Pair it with `/architect` when the fix is a new boundary. `principle-encode-lessons-in-structure` is the same rule for one repeated instruction.
+
+A skill edit affects every future session. Ask for a prove-out in the same task: "update the review skill so it flags missing migrations, and eval the change." Fix a misbehaving skill in its own PR, not inside the feature work where it went wrong.
+
 ## Learning tickets
 
 A lesson is a candidate, not authority:
