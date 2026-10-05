@@ -6,7 +6,7 @@
 - **Isolated worker cannot revive:** expected; isolation is terminal.
 - **Eval child cannot receive hub:** expected; use normal tasks for steering.
 - **UI tests pass but proof is inconclusive:** drive the mapped feature through the repository health gate.
-- **Wrong playbook:** restate problem, finish condition, and edit permission—not skill ceremony.
+- **Wrong playbook:** restate problem, finish condition, and edit permission, not skill ceremony. Or type `/eng-help` with the question.
 - **Skill or agent shadow:** remove unintended repository copies; rerun setup.
 - **Secret placeholder reaches a tool:** inspect redacted output only; never paste the secret into context.
 - **Context grows:** checkpoint, artifact matrices, delegate bulk reading, rewind with one evidence report.

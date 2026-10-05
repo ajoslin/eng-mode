@@ -10,7 +10,13 @@ Match evidence to the changed contract.
 
 Compilation proves compilation. A test proves its assertions. Runtime reproduction proves its scenario. Product verification proves behavior on the real surface. Drive web and mobile changes in their clients, CLI/TUI changes in the real program, jobs through a real worker, migrations through apply/readback, and cross-runtime contracts in every affected runtime. A failed health gate or wrong surface is **inconclusive**.
 
-Bug fixes reproduce first and remove the cause. Features name shape and ownership. Refactors pin behavior. Performance work records comparable baseline and result. Add tests only for uncovered observable contracts. A test calls the code the way its users do and asserts a literal expected value. If it would still pass when every imported function returned `undefined`, rewrite the assertion or delete the test.
+Ask for the proof as an artifact you can inspect: the failing test then the passing one, a before-and-after video, the trace, the screenshot. If the fix already merged, ask for the same check again on main.
+
+Bug fixes reproduce first and remove the cause. Features name shape and ownership. Refactors pin behavior. Performance work records comparable baseline and result. Live runtime diagnosis uses `runtime-forensics`. Fixed traces and heaps use `trace-forensics`. Add tests only for uncovered observable contracts. A test calls the code the way its users do and asserts a literal expected value. If it would still pass when every imported function returned `undefined`, rewrite the assertion or delete the test.
+
+A before-and-after number is easy to get wrong. Before you report or act on one, run `benchmark-checklist`. The verdict is faster, slower, no measurable difference, or inconclusive, with the run count, range, and limiter. Perf issue and Hillclimb already run it. Type it yourself when you measured something outside those playbooks.
+
+If the repository has no `verify-project` contract, run `create-verification-skill`. Name it in the prompt when you want app proof: "repro this with verify-project. if it repros on main, fix it and show me a video." Run `maintain-verification-skill` when the map may have rotted.
 
 ## Review and delivery
 

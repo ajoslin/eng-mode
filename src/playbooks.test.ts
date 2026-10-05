@@ -194,3 +194,72 @@ describe("pstack 0.15.9 port contracts", () => {
     expect(hillclimb).toContain("performance mantras");
   });
 });
+
+describe("pstack 0.15.13 port contracts", () => {
+  it("registers typed-only /eng-help and routes help questions from Eng Mode", async () => {
+    const { skillNames, agentSkillsAllowlist } = await import("./manifest.ts");
+    expect(skillNames).toContain("eng-help");
+    expect(agentSkillsAllowlist).not.toContain("eng-help");
+
+    const help = await read("skills/eng-help/SKILL.md");
+    expect(help).toContain("disable-model-invocation: true");
+    expect(help).toContain("Use for /eng-help");
+    expect(help).toContain("`/eng-mode`");
+    expect(help).toContain("`/setup-eng-mode`");
+    expect(help).toContain("https://github.com/ajoslin/eng-mode/blob/main/");
+    expect(help).toContain("Babysit ends at merge-ready and never merges");
+    expect(help).toContain("the `correct` skill");
+    expect(help).toContain("the `benchmark-checklist` skill");
+    expect(help).toContain("Cursor-only");
+    expect(help).not.toContain("/poteto-mode");
+    expect(help).not.toContain("/setup-pstack");
+    expect(help).not.toContain("/poteto-help");
+    expect(help).not.toContain("pstack-models.mdc");
+    expect(help).not.toContain("make-bot-ui");
+    expect(help).not.toContain("Custom Mode");
+
+    const skill = await read("skills/eng-mode/SKILL.md");
+    expect(skill).toContain("the `eng-help` skill");
+    expect(skill).toContain("It answers and does not start the work.");
+  });
+
+  it("ships prompting and recipe references adapted to Eng Mode", async () => {
+    const prompting = await read("skills/eng-help/references/prompting.md");
+    expect(prompting).toContain("`/eng-mode`");
+    expect(prompting).toContain("The goal.");
+    expect(prompting).toContain("The done check.");
+    expect(prompting).not.toContain("/poteto-mode");
+    expect(prompting).not.toContain("Custom Mode");
+
+    const recipes = await read("skills/eng-help/references/recipes.md");
+    expect(recipes).toContain("`/eng-mode`");
+    expect(recipes).toContain("babysit this pr");
+    expect(recipes).toContain("land the stack");
+    expect(recipes).toContain("`/eng-help`");
+    expect(recipes).not.toContain("/poteto-mode");
+    expect(recipes).not.toContain("/poteto-help");
+    expect(recipes).not.toContain("make-bot-ui");
+  });
+
+  it("records the 0.15.13 sync and teaches /eng-help in the operator guide", async () => {
+    const readme = await read("README.md");
+    expect(readme).toContain("Synced with pstack 0.15.13");
+    expect(readme).toContain("2cbf585");
+    expect(readme).toContain("`/eng-help`");
+
+    const guide = await read("docs/guide/README.md");
+    expect(guide).toContain("`/eng-help`");
+    expect(guide).toContain("does not start the work");
+
+    const giveWork = await read("docs/guide/03-give-work-to-aj.md");
+    expect(giveWork).toContain("restate the underlying issue");
+
+    const verify = await read("docs/guide/06-build-debug-and-verify.md");
+    expect(verify).toContain("`benchmark-checklist`");
+    expect(verify).toContain("runtime-forensics");
+
+    const recipes = await read("docs/guide/10-recipes-and-failure-modes.md");
+    expect(recipes).toContain("`/eng-help`");
+    expect(recipes).toContain("`/correct`");
+  });
+});

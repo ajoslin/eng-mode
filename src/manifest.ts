@@ -1,6 +1,7 @@
 
 export const skillNames = [
   "eng-mode",
+  "eng-help",
   "setup-eng-mode",
   "eng-mode-sync-skills",
   "architect",
