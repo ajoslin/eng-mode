@@ -6,6 +6,12 @@ import {
 import type { ExtensionAPI } from "./extension-types.ts";
 import { openStore, parseVerdict } from "./store.ts";
 
+/** Explicit path when set; otherwise the session cwd (romp/herdr workspace root). */
+export function resolveRepositoryRoot(value: string | undefined): string {
+  if (value !== undefined && value.length > 0) return resolve(value);
+  return resolve(process.cwd());
+}
+
 export const actionNames = [
   "contracts",
   "init",
@@ -71,16 +77,12 @@ function required(value: string | undefined, name: string): string {
 
 function resolveStore(input: Input): string {
   if (input.store !== undefined && input.store.length > 0) return input.store;
-  return join(
-    resolve(required(input.repositoryRoot, "repositoryRoot")),
-    ".omp",
-    "eng-orch"
-  );
+  return join(resolveRepositoryRoot(input.repositoryRoot), ".omp", "eng-orch");
 }
 
 export async function executeEngOrch(input: Input): Promise<unknown> {
   if (input.action === "contracts") {
-    const repositoryRoot = required(input.repositoryRoot, "repositoryRoot");
+    const repositoryRoot = resolveRepositoryRoot(input.repositoryRoot);
     const observations = observeRepositoryContracts(repositoryRoot);
     return decideRepositoryContracts({
       repositoryRoot,
@@ -204,7 +206,12 @@ export function registerEngOrchestration(pi: ExtensionAPI): void {
     parameters: z.object({
       action: z.enum(actionNames),
       store: z.string().optional(),
-      repositoryRoot: z.string().optional(),
+      repositoryRoot: z
+        .string()
+        .describe(
+          "Git repository root. Defaults to the session cwd (romp/herdr workspace root)."
+        )
+        .optional(),
       mode: z.enum(["read-only", "code-producing"]).optional(),
       spawner: z.string().optional(),
       agent: z.string().optional(),

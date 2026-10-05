@@ -68,6 +68,24 @@ describe("eng_orch executable entrypoint", () => {
     });
   });
 
+  it("defaults repositoryRoot to the session cwd for contracts and the store", async () => {
+    await withRepo(async (repositoryRoot) => {
+      await contract(repositoryRoot, "project-standards");
+      await contract(repositoryRoot, "verify-project");
+      const result = await executeEngOrch({ action: "contracts", mode: "code-producing" }) as {
+        decision: string;
+        repositoryRoot: string;
+        forgeProvider: string;
+      };
+      expect(result.decision).toBe("proceed");
+      expect(result.forgeProvider).toBe("github");
+      expect(realpathSync(result.repositoryRoot)).toBe(realpathSync(repositoryRoot));
+      const initialized = await executeEngOrch({ action: "init", spawner: "session" }) as { store: string };
+      expect(realpathSync(initialized.store)).toBe(realpathSync(join(repositoryRoot, ".omp", "eng-orch")));
+    });
+  });
+
+
   it("prefers canonical project skills and falls back to legacy OMP skills", async () => {
     const canonicalRepository = await root();
     await contract(canonicalRepository, "project-standards", "pr-cockpit");
