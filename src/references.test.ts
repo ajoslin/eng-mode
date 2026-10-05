@@ -9,6 +9,7 @@ const externalSkills = [
 ];
 const notSkillLoads = [
   { name: "goal", reason: "OMP operator goal command" },
+  { name: "clear", reason: "OMP context reset command" },
   { name: "guided-goal", reason: "OMP guided goal command" },
   { name: "handoff", reason: "OMP session handoff command" },
   { name: "loop", reason: "OMP operator loop command" },
