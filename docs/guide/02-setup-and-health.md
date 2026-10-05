@@ -20,3 +20,9 @@ Declarations do not prove runtime availability. Inspect settings with `omp confi
 | Task isolation | Concurrent writers collide |
 
 Agents select semantic roles, not provider IDs. Actual models matter when claiming vendor diversity. Isolation is terminal; use ordinary tasks when later hub steering is required.
+
+If the repository has no `verify-project` contract, run `create-verification-skill`. An agent that can check its own work keeps going until the check passes. An agent that can't hands every result back to you.
+
+Eng Mode spends extra tokens on typed agents and review panels. Use `sonic` or `scout` when the brief is mechanical or read-only. Save `/eng-mode` for work that needs rigor.
+
+When you can't tell which skill fits, type `/eng-help` with the question. It answers and does not start the work.
