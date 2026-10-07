@@ -126,18 +126,15 @@ providers:
     capabilities:
       - id: snapshot
         owner: provider
-        delegatesTo: github
-        external: false
+        delegatesTo: better-github-skill
         confirmationEvidence: [provider-snapshot]
       - id: watch
         owner: provider
-        delegatesTo: github
-        external: false
+        delegatesTo: better-github-skill
         confirmationEvidence: [provider-watch-event]
       - id: rearm
         owner: provider
-        delegatesTo: github
-        external: false
+        delegatesTo: better-github-skill
         confirmationEvidence: [provider-watch-event]
       - id: frozen-queue
         owner: provider
@@ -156,8 +153,7 @@ providers:
         confirmationEvidence: [provider-snapshot]
       - id: compare-head-base
         owner: provider
-        delegatesTo: github
-        external: false
+        delegatesTo: better-github-skill
         confirmationEvidence: [head-sha, base-sha]
     requirements: [snapshot, watch, rearm, frozen-queue, arm-confirmation, topology, merge-when-ready-request, disarm, compare-head-base]
   - id: pr-cockpit
@@ -192,7 +188,7 @@ providers:
         confirmationEvidence: [head-sha, base-sha]
     requirements: [snapshot, watch, rearm, frozen-queue, arm-confirmation, topology, merge-when-ready-request, disarm, compare-head-base]
 references:
-  skills: [eng-mode, github, pr-cockpit, gh-stack]
+  skills: [eng-mode, github, pr-cockpit, gh-stack, better-github-skill]
   agents: [implementation-agent, judgment-agent]
   playbooks: [babysit, shipping, autopilot-full, autopilot-stack, orchestrate]
   tools: [goal, loop, eng_orch]

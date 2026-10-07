@@ -32,9 +32,9 @@ function references(text: string): { name: string; index: number }[] {
   const found: { name: string; index: number }[] = [];
   for (const pattern of [
     /skill:\/\/([a-z][a-z0-9-]*)/g,
-    /(?<![a-z0-9-])`\/([a-z][a-z0-9-]*-?)(?=[\s`])/g,
+    /(?<![a-z0-9-(]|, )`\/([a-z][a-z0-9-]*-?)(?=[\s`])/g,
     /\*\*([a-z][a-z0-9-]*)\*\*(?:\s+and\s+\*\*([a-z][a-z0-9-]*)\*\*)?\s+(?:principle\s+)?skills?\b/g,
-    /(?:Read|read|Use|use|Apply|apply|Run|run)\s+`([a-z][a-z0-9-]*skill)`(?=\s+(?:for|skill|before|and|first))/g,
+    /(?:Read|read|Use|use|Apply|apply|Run|run)\s+`([a-z][a-z0-9-]*skill(?:-[a-z0-9-]+)?)`(?=\s+(?:for|skill|before|and|first))/g,
   ]) {
     for (const match of text.matchAll(pattern)) {
       for (const name of match.slice(1)) if (name) found.push({ name, index: match.index });
@@ -61,8 +61,8 @@ describe("runtime skill references", () => {
     expect(missingReferences("skills/example/SKILL.md", "Apply the **type-system-discipline** principle skill first.")).toEqual([
       "skills/example/SKILL.md:1 type-system-discipline → did you mean principle-type-system-discipline?",
     ]);
-    expect(missingReferences("skills/example/SKILL.md", "Use `better-github-skill` for GitHub operations.")).toEqual([
-      "skills/example/SKILL.md:1 better-github-skill → ship this skill or remove the required load",
+    expect(missingReferences("skills/example/SKILL.md", "Use `better-github-skill-v2` for GitHub operations.")).toEqual([
+      "skills/example/SKILL.md:1 better-github-skill-v2 → ship this skill or remove the required load",
     ]);
   });
 

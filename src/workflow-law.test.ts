@@ -136,11 +136,12 @@ describe("workflow law", () => {
     expect(codes(unsafe)).toContain("provider-delegate-undefined");
   });
 
-  it("rejects an unshipped external provider dependency", async () => {
+  it("rejects a provider delegate skill the plugin does not ship", async () => {
     const law = await validLaw();
-    law.references.skills.push("better-github-skill");
-    const diagnostics = validateWorkflowLaw(law, buildSourceInventory(root));
-    expect(diagnostics.some((item) => item.message.includes("better-github-skill"))).toBe(true);
+    const inventory = buildSourceInventory(root);
+    const shipped = new Set([...inventory.skills].filter((skill) => skill !== "better-github-skill"));
+    const diagnostics = validateWorkflowLaw(law, { ...inventory, skills: shipped });
+    expect(diagnostics.map((item) => item.code)).toContain("provider-delegate-undefined");
   });
 
   it("requires independent landing readiness evidence", async () => {
