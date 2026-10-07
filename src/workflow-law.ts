@@ -322,7 +322,7 @@ export function buildSourceInventory(root: string): SourceInventory {
   return {
     root: absoluteRoot,
     files,
-    skills: new Set<string>([...skillNames, "better-github-skill"]),
+    skills: new Set<string>(skillNames),
     agents: new Set<string>(agentNames),
     playbooks: new Set<string>(playbookNames),
     tools: new Set(["goal", "loop", "eng_orch"]),

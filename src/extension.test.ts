@@ -287,6 +287,7 @@ describe("eng_orch executable entrypoint", () => {
     expect(engOrch).toBeDefined();
     if (!goal || !engOrch) throw new Error("Eng Mode tools were not registered");
     expect(goal).toMatchObject({ strict: true, loadMode: "essential" });
+    expect(engOrch).toMatchObject({ strict: true, loadMode: "essential" });
     expect(tokenBudgetMinimum).toBe(MINIMUM_GOAL_TOKEN_BUDGET);
     const signal = new AbortController().signal;
     const onUpdate = () => {};

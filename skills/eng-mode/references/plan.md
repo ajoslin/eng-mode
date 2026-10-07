@@ -16,13 +16,13 @@ Read the **Principles** section of the `eng-mode` skill for applicability. Then 
 
 ## 2. Scope and constraints
 
-State your read of scope and constraints in one paragraph. Use the structured `ask` tool only for genuinely ambiguous intent (the **never-block-on-the-human** principle skill). Give concrete options with each open question. Prefer a reversible default and record it when repository evidence resolves the question.
+State your read of scope and constraints in one paragraph. Use the structured `ask` tool only for genuinely ambiguous intent (the **principle-never-block-on-the-human** principle skill). Give concrete options with each open question. Prefer a reversible default and record it when repository evidence resolves the question.
 
 Resolve what is in scope vs explicitly out, technical or platform constraints, patterns to preserve, and the observable definition of done. Name the execution playbook for each delivery unit and the repository-selected forge provider once for the plan. A provider operation absent from that skill is a blocker, not permission to fall back.
 
 ## 3. Explore in subagents
 
-Delegate codebase exploration (the **guard-the-context-window** principle skill).
+Delegate codebase exploration (the **principle-guard-the-context-window** principle skill).
 
 Each explorer returns file pointers, conventions, dependencies, test infrastructure, and entry points. No inlined dumps.
 
@@ -34,14 +34,14 @@ Keep a multi-phase plan as `overview.md` plus phase artifacts. Each phase artifa
 
 ### Phase and PR sizing
 
-Make every phase one independently shippable PR/evidence unit. Prefer more small coherent units over a few large ones, but do not split a behavior across PRs that cannot each produce an observable result (the **foundational-thinking** and **sequence-verifiable-units** principle skills). A dependent phase names the exact upstream phase and base. An independent phase names the common base.
+Make every phase one independently shippable PR/evidence unit. Prefer more small coherent units over a few large ones, but do not split a behavior across PRs that cannot each produce an observable result (the **principle-foundational-thinking** and **principle-sequence-verifiable-units** principle skills). A dependent phase names the exact upstream phase and base. An independent phase names the common base.
 
 ### Overview file
 
 - **Context.** Problem and why now.
 - **Scope.** Included, explicitly excluded.
 - **Constraints.** Technical, platform, dependency, and established patterns.
-- **Alternatives.** Two or three approaches, the choice, and rationale (the **exhaust-the-design-space** principle skill). Skip only when constraints dictate one. Retain rejected alternatives in an appendix.
+- **Alternatives.** Two or three approaches, the choice, and rationale (the **principle-exhaust-the-design-space** principle skill). Skip only when constraints dictate one. Retain rejected alternatives in an appendix.
 - **Execution.** Ordered PR graph, execution playbook per phase, selected forge provider, topology owner for dependent stacks, and whether delivery is independent or stacked.
 - **Applicable skills.** Domain skills the implementer should invoke, by name.
 - **Phases.** Ordered standard-markdown links to phase files, with dependency and owner at a glance.
@@ -60,15 +60,15 @@ Every phase file contains this skeleton. Omit no field. Write `not applicable: <
 - **Owner and branch.** One accountable owner, named successor rule if autonomy is required, branch, and exact base branch/PR.
 - **Execution.** Eng Mode execution playbook and selected provider operation used to open or append the PR. Name the topology owner for a dependent stack.
 - **Files and boundaries.** Paths the phase may change, seams it owns, paths it must not change, and interaction with adjacent phases. Describe what and why, not line-by-line implementation. No code snippets.
-- **Data structures.** Key types or schemas in a one-line sketch (the **foundational-thinking** principle skill), or `not applicable`.
+- **Data structures.** Key types or schemas in a one-line sketch (the **principle-foundational-thinking** principle skill), or `not applicable`.
 - **Prototype prerequisite.** For uncertain layout, interface, interaction, or timing, require the Prototype playbook before production writing. Record the throwaway branch, artifact path, head SHA, matching-surface screenshots for every visual variant or logs/timings for behavioral variants, selected direction, and disposal. Otherwise state why no prototype is needed.
 - **Verification receipt.** Exact surface and expected observation, commands or project-contract flow, evidence location, verifier, PR number, and head SHA. Include relevant unit/static evidence, live matching-surface evidence, and performance baseline/result. Mark irrelevant lanes `not applicable`. Never promote green CI or a unit test into live proof.
 - **Review gate.** Required project review/pre-PR gates, reviewers or review skills, actionable-finding disposition, and acceptance condition at the same head SHA.
 - **Merge or handback.** Independent merge or provider-owned stack operation, merge authority, ordering, handback recipient, and the evidence delivered. Babysit may establish readiness but never supplies merge authority.
 
-Order phases so subtraction, infrastructure, and shared types land before dependents (the **foundational-thinking** principle skill). Each phase must be independently reviewable and produce its own receipt. A new head SHA invalidates SHA-pinned evidence unless the active execution/provider contract explicitly permits patch-identity proof.
+Order phases so subtraction, infrastructure, and shared types land before dependents (the **principle-foundational-thinking** principle skill). Each phase must be independently reviewable and produce its own receipt. A new head SHA invalidates SHA-pinned evidence unless the active execution/provider contract explicitly permits patch-identity proof.
 
-For changes touching existing code, apply the **redesign-from-first-principles** principle skill. If we'd built this with the new requirement on day one, what would it look like? Redesign holistically. Deliver incrementally.
+For changes touching existing code, apply the **principle-redesign-from-first-principles** principle skill. If we'd built this with the new requirement on day one, what would it look like? Redesign holistically. Deliver incrementally.
 
 If a phase creates or edits a skill, name the Eng Mode Authoring a skill playbook as its execution playbook. Eng Mode's autonomy rule resolves the contract from repository context instead of interviewing.
 
@@ -80,13 +80,13 @@ Specify only checks supported by `project-standards`, `verify-project`, existing
 - **Live evidence:** exercise the changed behavior on its matching real surface. If the project contract does not map that surface or its health gate fails, record `INCONCLUSIVE`. Do not substitute a convenient proxy.
 - **Performance evidence:** when timing, resource use, or responsiveness is part of the result, freeze the workload and ruler, then record baseline and post-change measurements on the same surface.
 
-For bug fixes, reproduce on the real surface, fix, and verify on that same surface. Unit tests show a branch behaves a certain way. They do not prove the reported bug is gone (the **prove-it-works** principle skill).
+For bug fixes, reproduce on the real surface, fix, and verify on that same surface. Unit tests show a branch behaves a certain way. They do not prove the reported bug is gone (the **principle-prove-it-works** principle skill).
 
 The plan may require a lightweight structural checker only when the repository already documents one. Name its exact command and what fields it checks. Otherwise define a reviewer checklist against the canonical skeleton. Do not invent a script, command, or CI job.
 
 ## 6. Implementation guidance
 
-In the overview, name which Eng Mode non-negotiables govern execution: contracts before mutation, clean cutover, one writer per exclusive branch, matching-surface proof, current-head evidence, provider-only topology operations, and no merge without explicit authority. State any planned intermediate breakage and the verification boundary that contains it (the **outcome-oriented-execution** principle skill).
+In the overview, name which Eng Mode non-negotiables govern execution: contracts before mutation, clean cutover, one writer per exclusive branch, matching-surface proof, current-head evidence, provider-only topology operations, and no merge without explicit authority. State any planned intermediate breakage and the verification boundary that contains it (the **principle-outcome-oriented-execution** principle skill).
 
 ## 7. Arm and hand back
 

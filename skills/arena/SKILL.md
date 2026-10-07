@@ -39,11 +39,11 @@ The lead reads every candidate and rationale end to end, independently scores ea
 
 ## Graft
 
-Walk every losing candidate again. Usually graft only one or two coherent ideas, folding them into the base by hand under **redesign-from-first-principles** rather than pasting or averaging designs. For each graft record its source label. For each material rejected idea record why it was rejected. If candidates converge on one shape, record consensus and do not invent grafts. If they diverge so widely that the rubric cannot choose coherently, the lead owns recovery. Reframe the prompt and rerun the arena.
+Walk every losing candidate again. Usually graft only one or two coherent ideas, folding them into the base by hand under **principle-redesign-from-first-principles** rather than pasting or averaging designs. For each graft record its source label. For each material rejected idea record why it was rejected. If candidates converge on one shape, record consensus and do not invent grafts. If they diverge so widely that the rubric cannot choose coherently, the lead owns recovery. Reframe the prompt and rerun the arena.
 
 ## Verify
 
-Precisely graft the selected design into the real target, migrate any affected integration points, and verify the synthesized artifact on its real surface under **prove-it-works**. If verification fails, return to Graft when a candidate already contained the missing idea. Otherwise return to Frame and rerun. Do not patch around a failed synthesis.
+Precisely graft the selected design into the real target, migrate any affected integration points, and verify the synthesized artifact on its real surface under **principle-prove-it-works**. If verification fails, return to Graft when a candidate already contained the missing idea. Otherwise return to Frame and rerun. Do not patch around a failed synthesis.
 
 ## Outputs
 

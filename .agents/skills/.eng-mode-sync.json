@@ -1,12 +1,12 @@
 {
-  "sourceCommit": "0487a89287c3e31012d7de37d46786d36823379f",
+  "sourceCommit": "153bc01b70e9c84ecc8d0dac5f62043b7ec5f571",
   "skills": {
     "unslop": {
-      "SKILL.md": "6948335a00f9fed7a29204b9f08f74a9d9596d90989fd06f58f02d984ceab6f3"
+      "SKILL.md": "290a10a90e52f080fdf0f225f043088990b5cd8d8b8307c800a91cfeb1568aa4"
     },
     "typescript-best-practices": {
-      "SKILL.md": "abd84f43d3c33db81d90273777313a55cf39a6d32414f67e53951246ab4f3adc",
-      "references/patterns.md": "62e9cd32d2fa066a35d0d1349aac22dce31a48ad7d5eaf142570770cfe707384"
+      "SKILL.md": "cdc3d5ec1762397a315708ac0dffbfd707a396c0f5613a0f40d136a32d6f977a",
+      "references/patterns.md": "d3882243062d325dccf53592dbefa5c177b246d70093190baf2e33b719b0b037"
     },
     "tdd": {
       "SKILL.md": "3f9f418b5f120f92a757dd040c9ceb78d938df38e21f78ebc466c25f934d8848",
@@ -31,7 +31,7 @@
       "agents/openai.yaml": "edebc9e4fcfe102114012575eaa9600b9b5fd08c311664f389c36e7bc717740f"
     },
     "technical-writing": {
-      "SKILL.md": "6d6d9e625ae412ee8f36df8deb6fd9203d7c6acca776d5ee3cabbb9126f8b84c"
+      "SKILL.md": "f5c512ffeec70bc4e0dee50f7bb4c26742e1be77967a6e8b15d1921e1c209ceb"
     },
     "meaningful-contribution": {
       "SKILL.md": "8c841a6fd4f625f90573233d8ea8253d50a3625f68aea01524632722529bed4a"
@@ -46,13 +46,22 @@
       "SKILL.md": "715a6d7b269bbcc270f29c7b2bf280390acabb3bc8a2d8a22018ebf286f2baa0"
     },
     "blast-radius": {
-      "SKILL.md": "20cb2945f5fe62055166f745107274af5f19428ca033e53a9b8bc69650d3ded1"
+      "SKILL.md": "5f02db9101ccf26c20254718f0fcd5c2c7ac5d4292b0e0923d0944ac47237aff"
     },
     "gh-stack": {
       "SKILL.md": "f2744a8c5da4939347a80fa89916af95043fa6350d7ad13a1c42b9b83b52bee7",
       "references/commands.md": "31049425b8db652e80fa6994d5289f20169f57d7af0a0651fa72c3f25e8fe7c7",
       "references/stack-design.md": "2cdfe8cf0bfbd06d6c89460a46bbb61351d7a392f6d943f16875cf3714804ccf",
       "references/troubleshooting.md": "fe1958036e663c7471a0d3efdf1fefe47ee65e06713b13a96e3db95becccdc47"
+    },
+    "better-github-skill": {
+      "LICENSE": "2a2c97f25932125c5b00f94094df93f0e1094294d2b4c026dd6cefc7958bfc00",
+      "README.md": "d273ebaaf381026b8ebc7c0062ee9977b1a1e42213c728a71ec2a52edfeeb414",
+      "SKILL.md": "a2904c0aca609fed9ff095c0eca9995999594cf3b79c09e80d1576ec511e8aea",
+      "scripts/ci-failures.ts": "35552a9a54883ae87f7f286f627203c16216a64214286a26f4b37999defafacf",
+      "scripts/lib.ts": "6702ce1b4854b1b8067db863f37296926e61b20b271f68fc9ab63a88f11c3c65",
+      "scripts/pr-snapshot.ts": "f49a1015b509c85272bb5657ddd67f1339c28e2b702d299c8737fc393b126d82",
+      "scripts/pr-threads.ts": "821d360cbc28bb1c326a1b700d51f8da56d4fec22a78be7e524554c2e0109a62"
     }
   }
 }

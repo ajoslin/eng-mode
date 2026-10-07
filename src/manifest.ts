@@ -8,6 +8,7 @@ export const skillNames = [
   "arena",
   "automate-me",
   "benchmark-checklist",
+  "better-github-skill",
   "blast-radius",
   "bro",
   "codebase-design",

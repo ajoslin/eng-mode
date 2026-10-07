@@ -1,6 +1,6 @@
 # TypeScript patterns
 
-Code examples for each rule in `SKILL.md`. The underlying principles are language-agnostic. See the **type-system-discipline** and **boundary-discipline** principle skills.
+Code examples for each rule in `SKILL.md`. The underlying principles are language-agnostic. See the **principle-type-system-discipline** and **principle-boundary-discipline** principle skills.
 
 ## Branded types
 
@@ -153,27 +153,38 @@ Use `safeParse` when failure is an expected branch. Use the equivalent inference
 Every `as` is a potential runtime crash. Cast only after the type system has verified the claim.
 
 ```ts
+import { z } from "zod";
+
 // Don't
 const user = data as User;
 
-// Do. Earn the cast at the boundary.
-function parseUser(data: unknown): User {
-  if (typeof data !== "object" || data === null) {
-    throw new Error("expected object");
-  }
-  if (!("id" in data) || typeof (data as Record<string, unknown>).id !== "string") {
-    throw new Error("expected id");
-  }
-  // ... validate all fields
-  return data as User; // OK, earned cast after full validation
+// Don't
+function isUser(data: unknown): data is User {
+  return typeof data === "object" && data !== null && "id" in data;
 }
+
+// Do
+const userSchema = z.object({ id: z.string(), name: z.string() });
+type User = z.infer<typeof userSchema>;
+
+function parseUser(data: unknown): User {
+  return userSchema.parse(data);
+}
+```
+
+When the type comes first, annotate the validator with the type it proves. The compiler then rejects a validator that proves less than the type. Remove `name` from the object below and the assignment fails to compile.
+
+```ts
+type User = { id: string; name: string };
+
+const userSchema: z.ZodType<User> = z.object({ id: z.string(), name: z.string() });
 ```
 
 When refactoring an `as` out of existing code, identify why TypeScript can't infer:
 
 - Missing discriminant: add one, switch to a discriminated union.
 - Overly wide source type (e.g. `Record<string, unknown>`): narrow it.
-- Untyped boundary: add a parse function or schema.
+- Untyped boundary: parse with the schema that owns the shape. Add a schema only where none exists.
 - Genuinely inexpressible: use a branded type or `satisfies`.
 
 ## Narrowing hierarchy
@@ -258,7 +269,7 @@ const config = { theme: "dark", cols: 3 } satisfies Config;
 
 ## Boundary validation
 
-Validate once where data crosses in. Trust types inside. See the **boundary-discipline** principle skill.
+Validate once where data crosses in. Trust types inside. See the **principle-boundary-discipline** principle skill.
 
 - **Wire formats** (proto, JSON-RPC): parse with `ignoreUnknownFields` so forward-compatible changes don't break old clients.
 - **Persisted JSON:** versioned blob with a try/catch around the parse.

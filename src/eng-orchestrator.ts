@@ -237,6 +237,8 @@ export function registerEngOrchestration(pi: ExtensionAPI): void {
       prs: z.array(z.number()).optional(),
       line: z.string().optional(),
     }),
+    strict: true,
+    loadMode: "essential",
     async execute(_toolCallId, input) {
       try {
         const details = await executeEngOrch(input as Input);
