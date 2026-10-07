@@ -6,8 +6,6 @@ import { z } from "zod";
 export const contractNames = ["project-standards", "verify-project"] as const;
 export type ContractName = typeof contractNames[number];
 
-export type ForgeProviderName = "github" | "pr-cockpit";
-
 export type ContractParseStatus =
   | "ok"
   | "unconfigured"
@@ -20,7 +18,6 @@ export interface ContractObservation {
   readonly name: ContractName;
   readonly expectedPath: string;
   readonly parse: ContractParseStatus;
-  readonly forgeProvider?: string;
 }
 
 export type ContractDecision =
@@ -43,14 +40,12 @@ export interface RepositoryContractsResult {
   readonly mode: ContractMode;
   readonly repositoryRoot: string;
   readonly contracts: readonly ContractObservation[];
-  readonly forgeProvider: ForgeProviderName | null;
   readonly reasons: readonly string[];
 }
 
 const UNCONFIGURED_SENTINEL = "UNCONFIGURED";
 const contractMetadataSchema = z.object({
   name: z.string().optional(),
-  "forge-provider": z.string().min(1).optional(),
 });
 
 function observedContract(
@@ -79,15 +74,6 @@ export function decideRepositoryContracts(
   const standards = observedContract(input, "project-standards");
   const verification = observedContract(input, "verify-project");
   const contracts = [standards, verification];
-  const configuredForgeProvider =
-    standards.parse === "ok"
-      ? standards.forgeProvider ?? "github"
-      : null;
-  const forgeProvider: ForgeProviderName | null =
-    configuredForgeProvider === "github" ||
-    configuredForgeProvider === "pr-cockpit"
-      ? configuredForgeProvider
-      : null;
   const done = (
     decision: ContractDecision,
     reasons: readonly string[]
@@ -96,7 +82,6 @@ export function decideRepositoryContracts(
     mode: input.mode,
     repositoryRoot: input.repositoryRoot,
     contracts,
-    forgeProvider,
     reasons,
   });
 
@@ -124,13 +109,6 @@ export function decideRepositoryContracts(
       "project-standards is absent; code-producing work stops before any edit, write, or writer delegation",
     ]);
   }
-  if (forgeProvider === null) {
-    return done("blocked-standards", [
-      `project-standards selects unknown forge-provider ${JSON.stringify(
-        configuredForgeProvider
-      )}`,
-    ]);
-  }
 
   if (verification.parse === "unconfigured") {
     return done("unconfigured", [
@@ -145,7 +123,6 @@ export function decideRepositoryContracts(
 
   return done("proceed", [
     "both project contracts are valid repository-owned skills",
-    `forge provider ${forgeProvider} selected`,
   ]);
 }
 
@@ -206,13 +183,10 @@ export function observeRepositoryContracts(
     if (parsed.data.name !== name) {
       return { name, expectedPath, parse: "wrong-name" as const };
     }
-    const forgeProvider =
-      name === "project-standards" ? parsed.data["forge-provider"] : undefined;
     return {
       name,
       expectedPath,
       parse: "ok" as const,
-      ...(forgeProvider === undefined ? {} : { forgeProvider }),
     };
   });
 }

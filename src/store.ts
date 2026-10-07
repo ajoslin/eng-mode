@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync, type Dirent } from "node:fs";
+import { type Dirent } from "node:fs";
 import {
   access,
   mkdir,
@@ -13,9 +13,14 @@ import {
   unlink,
   writeFile,
 } from "node:fs/promises";
-import { basename, delimiter, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
+const ENG_GITHUB_SCRIPT = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../skills/eng-github/scripts/eng-github.ts"
+);
 const UNIT_HEADER = "id\ttrack\tstate\tbranch\tpr\tsha\tbrief";
 const LEDGER_HEADER = "pr\tsha\tverdict\tevidence\tverifier\tts";
 const LOCK_FILE = ".orch.lock";
@@ -1035,81 +1040,31 @@ function countLine(value: Counts): string {
     : entries.map(([name, count]) => `${name}=${count}`).join(", ");
 }
 
-const ghStackViewSchema = z.object({
-  trunk: z.string().min(1),
-  currentBranch: z.string().min(1),
-  branches: z.array(
+const stackViewSchema = z.object({
+  number: z.number().int().positive(),
+  base: z.string().min(1),
+  open: z.boolean(),
+  layers: z.array(
     z.object({
-      name: z.string().min(1),
-      head: z.string().optional(),
-      pr: z
-        .object({
-          number: z.number().int().positive(),
-          state: z.string().min(1),
-        })
-        .optional(),
+      number: z.number().int().positive(),
+      branch: z.string().min(1),
+      headSha: z.string().regex(/^[0-9a-f]{40,64}$/i),
+      state: z.string().min(1),
+      draft: z.boolean(),
     })
   ),
 });
 
-function resolveExecutable(name: string): string | undefined {
-  const path = process.env.PATH;
-  if (path === undefined || path.length === 0) {
-    return undefined;
-  }
-  for (const directory of path.split(delimiter)) {
-    if (directory.length === 0) {
-      continue;
-    }
-    const candidate = join(directory, name);
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return undefined;
-}
+const pullRequestListSchema = z.array(
+  z.object({
+    number: z.number().int().positive(),
+    headRefName: z.string().min(1),
+  })
+);
 
-function runGhStackView(repo: string): string {
-  const gh = resolveExecutable("gh");
-  if (gh === undefined) {
-    throw new UserError(
-      "gh stack is missing. Install GitHub CLI and run gh extension install github/gh-stack"
-    );
-  }
+function runEngGithub(repo: string, args: readonly string[]): string {
   try {
-    return execFileSync(gh, ["stack", "view", "--json"], {
-      cwd: repo,
-      encoding: "utf8",
-      env: { ...process.env, NO_COLOR: "1" },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-  } catch (error) {
-    if (!(error instanceof Error)) {
-      throw error;
-    }
-    throw new UserError(
-      `gh stack view --json failed: ${errorMessage(error)}`
-    );
-  }
-}
-
-function parseGhStackState(state: string): FrontierPrState {
-  if (state === "MERGED") {
-    return "MERGED";
-  }
-  if (state === "CLOSED") {
-    return "CLOSED";
-  }
-  if (state === "OPEN" || state === "QUEUED") {
-    return "OPEN";
-  }
-  throw new UserError(`gh stack view --json has an unknown PR state: ${state}`);
-}
-
-function branchSha({ branch, repo }: { branch: string; repo: string }): string {
-  let raw: string;
-  try {
-    raw = execFileSync("git", ["rev-parse", branch], {
+    return execFileSync("bun", [ENG_GITHUB_SCRIPT, ...args], {
       cwd: repo,
       encoding: "utf8",
       env: process.env,
@@ -1120,49 +1075,102 @@ function branchSha({ branch, repo }: { branch: string; repo: string }): string {
       throw error;
     }
     throw new UserError(
-      `git rev-parse ${branch} failed: ${errorMessage(error)}`
+      `eng-github ${args.join(" ")} failed: ${errorMessage(error)}`
     );
   }
-  const sha = raw.trim();
-  if (!/^[0-9a-f]{40,64}$/i.test(sha)) {
-    throw new UserError(`git rev-parse ${branch} returned an invalid SHA`);
+}
+
+function currentBranch(repo: string): string {
+  let branch: string;
+  try {
+    branch = execFileSync("git", ["branch", "--show-current"], {
+      cwd: repo,
+      encoding: "utf8",
+      env: process.env,
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error;
+    }
+    throw new UserError(
+      `git branch --show-current failed: ${errorMessage(error)}`
+    );
   }
-  return sha;
+  if (branch.length === 0) {
+    throw new UserError("cannot resolve a stack from a detached HEAD");
+  }
+  return branch;
+}
+
+function parseStackState(state: string): FrontierPrState {
+  switch (state) {
+    case "merged":
+      return "MERGED";
+    case "closed":
+      return "CLOSED";
+    case "open":
+      return "OPEN";
+    default:
+      throw new UserError(`eng-github stack view has an unknown PR state: ${state}`);
+  }
+}
+
+function parseJsonOutput(raw: string, command: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new UserError(`eng-github ${command} output is unparseable`);
+  }
 }
 
 function resolveFrontier(repo: string): readonly FrontierPr[] {
-  let decoded: unknown;
-  try {
-    decoded = JSON.parse(runGhStackView(repo));
-  } catch {
-    throw new UserError("gh stack view --json output is unparseable");
+  const branch = currentBranch(repo);
+  const pullRequestOutput = parseJsonOutput(
+    runEngGithub(repo, ["pr", "list", "--head", branch, "--state", "all"]),
+    "pr list"
+  );
+  const pullRequests = pullRequestListSchema.safeParse(pullRequestOutput);
+  if (!pullRequests.success) {
+    throw new UserError("eng-github pr list output is unparseable");
   }
-  const parsed = ghStackViewSchema.safeParse(decoded);
-  if (!parsed.success) {
-    throw new UserError("gh stack view --json output is unparseable");
+  const matchingPullRequests = pullRequests.data.filter(
+    (pullRequest) => pullRequest.headRefName === branch
+  );
+  if (matchingPullRequests.length !== 1) {
+    throw new UserError(
+      matchingPullRequests.length === 0
+        ? `eng-github pr list found no pull request for current branch ${branch}`
+        : `eng-github pr list found multiple pull requests for current branch ${branch}`
+    );
   }
-  const result = parsed.data.branches.map((branch) => {
-    if (branch.pr === undefined) {
-      throw new UserError(
-        `gh stack view --json branch ${branch.name} has no pull request`
-      );
-    }
-    const sha =
-      branch.head !== undefined && /^[0-9a-f]{40,64}$/i.test(branch.head)
-        ? branch.head
-        : branchSha({ branch: branch.name, repo });
-    return {
-      pr: branch.pr.number,
-      state: parseGhStackState(branch.pr.state),
-      branches: branch.name,
-      sha,
-    };
-  });
+  const pullRequest = matchingPullRequests[0];
+  if (pullRequest === undefined) {
+    throw new UserError(`eng-github pr list found no pull request for ${branch}`);
+  }
+
+  const stackOutput = parseJsonOutput(
+    runEngGithub(repo, ["stack", "view", String(pullRequest.number)]),
+    "stack view"
+  );
+  if (stackOutput === null) {
+    throw new UserError("eng-github stack view did not contain a stack");
+  }
+  const stack = stackViewSchema.safeParse(stackOutput);
+  if (!stack.success) {
+    throw new UserError("eng-github stack view output is unparseable");
+  }
+  const result = stack.data.layers.map((layer) => ({
+    pr: layer.number,
+    state: parseStackState(layer.state),
+    branches: layer.branch,
+    sha: layer.headSha,
+  }));
   if (result.length === 0) {
-    throw new UserError("gh stack view --json did not contain a stack");
+    throw new UserError("eng-github stack view did not contain a stack");
   }
   if (new Set(result.map((row) => row.pr)).size !== result.length) {
-    throw new UserError("gh stack view --json contains duplicate pull requests");
+    throw new UserError("eng-github stack view contains duplicate pull requests");
   }
   return result;
 }
@@ -1186,14 +1194,14 @@ function validateFrontierPin({
   const extra = actual.filter((pr) => !expectedSet.has(pr));
   const drift: string[] = [];
   if (missing.length > 0) {
-    drift.push(`missing from gh stack: ${missing.join(",")}`);
+    drift.push(`missing from stack: ${missing.join(",")}`);
   }
   if (extra.length > 0) {
-    drift.push(`extra in gh stack: ${extra.join(",")}`);
+    drift.push(`extra in stack: ${extra.join(",")}`);
   }
   if (missing.length === 0 && extra.length === 0) {
     drift.push(
-      `order differs: expected ${expected.join(",")}; gh stack ${actual.join(",")}`
+      `order differs: expected ${expected.join(",")}; stack ${actual.join(",")}`
     );
   }
   throw new UserError(`frontier pin mismatch: ${drift.join("; ")}`);

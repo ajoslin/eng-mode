@@ -61,8 +61,8 @@ describe("runtime skill references", () => {
     expect(missingReferences("skills/example/SKILL.md", "Apply the **type-system-discipline** principle skill first.")).toEqual([
       "skills/example/SKILL.md:1 type-system-discipline → did you mean principle-type-system-discipline?",
     ]);
-    expect(missingReferences("skills/example/SKILL.md", "Use `better-github-skill-v2` for GitHub operations.")).toEqual([
-      "skills/example/SKILL.md:1 better-github-skill-v2 → ship this skill or remove the required load",
+    expect(missingReferences("skills/example/SKILL.md", "Use `missing-example-skill` for GitHub operations.")).toEqual([
+      "skills/example/SKILL.md:1 missing-example-skill → ship this skill or remove the required load",
     ]);
   });
 

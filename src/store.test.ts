@@ -98,64 +98,83 @@ async function makeGitStack(directory: string): Promise<{
   };
 }
 
-function defaultGhStackView(stack: {
+function defaultEngGithubStackView(stack: {
   readonly mergedSha: string;
   readonly closedSha: string;
   readonly openSha: string;
 }): string {
   return `${JSON.stringify({
-    trunk: "main",
-    currentBranch: "stack/open",
-    branches: [
+    number: 4,
+    base: "main",
+    open: true,
+    layers: [
       {
-        name: "stack/merged",
-        head: stack.mergedSha,
-        pr: { number: 10, state: "MERGED" },
+        number: 10,
+        branch: "stack/merged",
+        headSha: stack.mergedSha,
+        state: "merged",
+        draft: false,
       },
       {
-        name: "stack/closed",
-        head: stack.closedSha,
-        pr: { number: 13, state: "CLOSED" },
+        number: 13,
+        branch: "stack/closed",
+        headSha: stack.closedSha,
+        state: "closed",
+        draft: false,
       },
       {
-        name: "stack/open",
-        head: stack.openSha,
-        pr: { number: 11, state: "OPEN" },
+        number: 11,
+        branch: "stack/open",
+        headSha: stack.openSha,
+        state: "open",
+        draft: false,
       },
     ],
   }, null, 2)}\n`;
 }
 
-async function withFakeGhStack<T>({
+async function withFakeEngGithub<T>({
   directory,
   view,
+  pullRequests = '[{"number":11,"headRefName":"stack/open"}]',
   operation,
 }: {
   directory: string;
   view: string;
+  pullRequests?: string;
   operation: () => Promise<T>;
 }): Promise<T> {
   const bin = join(directory, "bin");
-  const viewPath = join(directory, "gh-stack-view.json");
+  const viewPath = join(directory, "stack-view.json");
+  const pullRequestsPath = join(directory, "pull-requests.json");
   await mkdir(bin, { recursive: true });
   await writeFile(viewPath, view);
-  const gh = join(bin, "gh");
+  await writeFile(pullRequestsPath, pullRequests);
+  const bun = join(bin, "bun");
   await writeFile(
-    gh,
+    bun,
     `#!/usr/bin/env bash
 set -euo pipefail
 if [ "$(pwd -P)" != "${realpathSync(join(directory, "repo"))}" ]; then
-  printf 'gh ran outside the fixture repo: %s\\n' "$(pwd -P)" >&2
+  printf 'bun ran outside the fixture repo: %s\\n' "$(pwd -P)" >&2
   exit 2
 fi
-if [ "$*" != "stack view --json" ]; then
-  printf 'unexpected gh arguments: %s\\n' "$*" >&2
+if [ "$#" -lt 1 ] || [ ! -f "$1" ] || [ "\${1#/}" = "$1" ]; then
+  printf 'eng-github script path must be an absolute file path\\n' >&2
   exit 2
 fi
-cat "${viewPath}"
+shift
+if [ "$*" = "pr list --head stack/open --state all" ]; then
+  cat "${pullRequestsPath}"
+elif [ "$*" = "stack view 11" ]; then
+  cat "${viewPath}"
+else
+  printf 'unexpected eng-github arguments: %s\\n' "$*" >&2
+  exit 2
+fi
 `
   );
-  await chmod(gh, 0o755);
+  await chmod(bun, 0o755);
   return await withPathPrefix({ bin, operation, replace: false });
 }
 
@@ -631,13 +650,13 @@ describe("Store", () => {
     ]);
   });
 
-  it("resolves the ordered gh stack frontier and validates an optional pin", async () => {
+  it("resolves the ordered eng-github stack frontier and validates an optional pin", async () => {
     const { directory, store } = await initializedStore();
     const stack = await makeGitStack(directory);
 
-    await withFakeGhStack({
+    await withFakeEngGithub({
       directory,
-      view: defaultGhStackView(stack),
+      view: defaultEngGithubStackView(stack),
       operation: async () => {
         expect(await store.frontier.set({ repo: stack.repo })).toEqual({
           generation: 1,
@@ -678,7 +697,7 @@ describe("Store", () => {
             prs: [10, 11, 12],
           })
         ).rejects.toThrow(
-          "frontier pin mismatch: missing from gh stack: 12; extra in gh stack: 13"
+          "frontier pin mismatch: missing from stack: 12; extra in stack: 13"
         );
         await expect(
           store.frontier.set({
@@ -686,7 +705,7 @@ describe("Store", () => {
             prs: [13, 10, 11],
           })
         ).rejects.toThrow(
-          "frontier pin mismatch: order differs: expected 13,10,11; gh stack 10,13,11"
+          "frontier pin mismatch: order differs: expected 13,10,11; stack 10,13,11"
         );
         await expect(
           store.frontier.set({
@@ -698,82 +717,74 @@ describe("Store", () => {
     });
   });
 
-  it("rejects unparseable gh stack output loudly", async () => {
+  it("rejects unparseable eng-github stack output loudly", async () => {
     const { directory, store } = await initializedStore();
     const stack = await makeGitStack(directory);
 
-    await withFakeGhStack({
+    await withFakeEngGithub({
       directory,
-      view: "this line is not gh stack json\n",
+      view: "this line is not eng-github JSON",
       operation: async () => {
         await expect(store.frontier.set({ repo: stack.repo })).rejects.toThrow(
-          "gh stack view --json output is unparseable"
+          "eng-github stack view output is unparseable"
         );
       },
     });
   });
 
-  it("rejects a stack branch with no PR", async () => {
+  it("requires a pull request for the current branch", async () => {
     const { directory, store } = await initializedStore();
     const stack = await makeGitStack(directory);
 
-    await withFakeGhStack({
+    await withFakeEngGithub({
       directory,
-      view: `${JSON.stringify({
-        trunk: "main",
-        currentBranch: "stack/open",
-        branches: [
-          { name: "stack/merged", head: stack.mergedSha },
-          {
-            name: "stack/closed",
-            head: stack.closedSha,
-            pr: { number: 13, state: "CLOSED" },
-          },
-          {
-            name: "stack/open",
-            head: stack.openSha,
-            pr: { number: 11, state: "OPEN" },
-          },
-        ],
-      })}\n`,
+      view: defaultEngGithubStackView(stack),
+      pullRequests: "[]",
       operation: async () => {
         await expect(store.frontier.set({ repo: stack.repo })).rejects.toThrow(
-          "gh stack view --json branch stack/merged has no pull request"
+          "eng-github pr list found no pull request for current branch stack/open"
         );
       },
     });
   });
 
-  it("rejects an unknown gh stack PR state", async () => {
+  it("rejects an unknown eng-github stack state", async () => {
     const { directory, store } = await initializedStore();
     const stack = await makeGitStack(directory);
 
-    await withFakeGhStack({
+    await withFakeEngGithub({
       directory,
       view: `${JSON.stringify({
-        trunk: "main",
-        currentBranch: "stack/open",
-        branches: [
+        number: 4,
+        base: "main",
+        open: true,
+        layers: [
           {
-            name: "stack/merged",
-            head: stack.mergedSha,
-            pr: { number: 10, state: "MERGED" },
+            number: 10,
+            branch: "stack/merged",
+            headSha: stack.mergedSha,
+            state: "merged",
+            draft: false,
           },
           {
-            name: "stack/closed",
-            head: stack.closedSha,
-            pr: { number: 13, state: "CLOSED" },
+            number: 13,
+            branch: "stack/closed",
+            headSha: stack.closedSha,
+            state: "closed",
+            draft: false,
           },
           {
-            name: "stack/open",
-            head: stack.openSha,
-            pr: { number: 11, state: "Mystery status" },
+            number: 11,
+            branch: "stack/open",
+            headSha: stack.openSha,
+            state: "Mystery status",
+            draft: false,
           },
         ],
       })}\n`,
       operation: async () => {
         await expect(store.frontier.set({ repo: stack.repo })).rejects.toThrow(
-          "gh stack view --json has an unknown PR state: Mystery status"
+          "eng-github stack view has an unknown PR state: Mystery status"
         );
       },
     });

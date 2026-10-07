@@ -15,8 +15,8 @@ Eng Mode uses OMP primitives directly:
 
 - `todo` for the active finite work list;
 - `task` and `hub` for typed agents, parallel work, and coordination;
-- LSP, debugger, browser, and repository-selected forge surfaces for grounded code and runtime evidence;
-- plain `git commit` for commits and one repository-selected provider skill for all forge and PR work;
+- LSP, debugger, and browser tools for grounded code and runtime evidence;
+- plain `git commit` for commits and `eng-github` for GitHub and PR operations;
 - `goal` for durable objectives;
 - `loop` for bounded repetition;
 - plugin discovery for skills and agents, plus `eng_orch` for repository contracts and durable orchestration state.
@@ -37,7 +37,7 @@ Restart OMP. Then open every repository where you use Eng Mode and run:
 setup-eng-mode
 ```
 
-**Run `setup-eng-mode` in every repository.** It checks the plugin, model roles, agent chains, worktree isolation, and that repository's standards and verification contracts. It also installs and enables the companion [`compact-adviser`](https://github.com/kunchenguid/compact-adviser) plugin in `auto` mode when a `TYPESAFE_API_KEY` is available, and leaves it disabled otherwise (`bun run compact-adviser` from this checkout does the same gate on its own).
+**Run `setup-eng-mode` in every repository.** It checks plugin provenance, model roles, agent chains, worktree isolation, repository standards, and verification contracts. It runs `bun --version` and `eg whoami` to validate Bun and GitHub token access. When `TYPESAFE_API_KEY` is available, setup installs and enables the companion [`compact-adviser`](https://github.com/kunchenguid/compact-adviser) plugin in `auto` mode. Without a key, it leaves the plugin disabled. Run `bun run compact-adviser` from this checkout to apply the same gate.
 
 To update, run the install command again, restart OMP, and rerun `setup-eng-mode` in each repository.
 
@@ -45,14 +45,12 @@ To update, run the install command again, restart OMP, and rerun `setup-eng-mode
 
 Eng Mode supplies the reusable workflow. Each repository owns:
 
-- `.agents/skills/project-standards/SKILL.md` — repository law and selected tooling; optional `forge-provider` frontmatter selects `github` or `pr-cockpit`, defaulting to `github` when absent;
-- `.agents/skills/verify-project/SKILL.md` — the real product-verification surface.
+- `.agents/skills/project-standards/SKILL.md`: repository law and commands.
+- `.agents/skills/verify-project/SKILL.md`: the real product-verification surface.
 
 Legacy repositories may keep these contracts under `.omp/skills`; new and migrated repositories use `.agents/skills`.
 
-`eng_orch contracts` returns that selection as `forgeProvider`. Read that skill once and use only its documented interface for every forge and PR operation. If the skill does not document an operation, stop; never fall back to another provider.
-
-`setup-eng-mode` validates both contracts.
+For GitHub and PR operations, use the shipped [`eng-github`](skills/eng-github/SKILL.md) skill and its documented `eg` commands.
 
 ## From pstack
 

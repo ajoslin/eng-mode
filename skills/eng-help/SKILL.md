@@ -83,7 +83,7 @@ The default answer is `/eng-mode`, which runs most of the others when its steps 
 | Stop agents from repeating the same mistakes in this repo | the `correct` skill |
 | File a learning ticket from evidence | [`/capture-learning`](../capture-learning/SKILL.md) |
 | Run a blinded skill or workflow comparison | [`/omp-workflows`](../omp-workflows/SKILL.md) and the Prove-out playbook |
-| Use the selected forge or stack a GitHub PR | the `forgeProvider` skill from `eng_orch contracts`, or [`/gh-stack`](../gh-stack/SKILL.md) |
+| Read GitHub PRs or submit a stack | [`eng-github`](../eng-github/SKILL.md): `eg snapshot REF`, `eg watch REF`, `eg stack submit --base BASE BRANCH...` |
 | One Pre-PR question from a reviewer with no history | [`/fresh-eyes`](../fresh-eyes/SKILL.md) |
 | Harsh maintainability review, explicit only | [`/thermo-nuclear-code-quality-review`](../thermo-nuclear-code-quality-review/SKILL.md) |
 | Proven-working-code bar, explicit only | [`/meaningful-contribution`](../meaningful-contribution/SKILL.md) |

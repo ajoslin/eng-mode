@@ -1,8 +1,8 @@
 # T3 Code and GitHub
 
-This page lists every GitHub call T3 Code makes and explains how it stays inside GitHub's rate limits while it watches pull requests. It then compares that design with Eng Mode's `github` provider, `better-github-skill`, `pr-cockpit` and the Babysit playbook.
+This page records the GitHub calls T3 Code made at the pinned revision and compares its rate-limit design with Eng Mode. Eng Mode has since adopted batched GraphQL reads of up to 25 PRs, fingerprint checks, credential-scoped rate-limit pauses with exit 75, and a 10% quota reserve through `eng-github`.
 
-This is research. Nothing here changes Eng Mode behavior. The recommendations at the end are not adopted.
+This is research. The "Eng Mode before eng-github" and "Recommendations at the time" sections describe the earlier `gh`, `better-github-skill`, and `pr-cockpit` workflow, which has been removed. The Adopted section lists what Eng Mode now ships.
 
 All T3 Code paths are relative to [`pingdotgg/t3code`](https://github.com/pingdotgg/t3code) at `26285ab` (2026-10-07). Server paths start at `apps/server/src/`.
 
@@ -147,7 +147,7 @@ From `git log` on the pinned clone. Confidence follows the `why` skill's wording
 
 PR bodies and issues were not read. That kept GitHub API use near zero while this research ran.
 
-## Eng Mode today
+## Eng Mode before eng-github
 
 | Need | Eng Mode | Cost per use [INFERENCE: from `gh` behavior, not traced] |
 |---|---|---|
@@ -174,10 +174,19 @@ pr-cockpit is the closest match to T3 Code's server. It checks quota before back
 | Merge authority | A wake is news. The agent decides. | Babysit never merges. Shipping merges a frozen head. |
 | Merge from a shell | Detected by regex, then links are read fresh | Merges always go through the provider, which re-reads afterwards |
 
-## Recommendations (not adopted)
+## Recommendations at the time
 
 1. Pass `--interval 60` or more to `gh pr checks --watch` in `skills/github/SKILL.md`, or send waits through `pr-cockpit listen` when it is available. The 10 second default costs about 360 requests an hour for each watcher.
 2. Add one sentence to Babysit saying that a rate-limit error means wait until `x-ratelimit-reset` and re-read. It is not a failure, and it is never a reason to retry sooner.
 3. Add a fingerprint mode to the snapshot step: one GraphQL read of `headRefOid`, `mergeable`, check counts by state and comment and review counts. Run the full paired snapshot only when it changes.
 4. When a stack or queue is frozen, read every frozen PR in one aliased GraphQL document instead of one snapshot per PR.
 5. Make pr-cockpit's GitHub account explicit. `server/githubAuth.ts:93,218` caches the first `gh auth token` result, which belongs to whichever `gh` account was active then. A host where Babysit runs `gh` under another account spends two separate quotas, and nothing shows which one is spent.
+
+## Adopted
+
+Eng Mode's [`eng-github` skill](../../skills/eng-github/SKILL.md) adopts these mechanisms:
+
+- Batch PR reads in GraphQL documents with aliases, up to 25 PRs per request.
+- Read a cheap fingerprint before fetching a full snapshot.
+- Pause requests for the rate-limited credential until its reset time. `eg` exits with code 75 while paused; do not retry sooner.
+- Stop background reads when 10% of the GraphQL quota remains, reserving it for interactive commands.

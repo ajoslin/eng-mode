@@ -23,8 +23,7 @@ export const portableSkillNames = [
   "create-verification-skill",
   "maintain-verification-skill",
   "blast-radius",
-  "gh-stack",
-  "better-github-skill",
+  "eng-github",
 ] as const satisfies readonly SkillName[];
 
 export const syncManifestFile = ".eng-mode-sync.json";

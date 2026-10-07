@@ -130,17 +130,19 @@ describe("workflow law", () => {
     const law = await validLaw();
     const unsafe = structuredClone(law);
     const provider = unsafe.providers[0];
-    const capability = provider?.capabilities.find((item) => item.delegatesTo !== undefined);
-    if (!capability) throw new Error("delegated capability fixture missing");
+    const capability = provider?.capabilities.find((item) => item.id === "snapshot");
+    if (!capability) throw new Error("snapshot capability fixture missing");
     capability.delegatesTo = "missing-skill";
     expect(codes(unsafe)).toContain("provider-delegate-undefined");
   });
 
   it("rejects a provider delegate skill the plugin does not ship", async () => {
     const law = await validLaw();
+    const capability = law.providers[0]?.capabilities.find((item) => item.id === "snapshot");
+    if (!capability) throw new Error("snapshot capability fixture missing");
+    capability.delegatesTo = "missing-skill";
     const inventory = buildSourceInventory(root);
-    const shipped = new Set([...inventory.skills].filter((skill) => skill !== "better-github-skill"));
-    const diagnostics = validateWorkflowLaw(law, { ...inventory, skills: shipped });
+    const diagnostics = validateWorkflowLaw(law, inventory);
     expect(diagnostics.map((item) => item.code)).toContain("provider-delegate-undefined");
   });
 
