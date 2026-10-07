@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "171e682e2b7ee591683ca46201442cdc6f18e07a",
+  "sourceCommit": "9508bedb2cbd46398054eb36588a0e448dd8daa8",
   "skills": {
     "unslop": {
       "SKILL.md": "290a10a90e52f080fdf0f225f043088990b5cd8d8b8307c800a91cfeb1568aa4"
@@ -62,7 +62,7 @@
       "scripts/lib/merge-async.ts": "bdc8700b621b385a1ca1fee2b6061453052c990054cd38998ca5b5458c319693",
       "scripts/lib/pr-query.ts": "c12e4d39d9e89dfde6fbecf00214d45f3e326df93ce2a4cb6ec184c2d4dfff06",
       "scripts/lib/process.ts": "c608dace83136dc24c5ea5bb9dada15293a448903de9b7d4c4bfe67e7120f76b",
-      "scripts/lib/rebase.ts": "d867008d71e464c8733e7141fc24a9bf22f173a0ed9bc3248e1642fde3047f03",
+      "scripts/lib/rebase.ts": "45d82633ff497fbca9d7e3c19db952aa56de87a2f26f317cbe2d91f503fc5862",
       "scripts/lib/ref.ts": "e3442d78f58055cdce400ffdb0af66f8cd3347319badf3a821b0ea1374a28bf4",
       "scripts/lib/state.ts": "3449b5100b1befda9c9bb67579623d6c44bcbd3b21d1f0eb38a40eb10f378c87",
       "scripts/lib/watch-eval.ts": "61493005cd1f845dfc5901e6e3f7a201e719fa82edf76c4f4865fab6bd82c878"

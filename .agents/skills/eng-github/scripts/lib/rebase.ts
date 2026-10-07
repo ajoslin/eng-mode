@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { EngGithubError, UsageError } from "./errors.ts";
 import { git, gitOut } from "./process.ts";
@@ -84,12 +84,14 @@ async function cutoffFor(cwd: string, remote: string, layer: CascadeLayer, paren
 }
 
 async function otherWorktreeBranches(cwd: string): Promise<Set<string>> {
-  const top = await must(["rev-parse", "--show-toplevel"], cwd, "git rev-parse --show-toplevel");
+  const top = realpathSync(await must(["rev-parse", "--show-toplevel"], cwd, "git rev-parse --show-toplevel"));
   const branches = new Set<string>();
   let path: string | undefined;
   for (const line of ((await gitOut(["worktree", "list", "--porcelain"], cwd)) ?? "").split("\n")) {
-    if (line.startsWith("worktree ")) path = line.slice("worktree ".length);
-    else if (line.startsWith("branch refs/heads/") && path !== top) branches.add(line.slice("branch refs/heads/".length));
+    if (line.startsWith("worktree ")) {
+      const listed = line.slice("worktree ".length);
+      path = existsSync(listed) ? realpathSync(listed) : listed;
+    } else if (line.startsWith("branch refs/heads/") && path !== top) branches.add(line.slice("branch refs/heads/".length));
   }
   return branches;
 }
@@ -98,9 +100,12 @@ async function updateLocal(cwd: string, head: string, layer: CascadeResult["laye
   const local = await gitOut(["rev-parse", "-q", "--verify", `refs/heads/${layer.branch}`], cwd);
   if (local === undefined || local === "") return "absent";
   if (local !== layer.oldHead) return "diverged";
+  if (head === layer.branch) {
+    await must(["reset", "-q", "--keep", layer.newHead], cwd, `git reset --keep ${layer.branch}`);
+    return "updated";
+  }
   if (elsewhere.has(layer.branch)) return "checked-out-elsewhere";
-  if (head === layer.branch) await must(["reset", "-q", "--keep", layer.newHead], cwd, `git reset --keep ${layer.branch}`);
-  else await must(["update-ref", `refs/heads/${layer.branch}`, layer.newHead, layer.oldHead], cwd, `git update-ref ${layer.branch}`);
+  await must(["update-ref", `refs/heads/${layer.branch}`, layer.newHead, layer.oldHead], cwd, `git update-ref ${layer.branch}`);
   return "updated";
 }
 

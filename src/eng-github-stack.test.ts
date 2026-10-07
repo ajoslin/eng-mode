@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EngGithubError } from "../skills/eng-github/scripts/lib/errors.ts";
@@ -79,6 +79,20 @@ describe("cascadeRebase", () => {
     const result = await cascadeRebase({ cwd: work, base: "main", layers: layers(heads) });
     expect(result.layers.map((layer) => layer.local)).toEqual(["diverged", "updated", "updated"]);
     expect(sh(work, "rev-parse", "l1")).toBe(local);
+  });
+
+  test("a symlinked cwd still moves the checked-out branch and skips another worktree's branch", async () => {
+    const { work, heads } = setup();
+    const other = `${work}-other`;
+    dirs.push(other);
+    sh(work, "worktree", "add", "-q", other, "l3");
+    const link = `${work}-link`;
+    dirs.push(link);
+    symlinkSync(work, link);
+    const result = await cascadeRebase({ cwd: link, base: "main", layers: layers(heads) });
+    expect(result.layers.map((layer) => layer.local)).toEqual(["updated", "updated", "checked-out-elsewhere"]);
+    expect(sh(work, "rev-parse", "HEAD")).toBe(result.layers[1]!.newHead);
+    expect(sh(work, "rev-parse", "l3")).toBe(heads.l3!);
   });
 
   test("conflict stops at the right layer and restores the worktree", async () => {
