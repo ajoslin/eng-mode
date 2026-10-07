@@ -5,11 +5,11 @@ description: GitHub forge adapter for PR reads, waits, creation, review, merges,
 
 # GitHub
 
-Use `better-github-skill` for GitHub operations and `gh-stack` for dependent-stack topology and landing. Do not mix another forge provider into an operation.
+Use `better-github-skill` for PR reads, review threads, and CI drilldown, `gh` and OMP's native `github` tool for writes, and `gh-stack` for dependent-stack topology and landing. Do not mix another forge provider into an operation.
 
 ## Delivery interface
 
-Use one SHA-pinned snapshot for every decision. Run `pr-snapshot.ts --json`, then `pr-threads.ts --json`, then `pr-snapshot.ts --json` again. Accept the snapshot only when both state reads name the same head SHA and base ref. The state supplies head, base, checks, and merge state, while the middle read supplies review threads. Resolve the base ref and compare it with that exact head through `gh api 'repos/{owner}/{repo}/compare/BASE...HEAD'`. A changed head or resolved base SHA invalidates the snapshot.
+Use one SHA-pinned snapshot for every decision. Run `better-github-skill`'s `pr-snapshot.ts --json`, then `pr-threads.ts --all --json`, then `pr-snapshot.ts --json` again. `--all` is required: an outdated thread can still be unresolved, and the default view hides it. Accept the snapshot only when both state reads name the same head SHA and base ref. The state supplies head, base, checks, and merge state, while the middle read supplies every review thread with its resolution state. Resolve the base ref and compare it with that exact head through `gh api 'repos/{owner}/{repo}/compare/BASE...HEAD'`. A changed head or resolved base SHA invalidates the snapshot.
 
 Before watching a stack or queue, freeze its ordered PR references and head SHAs. The watcher record is `{ event, ref, head, base, reason }`, where `event` is exactly one of:
 
@@ -48,14 +48,14 @@ until s=$(gh api 'repos/{owner}/{repo}/pulls/N/merge-async/UUID' --jq .status) &
 
 For a dependent stack, the single stacker named for that stack owns every topology read and mutation. The stacker uses the operations in `gh-stack`. Nobody else appends, submits, syncs, rebases, or merges it.
 
-If this skill or either routed skill does not document a required operation, stop. A failed or unsupported operation never authorizes another provider or an improvised command.
+If this skill, `better-github-skill`, or `gh-stack` does not document a required operation, stop. A failed or unsupported operation never authorizes another provider or an improvised command.
 
 ## GitHub operations
 
-- **Read:** `pr://REF` for ordinary PR state. Use `better-github-skill`'s `pr-snapshot.ts`, `pr-threads.ts`, and `ci-failures.ts` when their richer views are needed.
+- **Read:** `pr://REF` for ordinary PR state, the pinned snapshot above for decisions, and `better-github-skill`'s `ci-failures.ts` for failing CI.
 - **Wait:** `gh pr checks REF --watch --fail-fast` or `gh run watch RUN_ID`. Use native goal mode only when the request requires continued watching across runs.
 - **Open:** native `github` `pr_create`, after the Opening a PR gates.
-- **Review:** use the review and thread commands documented by `better-github-skill`. Pass every comment or review body through a file payload, never shell-interpolated text.
+- **Review:** `gh pr review REF --approve|--request-changes|--comment --body-file FILE` for reviews and `gh pr comment REF --body-file FILE` for PR comments. Read threads with `pr-threads.ts --all`; it does not return thread IDs, so get them from `gh api graphql` with `repository(owner, name) { pullRequest(number) { reviewThreads(first: 100) { nodes { id isResolved } } } }`. Reply with `gh api graphql -F body=@FILE` and `addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId: THREAD_ID, body: $body })`; resolve with `resolveReviewThread(input: { threadId: THREAD_ID })`. Declare `$body: String!` in the reply mutation. Pass every comment or review body through a file payload, never shell-interpolated text.
 - **Merge:** async merge (above) for an independent `READY` PR; `gh pr merge REF --auto --match-head-commit HEAD` while checks run. Stacked PRs use `gh stack merge`.
 - **Rerun CI:** after the active playbook permits a retry, run `gh run rerun RUN_ID --failed`, then `gh run watch RUN_ID`.
 

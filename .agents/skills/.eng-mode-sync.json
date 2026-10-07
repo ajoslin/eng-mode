@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "76f8f01fcbab31acd8674a77cbe8b0665baf5c1b",
+  "sourceCommit": "153bc01b70e9c84ecc8d0dac5f62043b7ec5f571",
   "skills": {
     "unslop": {
       "SKILL.md": "290a10a90e52f080fdf0f225f043088990b5cd8d8b8307c800a91cfeb1568aa4"
@@ -53,6 +53,15 @@
       "references/commands.md": "31049425b8db652e80fa6994d5289f20169f57d7af0a0651fa72c3f25e8fe7c7",
       "references/stack-design.md": "2cdfe8cf0bfbd06d6c89460a46bbb61351d7a392f6d943f16875cf3714804ccf",
       "references/troubleshooting.md": "fe1958036e663c7471a0d3efdf1fefe47ee65e06713b13a96e3db95becccdc47"
+    },
+    "better-github-skill": {
+      "LICENSE": "2a2c97f25932125c5b00f94094df93f0e1094294d2b4c026dd6cefc7958bfc00",
+      "README.md": "d273ebaaf381026b8ebc7c0062ee9977b1a1e42213c728a71ec2a52edfeeb414",
+      "SKILL.md": "a2904c0aca609fed9ff095c0eca9995999594cf3b79c09e80d1576ec511e8aea",
+      "scripts/ci-failures.ts": "35552a9a54883ae87f7f286f627203c16216a64214286a26f4b37999defafacf",
+      "scripts/lib.ts": "6702ce1b4854b1b8067db863f37296926e61b20b271f68fc9ab63a88f11c3c65",
+      "scripts/pr-snapshot.ts": "f49a1015b509c85272bb5657ddd67f1339c28e2b702d299c8737fc393b126d82",
+      "scripts/pr-threads.ts": "821d360cbc28bb1c326a1b700d51f8da56d4fec22a78be7e524554c2e0109a62"
     }
   }
 }
