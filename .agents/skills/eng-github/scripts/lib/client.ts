@@ -214,7 +214,7 @@ export class GitHubClient {
     return url.href;
   }
 
-  private async send(url: string, init: RequestInit): Promise<Response> {
+  private async send(url: string, init: RequestInit): Promise<{ response: Response; github: boolean }> {
     const base = new Headers(init.headers);
     base.set("x-github-api-version", API_VERSION);
     base.set("user-agent", "eng-github");
@@ -232,7 +232,7 @@ export class GitHubClient {
         throw new EngGithubError("failure", `GitHub request failed: ${cause instanceof Error ? cause.message : String(cause)}`);
       }
       const location = response.headers.get("location");
-      if (response.status < 300 || response.status >= 400 || response.status === 304 || location === null) return response;
+      if (response.status < 300 || response.status >= 400 || response.status === 304 || location === null) return { response, github: authenticated };
       if (hop >= MAX_REDIRECTS) throw new EngGithubError("failure", `Too many redirects from ${url}`);
       target = new URL(location, target).href;
       if (response.status === 303 || ((response.status === 301 || response.status === 302) && request.method !== "GET")) {
@@ -255,7 +255,7 @@ export class GitHubClient {
       headers.set("content-type", "application/json");
       init.body = JSON.stringify(request.body);
     }
-    const response = await this.send(url, init);
+    const { response, github } = await this.send(url, init);
     if (response.status === 304 && cached !== undefined) {
       this.clearBackoff(seq);
       const headers = new Headers(response.headers);
@@ -263,9 +263,9 @@ export class GitHubClient {
       return { status: 200, data: parse<T>(cached.body), text: cached.body, headers };
     }
     const text = await response.text();
-    const core = quotaFromHeaders(response.headers, undefined);
+    const core = github ? quotaFromHeaders(response.headers, undefined) : undefined;
     if (core !== undefined) this.store.update((current) => ({ ...current, core }));
-    if (isRateLimited(response.status, response.headers, text, undefined)) this.recordRateLimit(response.headers, `HTTP ${response.status} on ${method} ${request.path}`);
+    if (github && isRateLimited(response.status, response.headers, text, undefined)) this.recordRateLimit(response.headers, `HTTP ${response.status} on ${method} ${request.path}`);
     this.clearBackoff(seq);
     const data = parse<T>(text);
     if (!response.ok) {
@@ -299,7 +299,7 @@ export class GitHubClient {
     const read = isRead(request.query);
     const seq = await this.admit(read ? { type: "graphql", priority: request.priority ?? "interactive" } : { type: "mutation" });
     const query = withRateLimitSelection(request.query);
-    const response = await this.send(this.roots.graphql, {
+    const { response } = await this.send(this.roots.graphql, {
       method: "POST",
       headers: { "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify({ query, variables: request.variables ?? {} }),

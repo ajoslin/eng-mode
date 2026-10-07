@@ -283,16 +283,26 @@ export const readCommands: CommandTable = {
           )
             continue;
           const id = number(job.id);
-          const logs = (
-            await ctx.client.rest<string>({
-              path: `/repos/${repoSlug(ref)}/actions/jobs/${id}/logs`,
-              accept: "text/plain",
-            })
-          ).text;
-          const directory = join(tmpdir(), `eng-github-ci-${run}`);
-          await mkdir(directory, { recursive: true });
-          const path = join(directory, `${id}.log`);
-          await writeFile(path, logs);
+          let logs: string | null = null;
+          let logError: string | null = null;
+          try {
+            logs = (
+              await ctx.client.rest<string>({
+                path: `/repos/${repoSlug(ref)}/actions/jobs/${id}/logs`,
+                accept: "text/plain",
+              })
+            ).text;
+          } catch (error) {
+            if (!(error instanceof ApiError)) throw error;
+            logError = `log unavailable: HTTP ${error.status}`;
+          }
+          let path: string | null = null;
+          if (logs !== null) {
+            const directory = join(tmpdir(), `eng-github-ci-${run}`);
+            await mkdir(directory, { recursive: true });
+            path = join(directory, `${id}.log`);
+            await writeFile(path, logs);
+          }
           results.push({
             run,
             job: id,
@@ -300,7 +310,7 @@ export const readCommands: CommandTable = {
             steps: Array.isArray(job.steps)
               ? job.steps.filter((s) => object(s).conclusion === "failure")
               : [],
-            log: logs.split(/\r?\n/).slice(-80).join("\n"),
+            log: logs === null ? logError : logs.split(/\r?\n/).slice(-80).join("\n"),
             path,
           });
         }

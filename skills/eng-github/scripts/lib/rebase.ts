@@ -17,8 +17,10 @@ export interface CascadeInput {
   readonly remote?: string;
 }
 
+export type LocalUpdate = "updated" | "absent" | "diverged" | "checked-out-elsewhere";
+
 export interface CascadeResult {
-  readonly layers: readonly { number: number; branch: string; oldHead: string; newHead: string }[];
+  readonly layers: readonly { number: number; branch: string; oldHead: string; newHead: string; local?: LocalUpdate }[];
 }
 
 async function must(args: readonly string[], cwd: string, what: string): Promise<string> {
@@ -81,6 +83,27 @@ async function cutoffFor(cwd: string, remote: string, layer: CascadeLayer, paren
   return cutoff;
 }
 
+async function otherWorktreeBranches(cwd: string): Promise<Set<string>> {
+  const top = await must(["rev-parse", "--show-toplevel"], cwd, "git rev-parse --show-toplevel");
+  const branches = new Set<string>();
+  let path: string | undefined;
+  for (const line of ((await gitOut(["worktree", "list", "--porcelain"], cwd)) ?? "").split("\n")) {
+    if (line.startsWith("worktree ")) path = line.slice("worktree ".length);
+    else if (line.startsWith("branch refs/heads/") && path !== top) branches.add(line.slice("branch refs/heads/".length));
+  }
+  return branches;
+}
+
+async function updateLocal(cwd: string, head: string, layer: CascadeResult["layers"][number], elsewhere: Set<string>): Promise<LocalUpdate> {
+  const local = await gitOut(["rev-parse", "-q", "--verify", `refs/heads/${layer.branch}`], cwd);
+  if (local === undefined || local === "") return "absent";
+  if (local !== layer.oldHead) return "diverged";
+  if (elsewhere.has(layer.branch)) return "checked-out-elsewhere";
+  if (head === layer.branch) await must(["reset", "-q", "--keep", layer.newHead], cwd, `git reset --keep ${layer.branch}`);
+  else await must(["update-ref", `refs/heads/${layer.branch}`, layer.newHead, layer.oldHead], cwd, `git update-ref ${layer.branch}`);
+  return "updated";
+}
+
 export async function cascadeRebase(input: CascadeInput): Promise<CascadeResult> {
   const { cwd, base } = input;
   const remote = input.remote ?? "origin";
@@ -103,6 +126,10 @@ export async function cascadeRebase(input: CascadeInput): Promise<CascadeResult>
   } finally {
     await git(["checkout", "-q", head], cwd);
   }
-  if (rebased.length > 0) await pushWithLease(cwd, remote, rebased);
-  return { layers: rebased };
+  if (rebased.length === 0) return { layers: rebased };
+  await pushWithLease(cwd, remote, rebased);
+  const elsewhere = await otherWorktreeBranches(cwd);
+  const layers = [];
+  for (const layer of rebased) layers.push({ ...layer, local: await updateLocal(cwd, head, layer, elsewhere) });
+  return { layers };
 }

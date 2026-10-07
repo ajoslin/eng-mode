@@ -65,6 +65,20 @@ describe("cascadeRebase", () => {
     expect(sh(work, "log", "--format=%s", "origin/l2..origin/l3")).toBe("edit l3.txt");
     expect(sh(work, "rev-parse", "origin/l3")).toBe(result.layers[2]!.newHead);
     expect(sh(work, "symbolic-ref", "--short", "HEAD")).toBe("l2");
+    expect(result.layers.map((layer) => layer.local)).toEqual(["updated", "updated", "updated"]);
+    for (const layer of result.layers) expect(sh(work, "rev-parse", layer.branch)).toBe(layer.newHead);
+    expect(sh(work, "status", "--porcelain")).toBe("");
+    expect(existsSync(join(work, "main.txt"))).toBe(true);
+  });
+
+  test("a local branch that moved past its recorded head is left alone", async () => {
+    const { work, heads } = setup();
+    sh(work, "checkout", "-q", "l1");
+    const local = commit(work, "local.txt", "unpushed\n");
+    sh(work, "checkout", "-q", "l2");
+    const result = await cascadeRebase({ cwd: work, base: "main", layers: layers(heads) });
+    expect(result.layers.map((layer) => layer.local)).toEqual(["diverged", "updated", "updated"]);
+    expect(sh(work, "rev-parse", "l1")).toBe(local);
   });
 
   test("conflict stops at the right layer and restores the worktree", async () => {

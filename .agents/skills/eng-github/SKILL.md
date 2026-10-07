@@ -54,7 +54,7 @@ Never wrap `eg` in a retry loop or `sleep`. Exit 75 already tells you when to co
 | `eg comments REF` | Issue comments and review bodies, oldest first. |
 | `eg diff REF [--name-only]` | The PR diff, or changed paths with additions and deletions. |
 | `eg file REF PATH [--ref SHA]` | File contents at the PR head or at `SHA`. |
-| `eg ci REF` | Failing checks, their failing jobs and steps, and the last 80 log lines per failed job. Full logs are written to files whose paths are printed. |
+| `eg ci REF` | Failing checks, their failing jobs and steps, and the last 80 log lines per failed job. Full logs are written to files whose paths are printed. When a job's log is unavailable, its `log` names the HTTP status and its `path` is `null`. |
 | `eg runs [--branch B] [--workflow W] [--limit N]` | Recent workflow runs with conclusions. |
 | `eg pr list [--state open] [--head BRANCH] [--limit N]` | PRs in the current repository. |
 | `eg whoami` | Login, token source, and remaining REST and GraphQL quota. |
@@ -152,7 +152,7 @@ eg stack unstack --stack N
 - `submit` and `add` give new PRs the first commit subject as the title and an empty body. Set the body afterwards with `eg pr edit REF --body-file FILE`.
 - `submit` pushes each branch, creates any missing PR with its base set to the branch below it, and creates the stack from those PRs bottom to top. Existing PRs with a wrong base are retargeted.
 - `add` pushes and appends branches on top of an existing stack the same way.
-- `rebase` checks that every open layer's head still equals `--heads`, then rebases each layer's own commits onto the new tip of the layer below, starting from the stack base, and pushes with `--force-with-lease` pinned to the recorded SHA. A layer's own commits are those after the recorded head of the layer below it, merged or closed layers included. The bottom layer of the stack starts after its merge-base with `origin/BASE` as it was before the fetch. When that cutoff is not an ancestor of the layer, it refuses with exit 4. It stops at the first conflict with exit 3, naming the layer and the files. Resolve, then run it again with the new heads. Run it from a clean worktree with no rebase, merge, cherry-pick, or revert in progress; otherwise it exits 2.
+- `rebase` checks that every open layer's head still equals `--heads`, then rebases each layer's own commits onto the new tip of the layer below, starting from the stack base, and pushes with `--force-with-lease` pinned to the recorded SHA. A layer's own commits are those after the recorded head of the layer below it, merged or closed layers included. The bottom layer of the stack starts after its merge-base with `origin/BASE` as it was before the fetch. When that cutoff is not an ancestor of the layer, it refuses with exit 4. It stops at the first conflict with exit 3, naming the layer and the files. Resolve, then run it again with the new heads. Run it from a clean worktree with no rebase, merge, cherry-pick, or revert in progress; otherwise it exits 2. After the push it moves each local branch that still points at its recorded head to the new head; the checked-out branch moves with `git reset --keep`. Each layer's `local` reports `updated`, `absent`, `diverged` (local commits, left alone), or `checked-out-elsewhere` (another worktree, left alone).
 - `merge` checks `--heads` against every open layer up to `--target`, then submits the async merge on the target. GitHub lands every layer below it in order.
 - `unstack` dissolves the stack on GitHub. PRs and branches stay.
 

@@ -144,6 +144,17 @@ describe("credential scoping", () => {
     ]);
   });
 
+  test("a 429 from a redirect target does not pause the GitHub credential", async () => {
+    const { client: c, store } = client();
+    stubFetch((url) =>
+      url.startsWith("https://api.github.com/")
+        ? new Response(null, { status: 302, headers: { location: "https://blob.example.net/log?sig=1" } })
+        : new Response("slow down", { status: 429, headers: { "retry-after": "600" } }),
+    );
+    await expect(c.rest({ path: "/repos/o/r/actions/jobs/1/logs", accept: "text/plain" })).rejects.toHaveProperty("status", 429);
+    expect(store.read().pauseUntil).toBeUndefined();
+  });
+
   test("pagination refuses an off-origin next link", async () => {
     const { client: c } = client();
     stubFetch(() => new Response("[1]", { headers: { link: '<https://evil.example/page2>; rel="next"' } }));
