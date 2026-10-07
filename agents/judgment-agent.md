@@ -6,6 +6,7 @@ model:
   - "@code"
   - "@smol"
 thinking: medium
+spawns: scout, sonic, comment-sicko
 autoloadSkills:
   - eng-mode
 ---
