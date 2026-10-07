@@ -125,19 +125,16 @@ providers:
     sourceRef: github
     capabilities:
       - id: snapshot
-        owner: external-skill
+        owner: provider
         delegatesTo: better-github-skill
-        external: true
         confirmationEvidence: [provider-snapshot]
       - id: watch
-        owner: external-skill
+        owner: provider
         delegatesTo: better-github-skill
-        external: true
         confirmationEvidence: [provider-watch-event]
       - id: rearm
-        owner: external-skill
+        owner: provider
         delegatesTo: better-github-skill
-        external: true
         confirmationEvidence: [provider-watch-event]
       - id: frozen-queue
         owner: provider
@@ -155,9 +152,8 @@ providers:
         owner: gh-stack
         confirmationEvidence: [provider-snapshot]
       - id: compare-head-base
-        owner: external-skill
+        owner: provider
         delegatesTo: better-github-skill
-        external: true
         confirmationEvidence: [head-sha, base-sha]
     requirements: [snapshot, watch, rearm, frozen-queue, arm-confirmation, topology, merge-when-ready-request, disarm, compare-head-base]
   - id: pr-cockpit
