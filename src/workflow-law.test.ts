@@ -136,6 +136,13 @@ describe("workflow law", () => {
     expect(codes(unsafe)).toContain("provider-delegate-undefined");
   });
 
+  it("rejects an unshipped external provider dependency", async () => {
+    const law = await validLaw();
+    law.references.skills.push("better-github-skill");
+    const diagnostics = validateWorkflowLaw(law, buildSourceInventory(root));
+    expect(diagnostics.some((item) => item.message.includes("better-github-skill"))).toBe(true);
+  });
+
   it("requires independent landing readiness evidence", async () => {
     const law = await validLaw();
     const result = validateTransition(law, "land-independent", {

@@ -6,7 +6,7 @@ model:
   - "@judgment"
   - "@smol"
 thinking: high
-spawns: scout, sonic, comment-sicko
+spawns: scout, sonic, reviewer, comment-sicko
 autoloadSkills:
   - eng-mode
 ---
