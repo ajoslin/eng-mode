@@ -16,7 +16,7 @@
 8. Build, verify, and commit each small unit before the next, following `principle-sequence-verifiable-units`. Revisit the throughput checkpoint at each phase boundary and assign a fresh owner rather than chaining interrupts across phases.
 9. If the design remains contested, run `interrogate` before delivery. The lead decides what to apply and reviews the final diff.
 10. Update `CONTEXT.md` inline only when domain terms changed. Create an ADR only when all three `domain-modeling` ADR tests pass.
-11. Run the pre-commit pass `project-standards` names, then the required review. If delivery includes a PR, run **Opening a PR**. It owns forge and stack delivery through the selected provider.
+11. Run the pre-commit pass `project-standards` names, then the required review. If delivery includes a PR, run **Opening a PR**. It owns PR and stack delivery through `eng-github`.
 
 **Alternatives**
 

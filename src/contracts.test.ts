@@ -22,7 +22,6 @@ async function repository(
     const directory = join(root, ".agents", "skills", name);
     await mkdir(directory, { recursive: true });
     const lines = ["---", `name: ${name}`, "description: test"];
-    if (name === "project-standards") lines.push("forge-provider: pr-cockpit");
     lines.push(
       name === "project-standards" ? standardsClosing : "---",
       "configured",
@@ -34,7 +33,7 @@ async function repository(
 }
 
 describe("eng_orch contract frontmatter", () => {
-  it("permits CRLF contracts with the same decision and provider as LF contracts", async () => {
+  it("permits CRLF contracts with the same decision as LF contracts", async () => {
     for (const newline of ["\n", "\r\n"]) {
       const repositoryRoot = await repository(newline);
       const result = await executeEngOrch({
@@ -44,7 +43,6 @@ describe("eng_orch contract frontmatter", () => {
       });
       expect(result).toMatchObject({
         decision: "proceed",
-        forgeProvider: "pr-cockpit",
         contracts: [
           { name: "project-standards", parse: "ok" },
           { name: "verify-project", parse: "ok" },
@@ -62,7 +60,6 @@ describe("eng_orch contract frontmatter", () => {
     });
     expect(result).toMatchObject({
       decision: "blocked-standards",
-      forgeProvider: null,
       contracts: [
         { name: "project-standards", parse: "malformed" },
         { name: "verify-project", parse: "ok" },
@@ -70,11 +67,11 @@ describe("eng_orch contract frontmatter", () => {
     });
   });
 
-  it("accepts quoted YAML scalars and inline provider comments", async () => {
+  it("accepts quoted YAML scalars and inline comments", async () => {
     const repositoryRoot = await repository("\n");
     await writeFile(
       join(repositoryRoot, ".agents/skills/project-standards/SKILL.md"),
-      '---\nname: "project-standards"\nforge-provider: "pr-cockpit" # selected provider\n---\nConfigured\n'
+      '---\nname: "project-standards" # contract name\n---\nConfigured\n'
     );
     expect(
       await executeEngOrch({
@@ -82,15 +79,25 @@ describe("eng_orch contract frontmatter", () => {
         repositoryRoot,
         mode: "code-producing",
       })
-    ).toMatchObject({ decision: "proceed", forgeProvider: "pr-cockpit" });
+    ).toMatchObject({ decision: "proceed" });
+  });
+
+  it("ignores obsolete selection metadata", async () => {
+    const repositoryRoot = await repository("\n");
+    const obsoleteKey = ["forge", "provider"].join("-");
+    await writeFile(
+      join(repositoryRoot, ".agents/skills/project-standards/SKILL.md"),
+      `---\nname: project-standards\n${obsoleteKey}: [unsupported]\n---\nConfigured\n`
+    );
+    expect(await executeEngOrch({ action: "contracts", repositoryRoot })).toMatchObject({
+      decision: "proceed",
+    });
   });
 
   it("rejects ambiguous or invalid YAML metadata", async () => {
     const repositoryRoot = await repository("\n");
     for (const metadata of [
       "name: project-standards\nname: other",
-      "name: project-standards\nforge-provider: pr-cockpit\nforge-provider: github",
-      "name: project-standards\nforge-provider: [pr-cockpit]",
       "name: [unterminated",
     ]) {
       await writeFile(

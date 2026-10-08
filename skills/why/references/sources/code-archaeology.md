@@ -3,7 +3,7 @@
 ## What this source contains
 
 - Commit history (messages, dates, authors, diffs)
-- PR descriptions, review comments, and discussion threads (via `gh`)
+- PR descriptions, review comments, and discussion threads (via `eng-github`)
 - Inline code comments, TODOs, FIXMEs, deprecation notes
 - ADRs (architectural decision records) if the repo keeps them
 - Tests. Names and assertions often encode the edge cases that motivated a change
@@ -37,17 +37,13 @@ git show <hash>
 git log <old>..<new> -p -- <file>
 ```
 
-For each substantive commit, pull the PR context:
+For each substantive commit, pull the PR context through `eng-github`:
 
-```bash
-# Find the PR number from the merge commit or branch
-git log -1 --format=%B <hash>
+1. Read `skill://eng-github`.
+2. Fetch the PR details with `eg api repos/OWNER/REPO/pulls/NUMBER`.
+3. Read issue comments and review discussions with `eg comments OWNER/REPO#NUMBER` and `eg threads OWNER/REPO#NUMBER`.
 
-# Full PR context: body, review comments, linked issues
-gh pr view <number> --json title,body,author,createdAt,mergedAt,labels,closingIssuesReferences,comments,reviews,files
-
-# The --json reviews and comments fields are where the real signal is
-```
+PR descriptions and review comments often contain the real signal.
 
 Look for out-of-band docs:
 

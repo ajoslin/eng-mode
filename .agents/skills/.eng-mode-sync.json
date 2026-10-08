@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "153bc01b70e9c84ecc8d0dac5f62043b7ec5f571",
+  "sourceCommit": "be0d14c93441881f07158ed90576ecd3134de5e3",
   "skills": {
     "unslop": {
       "SKILL.md": "290a10a90e52f080fdf0f225f043088990b5cd8d8b8307c800a91cfeb1568aa4"
@@ -48,20 +48,24 @@
     "blast-radius": {
       "SKILL.md": "5f02db9101ccf26c20254718f0fcd5c2c7ac5d4292b0e0923d0944ac47237aff"
     },
-    "gh-stack": {
-      "SKILL.md": "f2744a8c5da4939347a80fa89916af95043fa6350d7ad13a1c42b9b83b52bee7",
-      "references/commands.md": "31049425b8db652e80fa6994d5289f20169f57d7af0a0651fa72c3f25e8fe7c7",
-      "references/stack-design.md": "2cdfe8cf0bfbd06d6c89460a46bbb61351d7a392f6d943f16875cf3714804ccf",
-      "references/troubleshooting.md": "fe1958036e663c7471a0d3efdf1fefe47ee65e06713b13a96e3db95becccdc47"
-    },
-    "better-github-skill": {
-      "LICENSE": "2a2c97f25932125c5b00f94094df93f0e1094294d2b4c026dd6cefc7958bfc00",
-      "README.md": "d273ebaaf381026b8ebc7c0062ee9977b1a1e42213c728a71ec2a52edfeeb414",
-      "SKILL.md": "a2904c0aca609fed9ff095c0eca9995999594cf3b79c09e80d1576ec511e8aea",
-      "scripts/ci-failures.ts": "35552a9a54883ae87f7f286f627203c16216a64214286a26f4b37999defafacf",
-      "scripts/lib.ts": "6702ce1b4854b1b8067db863f37296926e61b20b271f68fc9ab63a88f11c3c65",
-      "scripts/pr-snapshot.ts": "f49a1015b509c85272bb5657ddd67f1339c28e2b702d299c8737fc393b126d82",
-      "scripts/pr-threads.ts": "821d360cbc28bb1c326a1b700d51f8da56d4fec22a78be7e524554c2e0109a62"
+    "eng-github": {
+      "SKILL.md": "3301600459f3e36277dab607f4ca74e21a338de5c5350f9d50f41af2b05aa45d",
+      "scripts/commands/mutate.ts": "421bdb040a43b4b01f9a9f7c0f358554174efc20a4fa177a97176ea065efea78",
+      "scripts/commands/read.ts": "c5904ff1a4bc04972abb5cf8ec912318c69b62e4ea8f8f86f8a65061078f4b00",
+      "scripts/commands/stack.ts": "a215e2d4aeff292457fbda0cc3f19550005b957bb8c7efc6750ef26fdd9d125c",
+      "scripts/eng-github.ts": "11efee413f2645ca26326070f0a7ccd61b6d1a8f73945c361d5c0b907c270655",
+      "scripts/lib/args.ts": "dacca8ad20b023c355c46a71bfc38c28e1e98a0d79ffcd7c4119a3d6680cf3dc",
+      "scripts/lib/client.ts": "6d4eea07639d0a788a7789ffeafaa3a62f7cd3096f0e3d78095c2f0d78923478",
+      "scripts/lib/command.ts": "b6dd423bc4c643ad1541d7337652f320454318f99090f43e1be2be540672f130",
+      "scripts/lib/credentials.ts": "609491a2e9d345166ea27dfd67970c8122ea669149a45940d80d3d8b47c03146",
+      "scripts/lib/errors.ts": "1398c45b6467c2eae5058fdf13057d022aa31d908053c30ca820eb16e5ac6a77",
+      "scripts/lib/merge-async.ts": "02e1ea3e47a2d8086421bc7459c21b0df12b701e21350a7527494e99431ac292",
+      "scripts/lib/pr-query.ts": "c12e4d39d9e89dfde6fbecf00214d45f3e326df93ce2a4cb6ec184c2d4dfff06",
+      "scripts/lib/process.ts": "c608dace83136dc24c5ea5bb9dada15293a448903de9b7d4c4bfe67e7120f76b",
+      "scripts/lib/rebase.ts": "45d82633ff497fbca9d7e3c19db952aa56de87a2f26f317cbe2d91f503fc5862",
+      "scripts/lib/ref.ts": "e3442d78f58055cdce400ffdb0af66f8cd3347319badf3a821b0ea1374a28bf4",
+      "scripts/lib/state.ts": "e83908a21a54dac3f50cc09e2831aec054a9e3b8e9b2648c7a88beb734451ce6",
+      "scripts/lib/watch-eval.ts": "61493005cd1f845dfc5901e6e3f7a201e719fa82edf76c4f4865fab6bd82c878"
     }
   }
 }

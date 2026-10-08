@@ -5,8 +5,9 @@ Eng Mode supplies workflow. A repository supplies architecture, law, and proof.
 ## Required
 
 - Standing repository context.
-- `project-standards`: repository law and selected tools.
+- `project-standards`: repository law and commands.
 - `verify-project`: Launch, Doctor, Drive, Evidence, Cleanup.
+- GitHub and PR operations use the shipped `eng-github` skill and its `eg` commands.
 - Domain vocabulary and ADR convention.
 - Exact dev, typecheck, lint, test, and architecture commands.
 - Secret and production boundaries.

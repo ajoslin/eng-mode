@@ -28,6 +28,6 @@ These gates answer different questions:
 - Verification: does it work?
 - Merge safety: are branch state, CI, threads, and dependency order safe?
 
-None substitutes for another. Prefer focused commits via `git commit`. For all forge and PR work, read the `forgeProvider` skill returned by `eng_orch contracts` once and use only its documented interface. If it does not document an operation, stop; never fall back. State exact proof and every inconclusive surface.
+None substitutes for another. Prefer focused commits via `git commit`. Use [`eng-github`](../../skills/eng-github/SKILL.md) for GitHub and PR work. For example, `eg snapshot REF` reads a pinned PR state, `eg watch REF` waits for changes, and `eg stack submit --base BASE BRANCH...` submits a stack. State exact proof and every inconclusive surface.
 
 A handoff records objective, fixed point, changed owners and paths, decisions, observed commands or scenarios, risks, current goal/todo state, and exact next action. Session pickup inherits this trail and does not redo completed work merely for reassurance.

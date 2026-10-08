@@ -21,22 +21,22 @@ Eng Mode keeps the operator's selected model and thinking level. It does not swi
 
 ## Repository contracts
 
-Eng procedure is global. The repository owns standards, forge workflow selection, product verification, domain law, production restrictions, and specialized delivery behavior through two native project contracts:
+Eng procedure is global. The repository owns standards, product verification, domain law, production restrictions, and specialized delivery behavior through two native project contracts:
 
-- `project-standards`. The index over repository law, commands, review agents, and repository-selected skills. Its `forge-provider` frontmatter selects the PR workflow adapter. Missing selection preserves `github` for existing repositories. An explicit provider never falls back.
-- `verify-project`. The product verification contract: launch, drive, evidence, health gate, and feature map for the project's real user surface.
+- `project-standards` indexes repository law, commands, review agents, and repository-selected skills.
+- `verify-project` defines launch, drive, evidence, health gate, and feature map for the project's real user surface.
 
 At Eng Mode entry, call the `eng_orch` tool's `contracts` action before repository mutation or behavioral claims, and obey its structured decision:
 
-- `proceed`. Both repository-owned contract files are present and valid under `.agents/skills` or the backwards-compatible `.omp/skills` fallback. The result includes one `forgeProvider` skill name.
-- `standards-unavailable-read-only`. Read-only investigation may proceed but makes no policy-compliance claim.
-- `blocked-standards`. Code-producing work stops before any edit, write, or writer delegation. This includes an unknown forge provider.
+- `proceed`. Both repository-owned contract files are valid under `.agents/skills` or the backwards-compatible `.omp/skills` fallback.
+- `standards-unavailable-read-only`. Read-only investigation may proceed, but makes no policy-compliance claim.
+- `blocked-standards`. Code-producing work stops before any edit, write, or writer delegation.
 - `inconclusive-verification`. Behavioral claims on the product surface are `INCONCLUSIVE`. Never substitute OMP `browser` for an unknown or private project driver.
 - `unconfigured`. A contract is an explicit `UNCONFIGURED` sentinel. Run `setup-eng-mode`.
 
-On `proceed`, read the returned `forgeProvider` skill once. Use only that skill for all forge and PR work. If it does not document an operation, stop. Never fall back.
+Use `eng-github` for all GitHub and PR work. Read its skill once. `eg` means `bun <eng-github skill directory>/scripts/eng-github.ts`. Use only commands documented by that skill. For an undocumented operation, use `eg api` or `eg graphql`; never use raw `gh`, `curl`, or another tool.
 
-The contracts decision is auditable on-disk validation, not model self-report. `setup-eng-mode` validates only the selected provider skill's documented prerequisites. Outside Eng invocation, OMP and repository context remain authoritative.
+The contracts decision is auditable on-disk validation, not model self-report. `setup-eng-mode` validates only the documented prerequisites. Outside Eng invocation, OMP and repository context remain authoritative.
 
 ## Router
 
@@ -57,11 +57,11 @@ The contracts decision is auditable on-disk validation, not model self-report. `
 - Comparative skill or workflow evaluation: `playbooks/prove-out.md`, `omp-workflows`, and `arena`.
 - Skill authoring: `playbooks/authoring-a-skill.md`.
 - Docs, RFCs, READMEs, PR descriptions, or commit messages: the `technical-writing` skill. Apply `unslop` to every prose surface, including replies and agent-facing instructions.
-- Any request about an existing PR's status, health, CI, conflicts, review threads, or readiness: `playbooks/babysit.md` and the selected forge provider. Babysit ends at merge-ready and never merges; landing belongs to Shipping.
-- Landing: `playbooks/shipping.md` and the selected forge provider.
+- Any request about an existing PR's status, health, CI, conflicts, review threads, or readiness: `playbooks/babysit.md` and `eng-github`. Babysit ends at merge-ready and never merges; landing belongs to Shipping.
+- Landing: `playbooks/shipping.md` and `eng-github`.
 - One long falsifiable task: `playbooks/autonomous-run.md`.
-- Independent PR program with merge authority: `playbooks/autopilot-full.md`.
-- Dependent review-first PR chain: `playbooks/autopilot-stack.md` and the selected forge provider.
+- Independent PR program with merge authority: `playbooks/autopilot-full.md` and `eng-github`.
+- Dependent review-first PR chain: `playbooks/autopilot-stack.md` and `eng-github`.
 - Project-scale program: `playbooks/orchestrate.md` and the `eng_orch` tool. Work one agent could finish inside the session budget is Autonomous run, not Orchestrate. Do not use OMP's `orchestrate` magic keyword. It supplies no scheduler or transport.
 - Large planned program without active execution: `playbooks/multi-phase-plan.md`.
 - Recent workspace context or prior-session precedent: `recall`. One known session uses `playbooks/session-pickup.md`.

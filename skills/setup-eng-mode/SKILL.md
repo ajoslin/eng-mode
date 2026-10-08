@@ -5,7 +5,7 @@ description: Validate and orchestrate an Eng Mode installation. Use for /setup-e
 
 # Setup Eng Mode
 
-Setup is a validator and orchestrator, never an installer of duplicate machinery. It configures OMP, never Cursor. It does not install forge providers. Re-running setup is idempotent.
+Setup validates the OMP installation and repository contracts. It does not install duplicate machinery. Re-running setup is idempotent.
 
 ## 1. Installation and source identity
 
@@ -13,6 +13,7 @@ Setup is a validator and orchestrator, never an installer of duplicate machinery
 2. Pin the exact expected absolute extension root. Provenance passes only when every shipped skill and agent resolves from that exact root, not merely from any Eng package.
 3. Verify tool discovery. The `eng_orch` tool is callable and one live `init` against a throwaway store succeeds.
 4. Run the companion-plugin gate: `bun --cwd "$HOME/dev/eng-mode" run compact-adviser`. It resolves `TYPESAFE_API_KEY` exactly as [compact-adviser](https://github.com/kunchenguid/compact-adviser) does (process env, key saved through `/compact-adviser`, then `.env` in the launch directory, agent directory, config root, and home). With a key it installs `npm:compact-adviser` into the `omp-plugins` set, enables it, and seeds `<agent>/compact-adviser.json` with mode `auto` once; without a key it disables the plugin and changes nothing else. Report the printed `Key:` source and the enabled state. Never enable the plugin without a key; the adviser has no fallback judge.
+5. Check Bun with `bun --version`. Then run `eg whoami` as documented in [`eng-github`](../eng-github/SKILL.md) to validate GitHub token access. Record the login and token source. Never include token values in output.
 
 ## 2. Shadows and collisions
 
@@ -39,8 +40,8 @@ Role migration is two-stage and owned by the extension's config migrator. Setup 
 
 ## 5. Project contracts
 
-1. Run `eng_orch contracts` and report the structured decision, per-contract source paths, and returned `forgeProvider` skill name.
-2. Validate existing `project-standards` and `verify-project` contracts from canonical `.agents/skills` or the backwards-compatible `.omp/skills` fallback. Never overwrite them. Unknown `forge-provider` values are blocking errors. Missing selection deliberately resolves to `github` for existing repositories.
+1. Run `eng_orch contracts` and report the structured decision and per-contract source paths.
+2. Validate existing `project-standards` and `verify-project` contracts from canonical `.agents/skills` or the backwards-compatible `.omp/skills` fallback. Never overwrite them.
 3. After explicit repository inspection, setup may create only an `UNCONFIGURED` sentinel (`SKILL.md` whose body is the single line `UNCONFIGURED`) under canonical `.agents/skills` for an absent contract, so the gap is explicit tool output rather than silence. It never infers a verification contract from package scripts. Real contract authoring routes through `create-verification-skill` and the repository owners.
 
 ## 6. Runtime validation
@@ -52,8 +53,8 @@ Restart OMP after installing or updating the extension, then verify `eng_orch co
 1. Verify `loop` is available without starting it and `goal` remains available. Reject duplicate tools.
 2. Validate that task worktree isolation is supported by current OMP configuration before any playbook depends on it.
 3. Dry-route one feature, one bug, and one contested design without editing product code, exercising discovery for every shipped agent.
-4. Observe `git commit --help`. Read only the `forgeProvider` skill returned by `eng_orch contracts` and validate its documented prerequisites. Do not inspect, invoke, or require another provider.
+4. Observe `git commit --help`. Read [`eng-github`](../eng-github/SKILL.md) and validate its prerequisites with Bun and `eg whoami`.
 
 ## 8. Report
 
-Report per-agent resolved models, contract decisions with source paths, isolation, `goal`, `loop`, commit capability, the selected forge provider's documented prerequisite results, and every unavailable capability. Refuse to report a capability as present without observing it.
+Report per-agent resolved models, contract decisions with source paths, isolation, `goal`, `loop`, Bun availability, GitHub token access and source, commit capability, and every unavailable capability. Refuse to report a capability as present without observing it.

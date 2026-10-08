@@ -1,6 +1,7 @@
 import type { ExtensionAPI as OmpExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 import { classifierOutputNeedsExpertGuidance, registerAutoMode } from "./auto-mode.ts";
 import { registerDangerGate } from "./danger-gate.ts";
+import { registerGhGuard } from "./gh-guard.ts";
 import { registerEngOrchestration } from "./eng-orchestrator.ts";
 import { EXPERT_DECISION_GUIDANCE, EXPERT_DECISION_MESSAGE, registerExpertLens } from "./expert-lens.ts";
 import type { ExtensionAPI } from "./extension-types.ts";
@@ -15,6 +16,7 @@ export default function engModeExtension(pi: OmpExtensionAPI & ExtensionAPI, cla
   const gate = classifier ?? makeClassifier();
   registerExpertLens(pi);
   registerAutoMode(pi, EXPERT_DECISION_GUIDANCE, EXPERT_DECISION_MESSAGE, gate);
+  registerGhGuard(pi);
   registerDangerGate(pi, gate);
   registerGoalTool(pi);
   registerLoopTool(pi);

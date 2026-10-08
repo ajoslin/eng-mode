@@ -18,7 +18,7 @@ Read the **Principles** section of the `eng-mode` skill for applicability. Then 
 
 State your read of scope and constraints in one paragraph. Use the structured `ask` tool only for genuinely ambiguous intent (the **principle-never-block-on-the-human** principle skill). Give concrete options with each open question. Prefer a reversible default and record it when repository evidence resolves the question.
 
-Resolve what is in scope vs explicitly out, technical or platform constraints, patterns to preserve, and the observable definition of done. Name the execution playbook for each delivery unit and the repository-selected forge provider once for the plan. A provider operation absent from that skill is a blocker, not permission to fall back.
+Resolve what is in scope vs explicitly out, technical or platform constraints, patterns to preserve, and the observable definition of done. Name the execution playbook for each delivery unit. Use `eng-github` for GitHub work. If it does not document an operation, use `eg api` or `eg graphql`, never raw `gh`.
 
 ## 3. Explore in subagents
 
@@ -42,7 +42,7 @@ Make every phase one independently shippable PR/evidence unit. Prefer more small
 - **Scope.** Included, explicitly excluded.
 - **Constraints.** Technical, platform, dependency, and established patterns.
 - **Alternatives.** Two or three approaches, the choice, and rationale (the **principle-exhaust-the-design-space** principle skill). Skip only when constraints dictate one. Retain rejected alternatives in an appendix.
-- **Execution.** Ordered PR graph, execution playbook per phase, selected forge provider, topology owner for dependent stacks, and whether delivery is independent or stacked.
+- **Execution.** Ordered PR graph, execution playbook per phase, `eng-github` commands, topology owner for dependent stacks, and whether delivery is independent or stacked.
 - **Applicable skills.** Domain skills the implementer should invoke, by name.
 - **Phases.** Ordered standard-markdown links to phase files, with dependency and owner at a glance.
 - **Project verification.** Exact repository gates and real surfaces shared by the phases. Do not replace phase receipts with this summary.
@@ -58,7 +58,7 @@ Every phase file contains this skeleton. Omit no field. Write `not applicable: <
 - **Observable result.** User- or operator-visible outcome delivered by this PR, not an implementation activity.
 - **Depends.** Prior phase/PR and required evidence, or `none`. Explain what context crosses the dependency.
 - **Owner and branch.** One accountable owner, named successor rule if autonomy is required, branch, and exact base branch/PR.
-- **Execution.** Eng Mode execution playbook and selected provider operation used to open or append the PR. Name the topology owner for a dependent stack.
+- **Execution.** Eng Mode execution playbook and `eg pr create` or `eg stack add` used to open or append the PR. Name the topology owner for a dependent stack.
 - **Files and boundaries.** Paths the phase may change, seams it owns, paths it must not change, and interaction with adjacent phases. Describe what and why, not line-by-line implementation. No code snippets.
 - **Data structures.** Key types or schemas in a one-line sketch (the **principle-foundational-thinking** principle skill), or `not applicable`.
 - **Prototype prerequisite.** For uncertain layout, interface, interaction, or timing, require the Prototype playbook before production writing. Record the throwaway branch, artifact path, head SHA, matching-surface screenshots for every visual variant or logs/timings for behavioral variants, selected direction, and disposal. Otherwise state why no prototype is needed.
