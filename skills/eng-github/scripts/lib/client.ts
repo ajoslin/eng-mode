@@ -274,6 +274,7 @@ export class GitHubClient {
     }
     const etag = response.headers.get("etag");
     if (method === "GET" && etag !== null && text.length < 4_000_000) this.store.writeEtag(url, etag, text, response.headers.get("link"));
+    if (method !== "GET") this.store.dropEtag(url);
     return { status: response.status, data, text, headers: response.headers };
   }
 

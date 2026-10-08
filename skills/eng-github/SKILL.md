@@ -51,10 +51,10 @@ Never wrap `eg` in a retry loop or `sleep`. Exit 75 already tells you when to co
 | `eg snapshot REF...` | One GraphQL document for up to 25 PRs. Per PR: `headSha`, `baseRef`, `baseSha`, `behindBy`, `state`, `isDraft`, `mergeable`, `mergeStateStatus`, `reviewDecision`, `autoMerge`, `labels`, `checks` (name, status, conclusion, required), `threads` (id, resolved, outdated, path, line, author, body, comment count), latest review per author, and stack membership. One ref prints one object; several print an array. |
 | `eg fingerprint REF...` | The cheap change detector `watch` uses: state, head, mergeability, check counts by state, comment and review counts with newest timestamps. |
 | `eg threads REF [--unresolved]` | Every review thread with all comments, paginated. Thread `id` is the handle for `reply` and `resolve`. |
-| `eg comments REF` | Issue comments and review bodies, oldest first. |
-| `eg diff REF [--name-only]` | The PR diff, or changed paths with additions and deletions. |
+| `eg comments REF` | Issue comments and review bodies, oldest first, each as `{ kind, id, author, authorType, state, body, createdAt, url }` (`state` on reviews only). |
+| `eg diff REF [--name-only]` | The PR diff, or changed paths with additions and deletions. When GitHub refuses a diff over 20,000 lines, `diff` rebuilds it from the paginated per-file patches; GitHub omits patches for binary and very large files. |
 | `eg file REF PATH [--ref SHA]` | File contents at the PR head or at `SHA`. |
-| `eg ci REF` | Failing checks, their failing jobs and steps, and the last 80 log lines per failed job. Full logs are written to files whose paths are printed. When a job's log is unavailable, its `log` names the HTTP status and its `path` is `null`. |
+| `eg ci REF` | Failing checks, their failing jobs and steps, and a log excerpt per failed job: the failure lines (`(fail)`, `error:`, `##[error]`) followed by the 30 lines before the first `##[error]`. Full logs are written to files whose paths are printed. When a job's log is unavailable, its `log` names the HTTP status and its `path` is `null`. |
 | `eg runs [--branch B] [--workflow W] [--limit N]` | Recent workflow runs with conclusions. |
 | `eg pr list [--state open] [--head BRANCH] [--limit N]` | PRs in the current repository. |
 | `eg whoami` | Login, token source, and remaining REST and GraphQL quota. |
@@ -133,7 +133,7 @@ eg auto-merge REF disable
 
 `auto-merge enable` arms GitHub auto-merge with `expectedHeadOid` set to `--head` and prints a fresh snapshot. Arming is confirmed only when that snapshot shows `autoMerge` non-null at the same `headSha`. Disarm with `auto-merge disable` and confirm `autoMerge` is null.
 
-`--action default` uses the merge queue when the base branch has one. `direct` skips it. `queue` forces it. `--admin` sets `bypass_rules` and requires explicit operator authorization.
+`--action default` uses the merge queue when the base branch has one. `direct` skips it. `queue` forces it and takes the queue's configured merge method, so it refuses `--method`. `--admin` sets `bypass_rules` and requires explicit operator authorization.
 
 ## Stacks
 

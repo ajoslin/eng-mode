@@ -132,4 +132,10 @@ export class StateStore {
     mkdirSync(this.etagDir, { recursive: true, mode: 0o700 });
     writeAtomic(join(this.etagDir, `${digest(url)}.json`), JSON.stringify({ etag, body, ...(link === null ? {} : { link }) }));
   }
+
+  dropEtag(url: string): void {
+    try {
+      unlinkSync(join(this.etagDir, `${digest(url)}.json`));
+    } catch {}
+  }
 }

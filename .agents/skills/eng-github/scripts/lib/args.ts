@@ -15,6 +15,7 @@ export function parseArgs(argv: readonly string[], booleans: readonly string[] =
       break;
     }
     if (!arg.startsWith("--")) {
+      if (/^-[A-Za-z]/.test(arg)) throw new UsageError(`unknown flag ${arg}; eng-github flags are long (--name value)`);
       positionals.push(arg);
       continue;
     }

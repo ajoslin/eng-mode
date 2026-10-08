@@ -66,13 +66,14 @@ async function resolve(ctx: CommandContext, resolved: boolean): Promise<unknown>
 
 async function merge(ctx: CommandContext): Promise<unknown> {
   const head = required(ctx.args, "head");
-  const method = oneOf(flag(ctx.args, "method"), ["squash", "merge", "rebase"], "method", "squash");
   const action = oneOf(flag(ctx.args, "action"), ["default", "direct", "queue"], "action", "default");
+  if (action === "queue" && flag(ctx.args, "method") !== undefined) throw new UsageError("--action queue uses the merge queue's configured method; drop --method");
+  const method = action === "queue" ? undefined : oneOf(flag(ctx.args, "method"), ["squash", "merge", "rebase"], "method", "squash");
   const ref = await reference(ctx);
   if ((await snapshot(ctx, ref)).headSha !== head) throw new EngGithubError("changed", "Pull request head differs from --head");
   let result;
   try {
-    result = await mergeAsync(ctx.client, ref, { head, method, action, admin: bool(ctx.args, "admin") });
+    result = await mergeAsync(ctx.client, ref, { head, action, admin: bool(ctx.args, "admin"), ...(method === undefined ? {} : { method }) });
   } catch (error) {
     if (!(error instanceof ApiError) || error.status !== 404) throw error;
     if (action === "queue") throw new EngGithubError("failure", "GitHub has no async merge endpoint here, and --action queue cannot fall back to a direct merge", { status: error.status, response: error.body });

@@ -136,7 +136,7 @@ describe("credential scoping", () => {
         ? new Response(null, { status: 302, headers: { location: "https://blob.example.net/log?sig=1" } })
         : new Response("log line", { status: 200 }),
     );
-    const response = await c.rest<string>({ path: "/repos/o/r/actions/jobs/1/logs", accept: "text/plain" });
+    const response = await c.rest<string>({ path: "/repos/o/r/actions/jobs/1/logs" });
     expect(response.text).toBe("log line");
     expect(calls).toEqual([
       { url: "https://api.github.com/repos/o/r/actions/jobs/1/logs", auth: "Bearer secret-token", method: "GET" },
@@ -151,7 +151,7 @@ describe("credential scoping", () => {
         ? new Response(null, { status: 302, headers: { location: "https://blob.example.net/log?sig=1" } })
         : new Response("slow down", { status: 429, headers: { "retry-after": "600" } }),
     );
-    await expect(c.rest({ path: "/repos/o/r/actions/jobs/1/logs", accept: "text/plain" })).rejects.toHaveProperty("status", 429);
+    await expect(c.rest({ path: "/repos/o/r/actions/jobs/1/logs" })).rejects.toHaveProperty("status", 429);
     expect(store.read().pauseUntil).toBeUndefined();
   });
 
@@ -160,6 +160,28 @@ describe("credential scoping", () => {
     stubFetch(() => new Response("[1]", { headers: { link: '<https://evil.example/page2>; rel="next"' } }));
     await expect(c.restPaginate("repos/o/r/pulls")).rejects.toBeInstanceOf(EngGithubError);
     expect(calls.map((call) => call.url)).toEqual(["https://api.github.com/repos/o/r/pulls?per_page=100"]);
+  });
+});
+
+describe("conditional cache", () => {
+  test("a write to a URL drops its cached body so the next read is unconditional", async () => {
+    const { client: c } = client();
+    let value = "old";
+    const sent: (string | null)[] = [];
+    globalThis.fetch = Object.assign(
+      async (_input: string | URL | Request, init: RequestInit = {}) => {
+        const headers = new Headers(init.headers);
+        if ((init.method ?? "GET") === "GET") sent.push(headers.get("if-none-match"));
+        if ((init.method ?? "GET") !== "GET") value = "new";
+        return new Response(JSON.stringify({ value }), { headers: { etag: `"${value}"` } });
+      },
+      { preconnect: realFetch.preconnect },
+    );
+    await c.rest({ path: "repos/o/r" });
+    await c.rest({ method: "PATCH", path: "repos/o/r", body: { value: "new" } });
+    const after = await c.rest<{ value: string }>({ path: "repos/o/r" });
+    expect(sent).toEqual([null, null]);
+    expect(after.data.value).toBe("new");
   });
 });
 

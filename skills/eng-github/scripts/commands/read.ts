@@ -35,6 +35,20 @@ async function refs(ctx: CommandContext): Promise<PrRef[]> {
     ctx.args.positionals.map((value) => parsePrRef(value, ctx.cwd)),
   );
 }
+
+const FAILURE_LINE = /##\[error\]|^(\[[\w-]+\] )?\(fail\) |^(\[[\w-]+\] )?error: |^(\[[\w-]+\] )?\d+ tests? failed|^FAIL\b/;
+
+export function excerpt(log: string): string {
+  const lines = log.split(/\r?\n/).map((line) => {
+    const bare = line.replace(/^\d{4}-\d\d-\d\dT[\d:.]+Z /, "");
+    return bare.length > 300 ? `${bare.slice(0, 300)}…` : bare;
+  });
+  const firstError = lines.findIndex((line) => line.startsWith("##[error]"));
+  const end = firstError === -1 ? lines.length : firstError + 1;
+  const tail = lines.slice(Math.max(0, end - 30), end);
+  const picked = [...new Set(lines.slice(0, Math.max(0, end - 30)).filter((line) => FAILURE_LINE.test(line)))].slice(-40);
+  return [...picked, ...(picked.length > 0 ? ["…"] : []), ...tail].join("\n");
+}
 async function single(ctx: CommandContext): Promise<PrRef> {
   const value = ctx.args.positionals[0];
   if (!value) throw new UsageError("REF is required");
@@ -212,14 +226,24 @@ export const readCommands: CommandTable = {
       const reviews = await ctx.client.restPaginate<unknown>(
         `/repos/${repoSlug(ref)}/pulls/${ref.number}/reviews`,
       );
+      const compact = (raw: unknown, kind: "comment" | "review") => {
+        const v = object(raw);
+        const user = v.user === null || v.user === undefined ? null : object(v.user);
+        return {
+          kind,
+          id: v.id,
+          author: user === null ? null : user.login,
+          authorType: user === null ? null : user.type,
+          ...(kind === "review" ? { state: v.state } : {}),
+          body: typeof v.body === "string" ? v.body : "",
+          createdAt: String(v.created_at ?? v.submitted_at ?? ""),
+          url: v.html_url,
+        };
+      };
       return [
-        ...comments.map((raw) => ({ ...object(raw), kind: "comment" })),
-        ...reviews.map((raw) => ({ ...object(raw), kind: "review" })),
-      ].sort((a, b) =>
-        String(object(a).created_at ?? object(a).submitted_at).localeCompare(
-          String(object(b).created_at ?? object(b).submitted_at),
-        ),
-      );
+        ...comments.map((raw) => compact(raw, "comment")),
+        ...reviews.map((raw) => compact(raw, "review")),
+      ].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     },
   },
   diff: {
@@ -238,12 +262,25 @@ export const readCommands: CommandTable = {
             };
           },
         );
-      return (
-        await ctx.client.rest<string>({
-          path,
-          accept: "application/vnd.github.diff",
+      try {
+        return (
+          await ctx.client.rest<string>({
+            path,
+            accept: "application/vnd.github.diff",
+          })
+        ).text;
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 406) throw error;
+      }
+      return (await ctx.client.restPaginate<unknown>(`${path}/files`))
+        .map((raw) => {
+          const v = object(raw);
+          const to = String(v.filename);
+          const from = typeof v.previous_filename === "string" ? v.previous_filename : to;
+          const header = `diff --git a/${from} b/${to}\n--- ${v.status === "added" ? "/dev/null" : `a/${from}`}\n+++ ${v.status === "removed" ? "/dev/null" : `b/${to}`}\n`;
+          return typeof v.patch === "string" ? `${header}${v.patch}\n` : `${header}Binary or oversized file, patch omitted by GitHub\n`;
         })
-      ).text;
+        .join("");
     },
   },
   file: {
@@ -289,7 +326,7 @@ export const readCommands: CommandTable = {
             logs = (
               await ctx.client.rest<string>({
                 path: `/repos/${repoSlug(ref)}/actions/jobs/${id}/logs`,
-                accept: "text/plain",
+                accept: "application/vnd.github+json",
               })
             ).text;
           } catch (error) {
@@ -310,7 +347,7 @@ export const readCommands: CommandTable = {
             steps: Array.isArray(job.steps)
               ? job.steps.filter((s) => object(s).conclusion === "failure")
               : [],
-            log: logs === null ? logError : logs.split(/\r?\n/).slice(-80).join("\n"),
+            log: logs === null ? logError : excerpt(logs),
             path,
           });
         }

@@ -11,7 +11,7 @@ export interface MergeAsyncResult {
 }
 export interface MergeAsyncOptions {
   readonly head: string;
-  readonly method: MergeMethod;
+  readonly method?: MergeMethod;
   readonly action: MergeAction;
   readonly admin?: boolean;
   readonly deadlineMs?: number;
@@ -32,7 +32,8 @@ function decode(value: unknown): MergeAsyncResult {
 
 export async function mergeAsync(client: GitHubClient, ref: PrRef, options: MergeAsyncOptions): Promise<MergeAsyncResult> {
   const base = `repos/${repoSlug(ref)}/pulls/${ref.number}/merge-async`;
-  const body = { sha: options.head, merge_method: options.method, merge_action: options.action === "direct" ? "direct_merge" : options.action === "queue" ? "merge_queue" : "default", ...(options.admin === true ? { bypass_rules: true } : {}) };
+  const mergeAction = options.action === "direct" ? "direct_merge" : options.action === "queue" ? "merge_queue" : "default";
+  const body = { sha: options.head, ...(options.method === undefined ? {} : { merge_method: options.method }), merge_action: mergeAction, ...(options.admin === true ? { bypass_rules: true } : {}) };
   let raw: unknown;
   try {
     raw = (await client.rest({ method: "PUT", path: base, body })).data;
@@ -41,7 +42,7 @@ export async function mergeAsync(client: GitHubClient, ref: PrRef, options: Merg
     const existing = object(error.body);
     const details = object(existing.details);
     const prior = object(details.options ?? existing.options ?? details);
-    if ((prior.sha ?? prior.expected_head_sha) !== options.head || prior.merge_method !== body.merge_method || prior.merge_action !== body.merge_action || (prior.bypass_rules ?? false) !== (body.bypass_rules ?? false)) throw new EngGithubError("conflict", "A pending merge has different options", { response: error.body });
+    if ((prior.sha ?? prior.expected_head_sha) !== options.head || (prior.merge_method ?? undefined) !== body.merge_method || prior.merge_action !== body.merge_action || (prior.bypass_rules ?? false) !== (body.bypass_rules ?? false)) throw new EngGithubError("conflict", "A pending merge has different options", { response: error.body });
     raw = error.body;
   }
   let result = decode(raw);
