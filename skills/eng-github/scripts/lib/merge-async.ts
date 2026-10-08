@@ -42,7 +42,8 @@ export async function mergeAsync(client: GitHubClient, ref: PrRef, options: Merg
     const existing = object(error.body);
     const details = object(existing.details);
     const prior = object(details.options ?? existing.options ?? details);
-    if ((prior.sha ?? prior.expected_head_sha) !== options.head || (prior.merge_method ?? undefined) !== body.merge_method || prior.merge_action !== body.merge_action || (prior.bypass_rules ?? false) !== (body.bypass_rules ?? false)) throw new EngGithubError("conflict", "A pending merge has different options", { response: error.body });
+    const methodDiffers = body.merge_method !== undefined && prior.merge_method !== body.merge_method;
+    if ((prior.sha ?? prior.expected_head_sha) !== options.head || methodDiffers || prior.merge_action !== body.merge_action || (prior.bypass_rules ?? false) !== (body.bypass_rules ?? false)) throw new EngGithubError("conflict", "A pending merge has different options", { response: error.body });
     raw = error.body;
   }
   let result = decode(raw);

@@ -6,6 +6,7 @@ import { mutationCommands } from "../skills/eng-github/scripts/commands/mutate.t
 import { apiRoot, GitHubClient, type Clock } from "../skills/eng-github/scripts/lib/client.ts";
 import type { Credential } from "../skills/eng-github/scripts/lib/credentials.ts";
 import { EngGithubError, RateLimitedError, UsageError } from "../skills/eng-github/scripts/lib/errors.ts";
+import { mergeAsync } from "../skills/eng-github/scripts/lib/merge-async.ts";
 import { digest, StateStore } from "../skills/eng-github/scripts/lib/state.ts";
 
 const credential: Credential = { host: "github.com", token: "secret-token", source: "ENG_GITHUB_TOKEN", fingerprint: "github.com:test" };
@@ -182,6 +183,30 @@ describe("conditional cache", () => {
     const after = await c.rest<{ value: string }>({ path: "repos/o/r" });
     expect(sent).toEqual([null, null]);
     expect(after.data.value).toBe("new");
+  });
+});
+
+describe("async merge reuse", () => {
+  const pending = (options: Record<string, unknown>) =>
+    new Response(JSON.stringify({ status: "pending", details: { uuid: "u1", options } }), { status: 409 });
+
+  test("retrying a queue merge reuses the pending operation even though GitHub reports the queue's method", async () => {
+    const { client: c } = client();
+    stubFetch((url) =>
+      url.endsWith("/merge-async")
+        ? pending({ sha: "abc", merge_method: "squash", merge_action: "merge_queue" })
+        : new Response(JSON.stringify({ status: "enqueued", details: {} })),
+    );
+    const result = await mergeAsync(c, { owner: "o", name: "r", number: 1 }, { head: "abc", action: "queue", sleep: async () => {} });
+    expect(result.status).toBe("enqueued");
+  });
+
+  test("a pending merge with a different method is a conflict", async () => {
+    const { client: c } = client();
+    stubFetch(() => pending({ sha: "abc", merge_method: "merge", merge_action: "default" }));
+    const error = await mergeAsync(c, { owner: "o", name: "r", number: 1 }, { head: "abc", method: "squash", action: "default" }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(EngGithubError);
+    expect((error as EngGithubError).exit).toBe("conflict");
   });
 });
 
