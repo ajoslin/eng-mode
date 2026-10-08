@@ -39,6 +39,8 @@ describe("shellUsesRawGithub", () => {
     "gh auth status",
     "gh --version",
     "bun skills/eng-github/scripts/eng-github.ts snapshot o/r#1",
+    "eng-github snapshot o/r#1",
+    "eng-github api repos/o/r/pulls/1",
     "git commit -m 'stop using gh pr checks'",
     "echo \"run gh api later\"",
     "cat <<'EOF' > body.md\nWe replaced gh pr view and pr-cockpit.\nEOF",

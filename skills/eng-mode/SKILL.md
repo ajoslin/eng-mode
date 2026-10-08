@@ -34,7 +34,7 @@ At Eng Mode entry, call the `eng_orch` tool's `contracts` action before reposito
 - `inconclusive-verification`. Behavioral claims on the product surface are `INCONCLUSIVE`. Never substitute OMP `browser` for an unknown or private project driver.
 - `unconfigured`. A contract is an explicit `UNCONFIGURED` sentinel. Run `setup-eng-mode`.
 
-Use `eng-github` for all GitHub and PR work. Read its skill once. `eg` means `bun <eng-github skill directory>/scripts/eng-github.ts`. Use only commands documented by that skill. For an undocumented operation, use `eg api` or `eg graphql`; never use raw `gh`, `curl`, or another tool.
+Use `eng-github` for all GitHub and PR work. Read its skill once, then run `eng-github COMMAND`. Use only commands documented by that skill. For an undocumented operation, use `eng-github api` or `eng-github graphql`; never use raw `gh`, `curl`, or another tool.
 
 The contracts decision is auditable on-disk validation, not model self-report. `setup-eng-mode` validates only the documented prerequisites. Outside Eng invocation, OMP and repository context remain authoritative.
 

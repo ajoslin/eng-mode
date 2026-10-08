@@ -13,7 +13,7 @@ Setup validates the OMP installation and repository contracts. It does not insta
 2. Pin the exact expected absolute extension root. Provenance passes only when every shipped skill and agent resolves from that exact root, not merely from any Eng package.
 3. Verify tool discovery. The `eng_orch` tool is callable and one live `init` against a throwaway store succeeds.
 4. Run the companion-plugin gate: `bun --cwd "$HOME/dev/eng-mode" run compact-adviser`. It resolves `TYPESAFE_API_KEY` exactly as [compact-adviser](https://github.com/kunchenguid/compact-adviser) does (process env, key saved through `/compact-adviser`, then `.env` in the launch directory, agent directory, config root, and home). With a key it installs `npm:compact-adviser` into the `omp-plugins` set, enables it, and seeds `<agent>/compact-adviser.json` with mode `auto` once; without a key it disables the plugin and changes nothing else. Report the printed `Key:` source and the enabled state. Never enable the plugin without a key; the adviser has no fallback judge.
-5. Check Bun with `bun --version`. Then run `eg whoami` as documented in [`eng-github`](../eng-github/SKILL.md) to validate GitHub token access. Record the login and token source. Never include token values in output.
+5. Check Bun with `bun --version`. Then run `eng-github whoami` as documented in [`eng-github`](../eng-github/SKILL.md) to validate GitHub token access. Record the login and token source. Never include token values in output.
 
 ## 2. Shadows and collisions
 
@@ -53,7 +53,7 @@ Restart OMP after installing or updating the extension, then verify `eng_orch co
 1. Verify `loop` is available without starting it and `goal` remains available. Reject duplicate tools.
 2. Validate that task worktree isolation is supported by current OMP configuration before any playbook depends on it.
 3. Dry-route one feature, one bug, and one contested design without editing product code, exercising discovery for every shipped agent.
-4. Observe `git commit --help`. Read [`eng-github`](../eng-github/SKILL.md) and validate its prerequisites with Bun and `eg whoami`.
+4. Observe `git commit --help`. Read [`eng-github`](../eng-github/SKILL.md) and validate its prerequisites with Bun and `eng-github whoami`.
 
 ## 8. Report
 
