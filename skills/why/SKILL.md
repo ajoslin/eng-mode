@@ -86,9 +86,9 @@ git log -1 --format=%B <commit>
 Pull PR bodies and discussion for substantive commits through `eng-github`. Read `skill://eng-github` and use its documented commands:
 
 ```sh
-eg api repos/OWNER/REPO/pulls/NUMBER
-eg comments OWNER/REPO#NUMBER
-eg threads OWNER/REPO#NUMBER
+eng-github api repos/OWNER/REPO/pulls/NUMBER
+eng-github comments OWNER/REPO#NUMBER
+eng-github threads OWNER/REPO#NUMBER
 ```
 
 Capture the file paths, symbols, commits, PR numbers, and linked ticket IDs as seed context. Pass them to the investigators so they do not repeat the search.

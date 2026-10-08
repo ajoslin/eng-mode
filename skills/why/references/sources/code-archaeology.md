@@ -40,8 +40,8 @@ git log <old>..<new> -p -- <file>
 For each substantive commit, pull the PR context through `eng-github`:
 
 1. Read `skill://eng-github`.
-2. Fetch the PR details with `eg api repos/OWNER/REPO/pulls/NUMBER`.
-3. Read issue comments and review discussions with `eg comments OWNER/REPO#NUMBER` and `eg threads OWNER/REPO#NUMBER`.
+2. Fetch the PR details with `eng-github api repos/OWNER/REPO/pulls/NUMBER`.
+3. Read issue comments and review discussions with `eng-github comments OWNER/REPO#NUMBER` and `eng-github threads OWNER/REPO#NUMBER`.
 
 PR descriptions and review comments often contain the real signal.
 

@@ -188,5 +188,5 @@ Eng Mode's [`eng-github` skill](../../skills/eng-github/SKILL.md) adopts these m
 
 - Batch PR reads in GraphQL documents with aliases, up to 25 PRs per request.
 - Read a cheap fingerprint before fetching a full snapshot.
-- Pause requests for the rate-limited credential until its reset time. `eg` exits with code 75 while paused; do not retry sooner.
+- Pause requests for the rate-limited credential until its reset time. `eng-github` exits with code 75 while paused; do not retry sooner.
 - Stop background reads when 10% of the GraphQL quota remains, reserving it for interactive commands.

@@ -14,7 +14,7 @@ bun --cwd "$HOME/dev/eng-mode" run sync-skills "$PWD"
 
 It deletes every `.agents/skills/<name>` that shadows a non-portable eng-mode skill, copies the portable set (`src/portable-skills.ts` `portableSkillNames`) verbatim, and writes `.agents/skills/.eng-mode-sync.json` with the source commit and per-file hashes.
 
-Then review `git status`, commit as `chore(skills): sync portable eng-mode skills @<sha>`, and open the PR with `eg pr create --base BASE --head BRANCH --title "TITLE" --body-file FILE`. Read [`eng-github`](../eng-github/SKILL.md) for the full command reference.
+Then review `git status`, commit as `chore(skills): sync portable eng-mode skills @<sha>`, and open the PR with `eng-github pr create --base BASE --head BRANCH --title "TITLE" --body-file FILE`. Read [`eng-github`](../eng-github/SKILL.md) for the full command reference.
 
 Drift check, for CI or before a release:
 

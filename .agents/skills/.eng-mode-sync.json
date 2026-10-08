@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "be0d14c93441881f07158ed90576ecd3134de5e3",
+  "sourceCommit": "a6858ea92933f1a5245b2d56e1574c5f018a0d11",
   "skills": {
     "unslop": {
       "SKILL.md": "290a10a90e52f080fdf0f225f043088990b5cd8d8b8307c800a91cfeb1568aa4"
@@ -49,7 +49,7 @@
       "SKILL.md": "5f02db9101ccf26c20254718f0fcd5c2c7ac5d4292b0e0923d0944ac47237aff"
     },
     "eng-github": {
-      "SKILL.md": "3301600459f3e36277dab607f4ca74e21a338de5c5350f9d50f41af2b05aa45d",
+      "SKILL.md": "5af7856b39cbfdd2979118b86bc039d767d346277e96abac93f5cf82457c12b8",
       "scripts/commands/mutate.ts": "421bdb040a43b4b01f9a9f7c0f358554174efc20a4fa177a97176ea065efea78",
       "scripts/commands/read.ts": "c5904ff1a4bc04972abb5cf8ec912318c69b62e4ea8f8f86f8a65061078f4b00",
       "scripts/commands/stack.ts": "a215e2d4aeff292457fbda0cc3f19550005b957bb8c7efc6750ef26fdd9d125c",

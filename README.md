@@ -37,7 +37,7 @@ Restart OMP. Then open every repository where you use Eng Mode and run:
 setup-eng-mode
 ```
 
-**Run `setup-eng-mode` in every repository.** It checks plugin provenance, model roles, agent chains, worktree isolation, repository standards, and verification contracts. It runs `bun --version` and `eg whoami` to validate Bun and GitHub token access. When `TYPESAFE_API_KEY` is available, setup installs and enables the companion [`compact-adviser`](https://github.com/kunchenguid/compact-adviser) plugin in `auto` mode. Without a key, it leaves the plugin disabled. Run `bun run compact-adviser` from this checkout to apply the same gate.
+**Run `setup-eng-mode` in every repository.** It checks plugin provenance, model roles, agent chains, worktree isolation, repository standards, and verification contracts. It runs `bun --version` and `eng-github whoami` to validate Bun and GitHub token access. When `TYPESAFE_API_KEY` is available, setup installs and enables the companion [`compact-adviser`](https://github.com/kunchenguid/compact-adviser) plugin in `auto` mode. Without a key, it leaves the plugin disabled. Run `bun run compact-adviser` from this checkout to apply the same gate.
 
 To update, run the install command again, restart OMP, and rerun `setup-eng-mode` in each repository.
 
@@ -50,7 +50,7 @@ Eng Mode supplies the reusable workflow. Each repository owns:
 
 Legacy repositories may keep these contracts under `.omp/skills`; new and migrated repositories use `.agents/skills`.
 
-For GitHub and PR operations, use the shipped [`eng-github`](skills/eng-github/SKILL.md) skill and its documented `eg` commands.
+For GitHub and PR operations, use the shipped [`eng-github`](skills/eng-github/SKILL.md) skill and its documented `eng-github` commands.
 
 ## From pstack
 

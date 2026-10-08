@@ -1,7 +1,7 @@
 import type { ExtensionAPI, ToolCallEvent, ToolCallEventResult } from "./extension-types.ts";
 
 export const RAW_GITHUB_BLOCK_REASON =
-  "Blocked: Eng Mode routes all GitHub work through the eng-github skill. Read skill://eng-github and run `bun <eng-github skill dir>/scripts/eng-github.ts COMMAND` instead (snapshot, watch, threads, ci, comment, reply, resolve, merge, stack, api, graphql). Raw gh, gh api, gh stack, pr-cockpit, curl to api.github.com, OMP's github tool, and pr:// or issue:// reads are not allowed. `gh auth login|status|token` stays available.";
+  "Blocked: Eng Mode routes all GitHub work through the eng-github skill. Read skill://eng-github and run `eng-github COMMAND` instead (snapshot, watch, threads, ci, comment, reply, resolve, merge, stack, api, graphql). Raw gh, gh api, gh stack, pr-cockpit, curl to api.github.com, OMP's github tool, and pr:// or issue:// reads are not allowed. `gh auth login|status|token` stays available.";
 
 const ALLOWED_GH_SUBCOMMANDS = new Set(["auth", "--version", "version", "help", "--help"]);
 const PREFIX_WORDS = new Set(["sudo", "exec", "command", "builtin", "time", "nice", "nohup", "env", "xargs", "timeout", "caffeinate", "do", "then", "else", "if", "elif", "while", "until", "!"]);

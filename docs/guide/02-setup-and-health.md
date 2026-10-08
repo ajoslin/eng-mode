@@ -13,7 +13,7 @@ Declarations do not prove runtime availability. Inspect settings with `omp confi
 
 ## GitHub access
 
-GitHub work uses [`eng-github`](../../skills/eng-github/SKILL.md). Setup checks Bun with `bun --version` and validates token access with `eg whoami`.
+GitHub work uses [`eng-github`](../../skills/eng-github/SKILL.md). Setup checks Bun with `bun --version` and validates token access with `eng-github whoami`.
 
 | Gate | Failure when absent |
 |---|---|
