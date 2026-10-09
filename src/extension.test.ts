@@ -10,6 +10,7 @@ import engModeExtension, {
 } from "./extension.ts";
 import { MINIMUM_GOAL_TOKEN_BUDGET } from "./goal-tool.ts";
 import type { OperationClassifier } from "./typesafe.ts";
+import type { ExtensionEventContext } from "./extension-types.ts";
 
 const roots: string[] = [];
 
@@ -142,7 +143,7 @@ describe("eng_orch executable entrypoint", () => {
     const repositoryRoot = await root();
     await contract(repositoryRoot, "project-standards");
     await contract(repositoryRoot, "verify-project");
-    type BeforeAgentStartHandler = (event: { prompt: string }) => Promise<{
+    type BeforeAgentStartHandler = (event: { prompt: string }, context: ExtensionEventContext) => Promise<{
       message?: {
         customType: string;
         content: string;
@@ -225,9 +226,9 @@ describe("eng_orch executable entrypoint", () => {
     });
     expect(registered.get("loop")).toMatchObject({ strict: true, loadMode: "essential" });
     expect(beforeAgentStartHandler).toBeDefined();
-    await expect(beforeAgentStartHandler?.({ prompt: "Explore these files and report findings" })).resolves.toEqual({});
-    await expect(beforeAgentStartHandler?.({ prompt: EXPERT_DECISION_GUIDANCE })).resolves.toEqual({});
-    await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" })).resolves.toEqual({
+    const eventContext: ExtensionEventContext = { hasUI: false, cwd: repositoryRoot, ui: { confirm: async () => false } };
+    await expect(beforeAgentStartHandler?.({ prompt: "Explore these files and report findings" }, eventContext)).resolves.toEqual({});
+    await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" }, eventContext)).resolves.toEqual({
       message: {
         customType: "eng-mode-expert-decision-guidance",
         content: EXPERT_DECISION_GUIDANCE,
@@ -235,6 +236,7 @@ describe("eng_orch executable entrypoint", () => {
         attribution: "agent",
       },
     });
+    await expect(beforeAgentStartHandler?.({ prompt: EXPERT_DECISION_GUIDANCE }, eventContext)).resolves.toEqual({});
     expect(classifierOutputNeedsExpertGuidance("ordinary")).toBeFalse();
     expect(classifierOutputNeedsExpertGuidance("expert")).toBeTrue();
     expect(classifierOutputNeedsExpertGuidance(undefined)).toBeFalse();

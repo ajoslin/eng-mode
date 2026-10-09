@@ -37,6 +37,7 @@ export interface CustomMessagePayload {
 export interface BeforeAgentStartEvent {
   readonly prompt: string;
 }
+
 /**
  * Fired before a tool executes; the handler may block it via ToolCallEventResult.
  * `input` is the raw execution arguments (shape varies by toolName).
@@ -54,10 +55,14 @@ export interface ToolCallEventResult {
   readonly reason?: string;
 }
 
-/** A session entry as the danger gate reads it; other entry kinds are skipped. */
 export interface SessionEntryView {
   readonly type: string;
-  readonly message?: { readonly role?: string; readonly content?: unknown };
+  readonly customType?: string;
+  readonly message?: {
+    readonly role?: string;
+    readonly content?: unknown;
+    readonly usage?: { readonly input?: number; readonly output?: number };
+  };
 }
 
 /** Subset of OMP's per-event ExtensionContext the extension relies on. */
