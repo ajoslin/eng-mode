@@ -8,6 +8,7 @@ import { EXPERT_DECISION_GUIDANCE, EXPERT_DECISION_MESSAGE, registerExpertLens }
 import type { ExtensionAPI } from "./extension-types.ts";
 import { registerGoalTool } from "./goal-tool.ts";
 import { registerLoopTool } from "./loop-tool.ts";
+import { registerProcessSignalGuard } from "./process-signal-guard.ts";
 import { makeClassifier, type OperationClassifier } from "./typesafe.ts";
 
 export { classifierOutputNeedsExpertGuidance, EXPERT_DECISION_GUIDANCE };
@@ -18,6 +19,7 @@ export default function engModeExtension(pi: OmpExtensionAPI & ExtensionAPI, cla
   registerExpertLens(pi);
   registerAutoMode(pi, EXPERT_DECISION_GUIDANCE, EXPERT_DECISION_MESSAGE, gate);
   registerGhGuard(pi);
+  registerProcessSignalGuard(pi);
   registerEngGithubShim();
   registerDangerGate(pi, gate);
   registerGoalTool(pi);

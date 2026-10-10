@@ -7,6 +7,8 @@ description: Eng's default engineering operating system. Routes feature, bug, in
 
 Correctness first. Smallest coherent change. Prove the real behavior. OMP only. No Cursor.
 
+Only signal a process you spawned, using its exact positive PID recorded at spawn time. Never use `pkill`, `killall`, or `pgrep` results as signal targets. `pgrep` is observation only. Shell signal targets must be literal positive PIDs; zero, negative process-group targets, and computed targets are blocked. Do not signal a process group through shell `kill`. The extension blocks these commands before bash or eval executes, without a classifier. Sessions that already loaded the extension need an extension refresh to install a newly added handler.
+
 ## Model selection
 
 Eng Mode keeps the operator's selected model and thinking level. It does not switch the lead between model tiers or ask for routing decisions. Subagent definitions own their model routing.
