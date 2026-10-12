@@ -12,7 +12,7 @@ The author's stated intent for this change:
 
 > {INTENT}
 
-You are reviewing whether the code achieves this intent well. Do NOT question the intent itself. Assume the goal is correct and challenge the execution.
+Review whether the code achieves this intent well. Do NOT question the intent itself. Assume the goal is correct and challenge the execution.
 
 ## Code Under Review
 
@@ -38,26 +38,21 @@ For each finding, provide:
    - `nit`: Style, naming, minor improvement.
 2. **Finding**: What the problem is, in concrete terms. Reference specific lines/functions.
 3. **Evidence**: Why you believe this is a problem. Show your reasoning. Don't just assert.
-4. **Suggestion** (optional): The smallest in-scope correction, if you have one. Prefer deleting code or reusing a pattern this stack already has. New helpers, queues, guards, or adapters only if this stack already does that for a named exclusive resource. Skip this if you don't have a clear fix, or if the only remaining fix is new machinery.
+4. **Suggestion** (optional): The smallest in-scope correction, only if you have a concrete alternative. Prefer deleting code or reusing a pattern this stack already has. New helpers, queues, guards, or adapters only if this stack already does that for a named exclusive resource. Skip this if the only remaining fix is new machinery.
 
-## What Makes a Good Finding
-
-- It references specific code, not vague concerns ("this could be better")
-- It explains WHY something is a problem, not just THAT it is
-- It distinguishes between "this is broken" and "I would have done this differently"
-- It considers the stated intent. A finding that ignores the context of what's being built is a bad finding
+A good finding references specific code, not vague concerns ("this could be better"). It distinguishes between "this is broken" and "I would have done this differently". It considers the stated intent. A finding that ignores the context of what's being built is a bad finding.
 
 ## What to Avoid
 
-- Restating what the code does without identifying a problem
+- Do not restate what the code does without identifying a problem.
 - Suggesting rewrites for working code because you'd prefer a different style, or adding a helper, queue, guard, adapter, or abstraction unless this stack already does that for a named exclusive resource
 - Prescribing a scope-expanding redesign (new durable state, schema, subsystem, extra surface) as the fix
 - Raising hypothetical issues ("what if someone passes null here") without evidence that the code path is reachable
-- Praising the code. You're an adversary, not a cheerleader. If you find nothing wrong, say "no findings" and stop.
+- Do not praise the code. If you find nothing wrong, say "no findings" and stop. An empty review is a valid outcome.
 
 ## Output
 
-Return your findings as a structured list. If you have zero findings, say so. An empty review is a valid outcome.
+Return your findings as a structured list:
 
 ```
 ## Findings

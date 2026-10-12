@@ -1,8 +1,8 @@
 {
-  "sourceCommit": "a6858ea92933f1a5245b2d56e1574c5f018a0d11",
+  "sourceCommit": "73528d40178ae6d0b196d2cf198dc9c090de9a5d",
   "skills": {
     "unslop": {
-      "SKILL.md": "290a10a90e52f080fdf0f225f043088990b5cd8d8b8307c800a91cfeb1568aa4"
+      "SKILL.md": "996d82059bc84ea8cc22ad3306918240d52fed6e92b65efdea1c1789b233ca78"
     },
     "typescript-best-practices": {
       "SKILL.md": "cdc3d5ec1762397a315708ac0dffbfd707a396c0f5613a0f40d136a32d6f977a",
@@ -31,13 +31,13 @@
       "agents/openai.yaml": "edebc9e4fcfe102114012575eaa9600b9b5fd08c311664f389c36e7bc717740f"
     },
     "technical-writing": {
-      "SKILL.md": "f5c512ffeec70bc4e0dee50f7bb4c26742e1be77967a6e8b15d1921e1c209ceb"
+      "SKILL.md": "61fe9c424a798ebf36ad94941f87be049cb8827bdf86d21474a0dde37b513c43"
     },
     "meaningful-contribution": {
       "SKILL.md": "8c841a6fd4f625f90573233d8ea8253d50a3625f68aea01524632722529bed4a"
     },
     "create-verification-skill": {
-      "SKILL.md": "6add7dde32253e395695d2847e8061c7292a1ac9664cca0d315c2c86c0daf1da",
+      "SKILL.md": "20b4dade3b55ac4a051b5d0427ee05657b7df829f753c266c23ebe7246e94fc5",
       "references/feature-map-example/README.md": "cb7bd782cf89968a4ba3d58a5151db837430db92d19a6f52a906973b77b516ba",
       "references/feature-map-example/create-note.md": "644a44c74f35d38c2feb7cd05a0121fdebbb623e8dc376c185b565a581d1ccf7",
       "references/feature-map-example/search.md": "6e87b9e7f2791a7776ba1bb83f371cd285c306c67f19d245cc4dd6ca3015c823"
@@ -46,12 +46,12 @@
       "SKILL.md": "715a6d7b269bbcc270f29c7b2bf280390acabb3bc8a2d8a22018ebf286f2baa0"
     },
     "blast-radius": {
-      "SKILL.md": "5f02db9101ccf26c20254718f0fcd5c2c7ac5d4292b0e0923d0944ac47237aff"
+      "SKILL.md": "2e10745b97f5862323dcda3b29ca60d56b5c3c98e37020085d26b48efbe0a436"
     },
     "eng-github": {
       "SKILL.md": "5af7856b39cbfdd2979118b86bc039d767d346277e96abac93f5cf82457c12b8",
       "scripts/commands/mutate.ts": "421bdb040a43b4b01f9a9f7c0f358554174efc20a4fa177a97176ea065efea78",
-      "scripts/commands/read.ts": "c5904ff1a4bc04972abb5cf8ec912318c69b62e4ea8f8f86f8a65061078f4b00",
+      "scripts/commands/read.ts": "86c325437e4a65a86913a9d19f44369d2f8b07a8d2a058f22accf7284ca63522",
       "scripts/commands/stack.ts": "a215e2d4aeff292457fbda0cc3f19550005b957bb8c7efc6750ef26fdd9d125c",
       "scripts/eng-github.ts": "11efee413f2645ca26326070f0a7ccd61b6d1a8f73945c361d5c0b907c270655",
       "scripts/lib/args.ts": "dacca8ad20b023c355c46a71bfc38c28e1e98a0d79ffcd7c4119a3d6680cf3dc",
@@ -60,7 +60,7 @@
       "scripts/lib/credentials.ts": "609491a2e9d345166ea27dfd67970c8122ea669149a45940d80d3d8b47c03146",
       "scripts/lib/errors.ts": "1398c45b6467c2eae5058fdf13057d022aa31d908053c30ca820eb16e5ac6a77",
       "scripts/lib/merge-async.ts": "02e1ea3e47a2d8086421bc7459c21b0df12b701e21350a7527494e99431ac292",
-      "scripts/lib/pr-query.ts": "c12e4d39d9e89dfde6fbecf00214d45f3e326df93ce2a4cb6ec184c2d4dfff06",
+      "scripts/lib/pr-query.ts": "7b2884f0ed84d62f5f3e97e9f2d1cfa7385f7de3b37e2a1d20f96f37ea0a46d6",
       "scripts/lib/process.ts": "c608dace83136dc24c5ea5bb9dada15293a448903de9b7d4c4bfe67e7120f76b",
       "scripts/lib/rebase.ts": "45d82633ff497fbca9d7e3c19db952aa56de87a2f26f317cbe2d91f503fc5862",
       "scripts/lib/ref.ts": "e3442d78f58055cdce400ffdb0af66f8cd3347319badf3a821b0ea1374a28bf4",

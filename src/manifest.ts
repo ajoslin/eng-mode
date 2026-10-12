@@ -20,6 +20,7 @@ export const skillNames = [
   "figure-it-out",
   "how",
   "interrogate",
+  "ketchup",
   "maintain-verification-skill",
   "meaningful-contribution",
   "no-comments",

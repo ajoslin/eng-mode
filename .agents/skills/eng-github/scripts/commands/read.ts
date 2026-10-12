@@ -19,9 +19,9 @@ import {
   number,
   object,
   query,
+  reviewThreadPage,
   text,
   thread,
-  threadSelection,
   type Snapshot,
   type Fingerprint,
 } from "../lib/pr-query.ts";
@@ -64,30 +64,22 @@ async function allThreads(ctx: CommandContext) {
   const result = [];
   let cursor: string | null = null;
   do {
-    const data = await query(
-      ctx.client,
-      `query($cursor:String){repository(owner:${JSON.stringify(ref.owner)},name:${JSON.stringify(ref.name)}){pullRequest(number:${ref.number}){reviewThreads(first:100,after:$cursor){nodes{${threadSelection}} pageInfo{hasNextPage endCursor}}}}}`,
-      { cursor },
-    );
-    const connection = object(
-      object(object(data.repository).pullRequest).reviewThreads,
-    );
-    for (const raw of nodes(connection)) {
+    const page = await reviewThreadPage(ctx.client, ref, cursor);
+    for (const raw of page.nodes) {
       const value = thread(raw);
-      let page = object(object(raw).comments);
-      while (object(page.pageInfo).hasNextPage === true) {
+      let comments = object(object(raw).comments);
+      while (object(comments.pageInfo).hasNextPage === true) {
         const next = await query(
           ctx.client,
           `query($id:ID!,$cursor:String){node(id:$id){... on PullRequestReviewThread{comments(first:100,after:$cursor){totalCount nodes{author{login} body createdAt} pageInfo{hasNextPage endCursor}}}}}`,
-          { id: value.id, cursor: object(page.pageInfo).endCursor },
+          { id: value.id, cursor: object(comments.pageInfo).endCursor },
         );
-        page = object(object(next.node).comments);
-        value.comments.push(...nodes(page).map(activity));
+        comments = object(object(next.node).comments);
+        value.comments.push(...nodes(comments).map(activity));
       }
       result.push(value);
     }
-    const info = object(connection.pageInfo);
-    cursor = info.hasNextPage === true ? text(info.endCursor) : null;
+    cursor = page.cursor;
   } while (cursor !== null);
   return bool(ctx.args, "unresolved")
     ? result.filter((t) => !t.resolved)
