@@ -27,10 +27,15 @@ Check the state that changes the answer, and mention it only when it does:
 - `setup-eng-mode` has not been run in this repository. Model roles, contracts, and isolation are unvalidated.
 - No `verify-project` skill or other app harness in the project means agents have no scripted way to drive the app. Mention `/create-verification-skill` when the question is about proving a change works.
 
+When `setup-eng-mode` has not run in this repository and it matters to the answer, ask whether the user wants to run `/setup-eng-mode` now or later. It matters when the user is new, the question is about setup or cost, or the answer depends on validated roles and contracts. Ask at most once per chat. If the need is also unclear, ask both questions together. Offer two choices:
+
+- Now: give them `/setup-eng-mode` to type, and answer their question too.
+- Later: answer their question, and add one line saying roles and contracts stay unvalidated until they run `/setup-eng-mode`.
+
 ## Get set up
 
 1. Install with `omp plugin install github:ajoslin/eng-mode`, then restart OMP.
-2. Run [`/setup-eng-mode`](../setup-eng-mode/SKILL.md) in every repository. It validates plugin provenance, model-role chains, `goal`, `loop`, worktree isolation, and that repository's `project-standards` and `verify-project` contracts. It does not ask for a reasoning budget. OMP agent roles own model routing.
+2. Run [`/setup-eng-mode`](../setup-eng-mode/SKILL.md) in every repository. It validates plugin provenance, model-role chains, `goal`, `loop`, worktree isolation, and that repository's `project-standards` and `verify-project` contracts. OMP agent roles own model routing.
 3. Start a real task with `/eng-mode`, a goal, and a check that can pass or fail.
 
 Installing changes nothing until the user invokes a skill. The [README](../../README.md) and [setup page](../../docs/guide/02-setup-and-health.md) have the details. Offer to word their first prompt with them, per [`references/prompting.md`](references/prompting.md).
@@ -56,11 +61,12 @@ The default answer is `/eng-mode`, which runs most of the others when its steps 
 | Know why code is shaped this way, or where a number came from | [`/why`](../why/SKILL.md) |
 | Understand a change or subsystem, explained plainly | [`/teach`](../teach/SKILL.md) |
 | Catch up on their own recent work on a topic | [`/recall`](../recall/SKILL.md) |
+| Catch up on everything in this chat since their last message, with enough context to decide each action item | [`/ketchup`](../ketchup/SKILL.md) |
 | Know what a small diff could break outside itself | [`/blast-radius`](../blast-radius/SKILL.md) |
 | Settle types and module shape before code that crosses a function boundary | [`/architect`](../architect/SKILL.md) |
 | Get several attempts at one brief, merged into the best one | [`/arena`](../arena/SKILL.md) |
 | Run parallel checks over slices, or race workers | [`/swarm`](../swarm/SKILL.md) |
-| Have several models review a diff and try to break it | [`/interrogate`](../interrogate/SKILL.md) |
+| Have different models review a diff and try to break it | [`/interrogate`](../interrogate/SKILL.md) |
 | Diagnose a defect with a scientific bar | [`/diagnosing-bugs`](../diagnosing-bugs/SKILL.md) |
 | Name the domain shape or record an ADR | [`/domain-modeling`](../domain-modeling/SKILL.md) |
 | Deepen a module's interface | [`/codebase-design`](../codebase-design/SKILL.md) |
@@ -97,7 +103,7 @@ Close calls:
 - `/arena` gives every worker the same brief and merges the best parts. `/swarm` splits work into slices or a race and returns one report.
 - `/architect` implements right after it settles the design. Add "with checkpoint" to review the design before it writes code.
 - `/interrogate` reviews the diff. `/blast-radius` looks for breakage outside the diff and proves the one fact that makes the change safe.
-- `/recall` rebuilds context across recent chats. Resuming one specific chat or branch is the Session pickup playbook.
+- `/recall` rebuilds context across recent chats. `/ketchup` covers only this chat since the user's last message. Resuming one specific chat or branch is the Session pickup playbook.
 - `/figure-it-out` designs one rigorous run. The Orchestrate playbook runs a program that spans days and many PRs. The Autonomous run playbook drives one task to a finish condition.
 
 Not in Eng Mode:

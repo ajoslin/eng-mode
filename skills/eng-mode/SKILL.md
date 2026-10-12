@@ -13,6 +13,8 @@ Eng Mode keeps the operator's selected model and thinking level. It does not swi
 
 ## Start
 
+The session that receives `/eng-mode` runs the playbook itself and owns `todo`, `goal`, `loop`, and every spawn. Never spawn a subagent to run Eng Mode itself, because a nested agent cannot fan out the delegates the playbooks need.
+
 1. Before lead-owned exploration, choose exactly one path. Use `scout` when a report is sufficient. Otherwise open `checkpoint` before the first read, grep, glob, LSP, log, or verification call, then `rewind` with the findings before editing or yielding.
 2. Match exactly one primary playbook before editing.
 3. In the main session, `todo` holds the concrete work for this task. Each item names an action and its target, such as "Fix expired-token handling in the session loader". Playbook steps, principles, and skill reads govern how you work and never appear as todos. Add only work in the requested scope. Mark an item done when its outcome exists, and revise the list when the approach changes. Skip the list for trivial tasks. Delegates report requested transitions to the lead and never mutate parent state.

@@ -8,8 +8,6 @@ disable-model-invocation: true
 
 Mine the current conversation for durable learnings, then route them into skill edits.
 
-## When to invoke
-
 - The user said "reflect" or "/reflect".
 - A complex task (5+ tool calls) just landed cleanly and the recipe is worth keeping.
 - The agent hit dead ends, found the working path, and the path generalizes.
@@ -18,40 +16,38 @@ Mine the current conversation for durable learnings, then route them into skill 
 
 Skip when the conversation is trivial, off-topic, or already covered by an existing skill the parent followed correctly. One-offs are not learnings.
 
-## Process
-
-### 1. Capture the active conversation
+## 1. Capture the active conversation
 
 Use the conversation already present in the parent context. For long sessions, write a tight digest containing the opening request, decisions, corrections, tool evidence, and outcome. When the system provides a specific `history://<id>`, read that URI directly. Never treat `history://` as a filesystem directory or scan unrelated sessions.
 
-### 2. Spawn three reviewers in parallel
+## 2. Spawn three reviewers in parallel
 
 Dispatch one `task` batch with three `reviewer` agents. Give each the same conversation or digest and one lens from `references/judgment-reviewer.md`, `references/tooling-reviewer.md`, and `references/divergent-reviewer.md`. Reviewers return findings only. They do not edit files. OMP configuration owns model routing.
 
-### 3. Synthesize
+## 3. Synthesize
 
 Spawn one `reviewer` with `references/synthesizer.md` and the three full reports. The synthesizer returns a structured Accepted / Rejected / Backlog list.
 
-### 4. Structural enforcement check
+## 4. Structural enforcement check
 
-Sanity-check the synthesizer's Accepted list. For any item that would be enforced more reliably by a lint rule, script, metadata flag, or runtime check, move it from Accepted to Backlog. See the **principle-encode-lessons-in-structure** principle skill.
+Move any Accepted item that a lint rule, script, metadata flag, or runtime check would enforce more reliably to Backlog. See the **principle-encode-lessons-in-structure** principle skill.
 
-### 5. Apply
+## 5. Apply
 
-Before applying any Accepted edit, present the synthesizer's full Accepted/Rejected/Backlog output to the user and wait for explicit approval. The user picks which subset to apply and may redirect routings. Skill changes affect every future agent in the org. Do not auto-apply.
+Present the synthesizer's full Accepted / Rejected / Backlog output and wait for explicit approval before applying any Accepted edit. The user picks the subset and may redirect routings. Skill changes affect every future agent in the org. Do not auto-apply.
 
 Route every Backlog item through `capture-learning`. It expects `linear_graphql`, resolves configured team/project identifiers, and deduplicates before creating or updating a candidate ticket. Tracker submission is automatic. Only Accepted skill edits wait for approval.
 
-For each approved Accepted item, follow the Routing field exactly:
+Follow each approved row's Routing exactly:
 
-- Trivial existing-skill edit (a one-line bullet, a tightened sentence, a stale fact corrected): parent does directly.
+- Trivial existing-skill edit (a one-line bullet, a tightened sentence, a stale fact corrected): the parent does it directly.
 - Substantive existing-skill edit (a new section, a new pattern table, more than ~10 lines): run the Eng Mode Authoring a skill playbook's draft / validate / iterate loop.
 - `tune description: <skill path>` (the skill exists but didn't trigger when it should have): rework the description through the Authoring a skill playbook until the trigger fires.
 - `new skill: <kebab-name>`: create it through the Authoring a skill playbook. Do not invent the shape ad hoc.
 
-If your environment ships a SKILL.md validator, run it on every touched skill before declaring done. Skip this step if it doesn't.
+If your environment ships a SKILL.md validator, run it on every touched skill before declaring done.
 
-### 6. Summarize for the user
+## 6. Summarize for the user
 
 Short list, no preamble:
 

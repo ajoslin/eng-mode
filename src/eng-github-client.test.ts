@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mutationCommands } from "../skills/eng-github/scripts/commands/mutate.ts";
+import { readCommands } from "../skills/eng-github/scripts/commands/read.ts";
 import { apiRoot, GitHubClient, type Clock } from "../skills/eng-github/scripts/lib/client.ts";
 import type { Credential } from "../skills/eng-github/scripts/lib/credentials.ts";
 import { EngGithubError, RateLimitedError, UsageError } from "../skills/eng-github/scripts/lib/errors.ts";
@@ -269,5 +270,32 @@ describe("merge", () => {
   test("direct still falls back to the synchronous merge endpoint", async () => {
     expect(await run("direct")).toEqual({ merged: true });
     expect(calls.some((call) => call.url.endsWith("/pulls/1/merge"))).toBe(true);
+  });
+});
+
+describe("snapshot", () => {
+  function threadNode(id: string, resolved: boolean) {
+    return { id, isResolved: resolved, isOutdated: false, path: "a.ts", line: 1, comments: { totalCount: 1, nodes: [{ author: { login: "cursor" }, body: id, createdAt: "t" }], pageInfo: { hasNextPage: false, endCursor: null } } };
+  }
+
+  test("reads review threads past the first page so a late unresolved thread still blocks", async () => {
+    const firstPage = Array.from({ length: 100 }, (_, i) => threadNode(`T${i}`, true));
+    const pr = { stack: null, id: "n", url: "u", number: 1, title: "t", state: "OPEN", isDraft: false, headRefName: "h", headRefOid: "abc1234", baseRefName: "main", baseRefOid: "b", mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", reviewDecision: null, labels: { nodes: [] }, autoMergeRequest: null, baseRef: null, commits: { nodes: [] }, reviewThreads: { nodes: firstPage, pageInfo: { hasNextPage: true, endCursor: "c1" } }, latestReviews: { nodes: [] }, comments: { nodes: [] } };
+    const { client: c } = client({ now: () => Date.now(), sleep: async () => {} });
+    stubFetch((_url, init) => {
+      const body = JSON.parse(String(init.body)) as { variables?: { cursor?: string } };
+      return new Response(
+        JSON.stringify(
+          body.variables?.cursor === "c1"
+            ? { data: { repository: { pullRequest: { reviewThreads: { nodes: [threadNode("late", false)], pageInfo: { hasNextPage: false, endCursor: null } } } } } }
+            : { data: { p0: { pullRequest: pr } } },
+        ),
+      );
+    });
+    const command = readCommands.snapshot;
+    if (command === undefined) throw new Error("snapshot command missing");
+    const result = (await command.run({ client: c, cwd: dir, args: { positionals: ["o/r#1"], flags: new Map() } })) as { threads: { id: string; resolved: boolean }[] };
+    expect(result.threads).toHaveLength(101);
+    expect(result.threads.filter((t) => !t.resolved).map((t) => t.id)).toEqual(["late"]);
   });
 });

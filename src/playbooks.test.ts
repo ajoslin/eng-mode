@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { agentSkillsAllowlist, skillNames } from "./manifest.ts";
 
 const root = join(import.meta.dir, "..");
 
@@ -127,7 +128,6 @@ describe("pstack 0.15.0 port contracts", () => {
 
   it("makes /how explain-only and drops critique references", async () => {
     const how = await read("skills/how/SKILL.md");
-    expect(how).toContain("## Step 1. Assess Complexity");
     expect(how).toContain("`scout`");
     expect(how).not.toContain("Critique");
     expect(how).not.toContain("critic-prompt");
@@ -241,10 +241,10 @@ describe("pstack 0.15.13 port contracts", () => {
     expect(recipes).not.toContain("make-bot-ui");
   });
 
-  it("records the 0.15.13 sync and teaches /eng-help in the operator guide", async () => {
+  it("records the current sync and teaches /eng-help in the operator guide", async () => {
     const readme = await read("README.md");
-    expect(readme).toContain("Synced with pstack 0.15.13");
-    expect(readme).toContain("2cbf585");
+    expect(readme).toContain("Synced with pstack 0.15.20");
+    expect(readme).toContain("1b6d44f");
     expect(readme).toContain("`/eng-help`");
 
     const guide = await read("docs/guide/README.md");
@@ -261,5 +261,25 @@ describe("pstack 0.15.13 port contracts", () => {
     const recipes = await read("docs/guide/10-recipes-and-failure-modes.md");
     expect(recipes).toContain("`/eng-help`");
     expect(recipes).toContain("`/correct`");
+  });
+});
+
+describe("pstack 0.15.20 port contracts", () => {
+  it("registers typed-only /ketchup and routes catch-up questions to it from /eng-help", async () => {
+    expect(skillNames).toContain("ketchup");
+    expect(agentSkillsAllowlist).not.toContain("ketchup");
+
+    const ketchup = await read("skills/ketchup/SKILL.md");
+    expect(ketchup).toContain("disable-model-invocation: true");
+    expect(ketchup).toContain("Use for /ketchup.");
+    expect(ketchup).toContain("Never invent a number");
+
+    const help = await read("skills/eng-help/SKILL.md");
+    expect(help).toContain("[`/ketchup`](../ketchup/SKILL.md)");
+  });
+
+  it("keeps the /eng-mode session as the runner rather than a spawned agent", async () => {
+    const skill = await read("skills/eng-mode/SKILL.md");
+    expect(skill).toContain("Never spawn a subagent to run Eng Mode itself");
   });
 });

@@ -160,10 +160,32 @@ export async function aliased(
 }
 const commentsSelection = "totalCount nodes{author{login} body createdAt}";
 export const threadSelection = `id isResolved isOutdated path line comments(first:100){${commentsSelection} pageInfo{hasNextPage endCursor}}`;
-function snapshotSelection(ref: PrRef): string {
-  return `stack{number size} stackEntry{position} id url number title state isDraft headRefName headRefOid baseRefName baseRefOid mergeable mergeStateStatus reviewDecision labels(first:50){nodes{name}} autoMergeRequest{mergeMethod enabledBy{login}} baseRef{target{oid} compare(headRef:${JSON.stringify(`refs/pull/${ref.number}/head`)}){behindBy}} commits(last:1){nodes{commit{oid statusCheckRollup{state contexts(first:100){nodes{__typename ... on CheckRun{name status conclusion isRequired(pullRequestNumber:${ref.number}) detailsUrl databaseId checkSuite{workflowRun{databaseId}}} ... on StatusContext{context state isRequired(pullRequestNumber:${ref.number}) targetUrl}}}}}}} reviewThreads(first:100){nodes{${threadSelection}}} latestReviews(first:20){nodes{author{login} state submittedAt body}} comments(last:100){nodes{author{login} body createdAt}}`;
+const threadPageSelection = `nodes{${threadSelection}} pageInfo{hasNextPage endCursor}`;
+function nextCursor(connection: unknown): string | null {
+  const info = object(connection).pageInfo;
+  if (info === undefined || info === null) return null;
+  const page = object(info);
+  return page.hasNextPage === true ? text(page.endCursor) : null;
 }
-function parseSnapshot(value: unknown, ref: PrRef): Snapshot {
+export async function reviewThreadPage(
+  client: GitHubClient,
+  ref: PrRef,
+  cursor: string | null,
+  priority: Priority = "interactive",
+): Promise<{ nodes: unknown[]; cursor: string | null }> {
+  const data = await query(
+    client,
+    `query($cursor:String){repository(owner:${JSON.stringify(ref.owner)},name:${JSON.stringify(ref.name)}){pullRequest(number:${ref.number}){reviewThreads(first:100,after:$cursor){${threadPageSelection}}}}}`,
+    { cursor },
+    priority,
+  );
+  const connection = object(object(data.repository).pullRequest).reviewThreads;
+  return { nodes: nodes(connection), cursor: nextCursor(connection) };
+}
+function snapshotSelection(ref: PrRef): string {
+  return `stack{number size} stackEntry{position} id url number title state isDraft headRefName headRefOid baseRefName baseRefOid mergeable mergeStateStatus reviewDecision labels(first:50){nodes{name}} autoMergeRequest{mergeMethod enabledBy{login}} baseRef{target{oid} compare(headRef:${JSON.stringify(`refs/pull/${ref.number}/head`)}){behindBy}} commits(last:1){nodes{commit{oid statusCheckRollup{state contexts(first:100){nodes{__typename ... on CheckRun{name status conclusion isRequired(pullRequestNumber:${ref.number}) detailsUrl databaseId checkSuite{workflowRun{databaseId}}} ... on StatusContext{context state isRequired(pullRequestNumber:${ref.number}) targetUrl}}}}}}} reviewThreads(first:100){${threadPageSelection}} latestReviews(first:20){nodes{author{login} state submittedAt body}} comments(last:100){nodes{author{login} body createdAt}}`;
+}
+function parseSnapshot(value: unknown, ref: PrRef, threadNodes: unknown[]): Snapshot {
   const v = object(value);
   const state = v.state;
   if (state !== "OPEN" && state !== "CLOSED" && state !== "MERGED")
@@ -220,7 +242,7 @@ function parseSnapshot(value: unknown, ref: PrRef): Snapshot {
         : { method: text(auto.mergeMethod), enabledBy: login(auto.enabledBy) },
     nodeId: text(v.id),
     checks,
-    threads: nodes(v.reviewThreads).map(thread),
+    threads: threadNodes.map(thread),
     reviews: nodes(v.latestReviews).map((raw) => {
       const r = object(raw);
       return {
@@ -248,11 +270,21 @@ export async function fetchSnapshots(
   priority: Priority = "interactive",
 ): Promise<Snapshot[]> {
   const values = await aliased(client, refs, snapshotSelection, priority);
-  return values.map((value, i) => {
-    const ref = refs[i];
-    if (!ref) throw new ApiError(200, "Missing reference", null);
-    return parseSnapshot(value, ref);
-  });
+  return Promise.all(
+    values.map(async (value, i) => {
+      const ref = refs[i];
+      if (!ref) throw new ApiError(200, "Missing reference", null);
+      const connection = object(value).reviewThreads;
+      const threadNodes = nodes(connection);
+      let cursor = nextCursor(connection);
+      while (cursor !== null) {
+        const page = await reviewThreadPage(client, ref, cursor, priority);
+        threadNodes.push(...page.nodes);
+        cursor = page.cursor;
+      }
+      return parseSnapshot(value, ref, threadNodes);
+    }),
+  );
 }
 export interface Fingerprint {
   ref: string;

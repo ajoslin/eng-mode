@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Interrogate
 
-The default panel is four auditable seats intended to span three vendors. A configured roster may extend, shrink, or replace those defaults. Runtime fallbacks and dropouts may reduce either roster. Every seat receives the same review material. The lead applies judgment and never auto-edits.
+The default panel is four auditable seats intended to span three vendors. A configured roster may extend, shrink, or replace those defaults. Runtime fallbacks and dropouts may reduce either roster. The adversarial signal comes from model diversity, not assigned personas. The deliverable is a synthesized verdict. The lead applies judgment and never auto-edits.
 
 ## 1. Scope
 
@@ -16,11 +16,11 @@ Derive the review surface before dispatch:
 - Otherwise, on a branch, review the branch-base diff (`git diff <base>...HEAD`), using the PR base when known and the repository's default branch otherwise.
 - When the request refers to recent work rather than explicit paths, locate that work from the conversation and commits.
 
-Include the diff or file contents plus the surrounding code, tests, contracts, and decisions needed to judge it. Do not treat unrelated working-tree changes as part of the artifact.
+Package the diff or file contents with the surrounding code, tests, contracts, and decisions reviewers need. Do not include unrelated working-tree changes.
 
 ## 2. Intent
 
-Write one clear paragraph describing what the change must accomplish. Derive it from the request, commit messages, PR title and description when present, and the code itself. Reviewers challenge execution, not the product call. Ask only when those sources leave materially different plausible intents.
+Before dispatch, state the intent in one clear paragraph from the request, commit messages, PR title and description when present, and the code. Reviewers challenge execution, not the product call. Ask only when those sources leave materially different plausible intents.
 
 ## 3. Rubric
 

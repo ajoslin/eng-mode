@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Arena
 
-Fan out an explicit `N >= 2` attempts at the same artifact, then select and synthesize one result. The lead owns framing, recovery, selection, integration, verification, and the final record end to end.
+Fan out `N >= 2` attempts at the same artifact. The lead owns framing, recovery, selection, integration, verification, and the final record end to end.
 
 ## Start
 
@@ -39,7 +39,7 @@ The lead reads every candidate and rationale end to end, independently scores ea
 
 ## Graft
 
-Walk every losing candidate again. Usually graft only one or two coherent ideas, folding them into the base by hand under **principle-redesign-from-first-principles** rather than pasting or averaging designs. For each graft record its source label. For each material rejected idea record why it was rejected. If candidates converge on one shape, record consensus and do not invent grafts. If they diverge so widely that the rubric cannot choose coherently, the lead owns recovery. Reframe the prompt and rerun the arena.
+Walk each losing candidate once more for what is worth porting into the base, usually one or two coherent ideas. Fold each graft in by hand under **principle-redesign-from-first-principles**, so the result stays coherent under one mental model. Do not paste or average designs. Record each graft's source label and why each material rejected idea was rejected. If candidates converge on one shape, record consensus and do not invent grafts. If they diverge so widely that the rubric cannot choose coherently, the lead owns recovery. Reframe the prompt and rerun the arena.
 
 ## Verify
 
