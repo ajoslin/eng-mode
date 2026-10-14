@@ -13,5 +13,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.2
+      - run: git config --global user.name ci && git config --global user.email ci@localhost
       - run: bun install --frozen-lockfile
       - run: bun run check
