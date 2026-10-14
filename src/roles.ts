@@ -2,15 +2,6 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { parse, stringify } from "yaml";
 import { type AgentName, agentModelChains, agentNames } from "./manifest.ts";
 
-/**
- * Two-stage workstation role migration. Stage one (prepare) adds and validates
- * every new generic and panel role while retaining all old roles, so old and
- * new workflows coexist until the repository hard cut is proven. Stage two
- * (retire) deletes the four old `boja_*` keys only after no old workflow
- * consumer remains. Both stages are atomic over the config document and the
- * file runner restores the prior bytes on failure.
- */
-
 export const genericRoleSources = {
   code: "boja_code",
   judgment: "boja_judgment",
@@ -101,7 +92,6 @@ export function prepareRoles(input: PrepareRolesInput): PrepareRolesResult {
     }
     const incomingValid = typeof incoming === "string" && incoming.trim().length > 0;
     if (existingValid) {
-      // An existing valid new value wins; a differing old/new pair is a conflict.
       if (incomingValid && incoming !== existing) {
         conflicts.push({ role, existing, incoming });
       }
@@ -229,7 +219,6 @@ function writeRolesBack(
   try {
     write(configPath, stringify(document));
   } catch (error) {
-    // Partial-failure recovery: restore the exact prior bytes before rethrowing.
     writeFileSync(configPath, config.originalText);
     throw error;
   }

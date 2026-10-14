@@ -3,7 +3,6 @@ import type { ExpertLens, OperationClassifier } from "./typesafe.ts";
 
 const PROMPT_CLASSIFIER_TIMEOUT_MS = 5_000;
 
-/** An expert-lens classification requires guidance only when it is `expert`. */
 export function classifierOutputNeedsExpertGuidance(lens: ExpertLens | undefined): boolean {
   return lens === "expert";
 }

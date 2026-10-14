@@ -54,13 +54,11 @@ export interface ToolCallEventResult {
   readonly reason?: string;
 }
 
-/** A session entry as the danger gate reads it; other entry kinds are skipped. */
 export interface SessionEntryView {
   readonly type: string;
   readonly message?: { readonly role?: string; readonly content?: unknown };
 }
 
-/** Subset of OMP's per-event ExtensionContext the extension relies on. */
 export interface ExtensionEventContext {
   readonly hasUI: boolean;
   readonly cwd: string;

@@ -3,7 +3,6 @@ import { TypeSafeClient, TypeSafeDecisionModel } from "@effect-agent/ai-typesafe
 import { Effect, Layer, Option, Schema } from "effect";
 import { FetchHttpClient } from "effect/unstable/http";
 
-/** What the classifier sees: the proposed tool call plus the user messages that may authorize it. */
 export interface DangerContext {
   readonly userMessages: readonly string[];
   readonly tool: string;
@@ -91,7 +90,6 @@ const Live = TypeSafeDecisionModel.model("jev-latest").pipe(
   ),
 );
 
-/** A typed classifier backed by TypeSafe AI (`TYPESAFE_API_KEY`). */
 export interface OperationClassifier {
   classifyDanger(context: DangerContext, timeoutMs?: number): Promise<DangerVerdict>;
   classifyExpert(prompt: string, timeoutMs?: number): Promise<ExpertVerdict>;
