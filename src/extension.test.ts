@@ -237,6 +237,15 @@ describe("eng_orch executable entrypoint", () => {
     const bareMessages = await skillMessages("/no-comments");
     expect(bareMessages).toHaveLength(1);
     expect(bareMessages[0]?.content).not.toContain("\nUser:");
+    const restatement = await skillMessages("/in-your-own-words fix the flaky login test");
+    expect(restatement).toHaveLength(1);
+    expect(restatement[0]?.content.startsWith('[IMPORTANT: User invoked the "in-your-own-words" skill; follow its instructions. Full skill below.]')).toBeTrue();
+    expect(restatement[0]?.content).toContain("Restate in your own words what you think the user's goals are and what problem they're trying to solve.");
+    expect(restatement[0]?.content.endsWith("User: fix the flaky login test")).toBeTrue();
+    const sharpen = await skillMessages("/sharpen");
+    expect(sharpen).toHaveLength(1);
+    expect(sharpen[0]?.content).toContain("Don't hand back a rewritten prompt.");
+    expect(sharpen[0]?.content).not.toContain("\nUser:");
     for (const prompt of ["/skill:no-comments", "/not-a-skill x", "please run /no-comments"]) {
       expect(await skillMessages(prompt)).toEqual([]);
     }

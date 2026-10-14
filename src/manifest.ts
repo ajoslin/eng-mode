@@ -21,6 +21,8 @@ export const skillNames = [
   "how",
   "interrogate",
   "ketchup",
+  "in-your-own-words",
+  "sharpen",
   "maintain-verification-skill",
   "meaningful-contribution",
   "no-comments",

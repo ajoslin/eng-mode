@@ -66,7 +66,7 @@ Correct the log, not the story. The audit never edits or removes a row, even an 
 
 ## Independent review of the trail
 
-Before handing back, dispatch a `reviewer` or one pinned panel agent that did not perform the work. Give it the audit trail plus the conversation digest or exact transcript URI. Self-review is not a substitute. Agent definitions own model routing. The reviewer flags what the user should scrutinize, not a redo of the implementation.
+Before handing back, dispatch a `reviewer` or one pinned panel agent that did not perform the work. Give it the audit trail plus the conversation digest or exact transcript URI. Self-review is not a substitute. Agent definitions own model routing. The reviewer flags what the user should scrutinize, not a redo of the implementation. Pick each `task` item's `effort` for the job, per the **eng-mode** skill's Design and delegation section.
 
 - Decisions logged with weak or absent evidence.
 - Verification steps skipped or claimed without proof in the transcript.

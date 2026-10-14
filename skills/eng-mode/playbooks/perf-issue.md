@@ -14,7 +14,7 @@
    7. Do it cheaper.
 
    When an earlier mantra meets the target, stop.
-3. Plan the fix from the trace. If it crosses a function boundary, run `architect` first. Delegate an independent implementation slice to `implementation-agent`. Review the diff and capture a post-fix trace.
+3. Plan the fix from the trace. If it crosses a function boundary, run `architect` first. Delegate an independent implementation slice to `implementation-agent`. Review the diff and capture a post-fix trace. Pick each `task` item's `effort` for the job, per the Design and delegation section.
    Apply the **principle-sequence-verifiable-units** principle skill, verifying each attempt before trying the next.
 4. Parse and compare the artifacts (JSON to sqlite, diff). "Inconclusive" or wrong-surface is not a pass. Flag it.
 5. Cite the measurement in the PR.

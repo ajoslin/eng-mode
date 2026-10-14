@@ -1,6 +1,6 @@
 ### Bug fix
 
-**The lead owns the task. Plan, review, and verify.** Delegate bounded investigation and implementation, but inspect the evidence and diff yourself. Reviewers independently judge the result.
+**The lead owns the task. Plan, review, and verify.** Delegate bounded investigation and implementation, but inspect the evidence and diff yourself. Reviewers independently judge the result. Pick each `task` item's `effort` for the job, per the Design and delegation section.
 
 Be scientific. Reproduce the exact symptom on its real surface before fixing it. Every shipped line traces to runtime evidence. Belt-and-suspenders that "might help" is a hypothesis, not a fix. It does not ship. When evidence refutes a hypothesis, revert what it motivated. The smallest change the evidence justifies ships, nothing more.
 

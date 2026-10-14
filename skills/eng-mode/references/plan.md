@@ -22,7 +22,7 @@ Resolve what is in scope vs explicitly out, technical or platform constraints, p
 
 ## 3. Explore in subagents
 
-Delegate codebase exploration (the **principle-guard-the-context-window** principle skill).
+Delegate codebase exploration (the **principle-guard-the-context-window** principle skill). Pick each `task` item's `effort` for the job, per the **eng-mode** skill's Design and delegation section.
 
 Each explorer returns file pointers, conventions, dependencies, test infrastructure, and entry points. No inlined dumps.
 
@@ -66,7 +66,7 @@ Every phase file contains this skeleton. Omit no field. Write `not applicable: <
 - **Review gate.** Required project review/pre-PR gates, reviewers or review skills, actionable-finding disposition, and acceptance condition at the same head SHA.
 - **Merge or handback.** Independent merge or provider-owned stack operation, merge authority, ordering, handback recipient, and the evidence delivered. Babysit may establish readiness but never supplies merge authority.
 
-Order phases so subtraction, infrastructure, and shared types land before dependents (the **principle-foundational-thinking** principle skill). Each phase must be independently reviewable and produce its own receipt. A new head SHA invalidates SHA-pinned evidence unless the active execution/provider contract explicitly permits patch-identity proof.
+Order phases so subtraction, infrastructure, and shared types land before dependents (the **principle-foundational-thinking** principle skill). Each phase must be independently reviewable and produce its own receipt. A new head SHA invalidates SHA-pinned evidence unless `playbooks/shipping.md` step 3 carries it, through the single verifier at the new head or the patch-id rule.
 
 For changes touching existing code, apply the **principle-redesign-from-first-principles** principle skill. If we'd built this with the new requirement on day one, what would it look like? Redesign holistically. Deliver incrementally.
 

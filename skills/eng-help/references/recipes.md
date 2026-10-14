@@ -4,6 +4,8 @@ Swap in the real paths, skills, and done checks. Informal wording works. Start e
 
 ## Understand
 
+- `/in-your-own-words <long or messy ask>`
+- `/sharpen <your task>`
 - `/eng-mode read. restate the underlying issue in your own words, in plain english.`
 - `/eng-mode investigate why. give me what we know, what data you used, and your best hypotheses. don't change any code yet.`
 - `use /how to understand. then use /why to find out why it broke recently.`
