@@ -31,6 +31,8 @@ The session receiving `/eng-mode` runs the playbook and owns the todo list and a
 |---|---|
 | [`/ketchup`](skills/ketchup/SKILL.md) | Catch up on this chat since your last message, with enough context to decide each action item. |
 
+Invoke every shipped skill as bare `/<name>`. Eng Mode expands it; OMP itself only knows `/skill:<name>`. `/no-comments` takes a path set or `.` for a repo sweep and a refactor-vs-delete plan.
+
 ## Install
 
 ```sh
@@ -71,6 +73,8 @@ The core playbook ideas are pstack's:
 This tree ships **24 playbooks** (pstack's 23 plus Eng Mode's Pre-PR gates) and **24 principle skills**, including `principle-attack-the-premise` and `principle-test-behavior-not-implementation`. `/eng-mode` reads a principle leaf only when it governs a decision. Each leaf is also invocable as `/principle-<name>`. See [pstack's full playbook list](https://github.com/cursor/plugins/blob/main/pstack/README.md#just-use-poteto-mode). Upstream copyright and MIT license terms are preserved in [`LICENSE`](LICENSE).
 
 Synced with pstack 0.15.20 ([cursor/plugins `1b6d44f`](https://github.com/cursor/plugins/tree/1b6d44f/pstack)). This sync ports upstream's roughly 10% prompt cut and adds `/ketchup`. The 0.15.13 sync added `/eng-help` plus its prompting and recipe references; `/correct`, `/benchmark-checklist`, and `principle-explain-the-number` landed in the 0.15.9 sync.
+
+`/no-comments` also carries pstack 0.15.23's subagent-effort change, adapted to OMP agent-owned models and optional `task` effort.
 
 ## Development
 

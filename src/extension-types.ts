@@ -32,7 +32,7 @@ export interface CustomMessagePayload {
   readonly customType: string;
   readonly content: string;
   readonly display: boolean;
-  readonly attribution: "agent";
+  readonly attribution: "user" | "agent";
 }
 export interface BeforeAgentStartEvent {
   readonly prompt: string;
