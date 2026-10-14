@@ -39,7 +39,7 @@ Use the repository or session's configured `interrogate reviewers` list of proje
 
 Before the batch, resolve every configured seat. If its configured model or role is unavailable, recover it through the runtime resolver. Choose the closest available equivalent, preferring the same family and highest reasoning tier, record the substitution, and then dispatch. Treat resolver-owned `auto` or parent-inheritance as valid, not broken configuration. If no equivalent resolves, drop that seat and report it. Do not block the review or silently duplicate another seat.
 
-Dispatch one `task` batch with the same intent, artifact, and rubric to every resolved seat. After it settles, inspect each delivered result's `resolvedModel` and `resolvedModelIsFallback` when the runtime exposes them. Report each seat's actual resolved model and vendor. Missing metadata means vendor `unverified`. Never infer it from the nominal agent, count it toward cross-vendor agreement, or call the roster complete. A fallback is a substitution even when the nominal agent returned normally. Continue after dropouts.
+Dispatch one `task` batch with the same intent, artifact, and rubric to every resolved seat. After it settles, inspect each delivered result's `resolvedModel` and `resolvedModelIsFallback` when the runtime exposes them. Report each seat's actual resolved model and vendor. Missing metadata means vendor `unverified`. Never infer it from the nominal agent, count it toward cross-vendor agreement, or call the roster complete. A fallback is a substitution even when the nominal agent returned normally. Continue after dropouts. Pick each `task` item's `effort` for the job, per the **eng-mode** skill's Design and delegation section.
 
 ## 5. Synthesis and lead judgment
 

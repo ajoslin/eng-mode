@@ -22,7 +22,9 @@ When you're stuck, or can't tell which skill fits, type `/eng-help` with your qu
 
 It answers, hands you a prompt to send, and links the skill or guide page the answer came from. It does not start the work, because an Eng Mode run spends real tokens, so you send the prompt when you're ready. It runs only when you type it.
 
-Type `/ketchup` to catch up on this chat since your last message, with a summary of each decision waiting on you.
+Type `/ketchup` to catch up on what changed in this chat since your last message, in a few plain sentences and small visuals. Each action item gets just enough context to make the call.
+
+Type `/in-your-own-words <long or messy ask>` to check that the agent understood your goals and the problem. Type `/sharpen <your task>` to sharpen its expert approach, goal, and specification before starting.
 
 ## One rule
 

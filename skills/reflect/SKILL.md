@@ -22,7 +22,7 @@ Use the conversation already present in the parent context. For long sessions, w
 
 ## 2. Spawn three reviewers in parallel
 
-Dispatch one `task` batch with three `reviewer` agents. Give each the same conversation or digest and one lens from `references/judgment-reviewer.md`, `references/tooling-reviewer.md`, and `references/divergent-reviewer.md`. Reviewers return findings only. They do not edit files. OMP configuration owns model routing.
+Dispatch one `task` batch with three `reviewer` agents. Give each the same conversation or digest and one lens from `references/judgment-reviewer.md`, `references/tooling-reviewer.md`, and `references/divergent-reviewer.md`. Reviewers return findings only. They do not edit files. OMP configuration owns model routing. Pick each `task` item's `effort` for the job, per the **eng-mode** skill's Design and delegation section.
 
 ## 3. Synthesize
 

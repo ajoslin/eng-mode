@@ -24,7 +24,7 @@ Before launching workers, put these phases in the lead's finite task list:
 3. Set N from the request or derive it from the declared slices and arms. Record N separately from whatever concurrency the runtime provides. Do not invent a fixed maximum.
 4. When workers verify or measure commits, each brief names the exact SHAs. A measurement brief also names the method (sample count, what one sample is, order). The worker records both in its result.
 5. Give every worker one named, writable output destination. Outputs must not overlap. Writers either own disjoint exclusive paths, or use `isolated: true` only after verifying OMP task isolation is configured and only when every isolated change belongs in the merged result. Race artifacts that are not all meant to merge use separate worker-owned outputs instead of isolated parent-tree writes.
-6. Pick the most specific OMP agent type for each worker: `scout`, `sonic`, `implementation-agent`, `judgment-agent`, `reviewer`, `security-reviewer`, or another applicable specialist.
+6. Pick the most specific OMP agent type for each worker: `scout`, `sonic`, `implementation-agent`, `judgment-agent`, `reviewer`, `security-reviewer`, or another applicable specialist. Pick each `task` item's `effort` for the job, per the **eng-mode** skill's Design and delegation section.
 
 ## Fan out
 

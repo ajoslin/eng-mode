@@ -20,7 +20,7 @@ Use `--compact` on search when a trimmed hit list is enough. If `--full` fails, 
 
 Search and explain require authentication. If Entire is missing, `entire version` fails, or a command reports that login is required, say Entire was unavailable and continue with the fallback.
 
-4. Fall back to OMP `history://` for this workspace. For a large corpus, partition independent time slices across `scout` agents in one batch. Return only topic, goal, decisions, open threads, corrections, and artifacts with session IDs.
+4. Fall back to OMP `history://` for this workspace. For a large corpus, partition independent time slices across `scout` agents in one batch. Return only topic, goal, decisions, open threads, corrections, and artifacts with session IDs. Pick each `task` item's `effort` for the job, per the **eng-mode** skill's Design and delegation section.
 5. For a named feature, file, subsystem, or bug, run `why` across git, PRs, issues, ADRs, the project tracker, and available operational evidence. Null searches are evidence.
 6. Verify PRs, branches, issues, and current files against live state. History is not current truth.
 7. Catch-up return: Capsule (max five bullets). Threads tagged merged/open PR/in flight/verified uncommitted/reverted/planned. Problems (max five). Next move (one action). Precedent return: closest checkpoint, what worked, gotchas, files touched, and a suggested approach for this task. Anchor claims to a checkpoint id, session id, file, or SHA.

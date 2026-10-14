@@ -75,7 +75,7 @@ Source control is always available through git and `eng-github`. For the other s
 
 Spawn one investigator per category that has a matching MCP, all in a single `task` batch so they run concurrently, each owning exactly one tool or MCP. Don't ask one agent to cover multiple MCPs.
 
-Dispatch each investigator as a `scout` when repository and web evidence are sufficient. When a category requires an MCP not exposed to `scout`, use the most specific tool-capable project agent and prohibit writes in its brief. Agent definitions and OMP configuration own model routing. Never pass Cursor-style `model` or `readonly` task fields.
+Dispatch each investigator as a `scout` when repository and web evidence are sufficient. When a category requires an MCP not exposed to `scout`, use the most specific tool-capable project agent and prohibit writes in its brief. Agent definitions and OMP configuration own model routing. Never pass Cursor-style `model` or `readonly` task fields. Pick each `task` item's `effort` for the job, per the **eng-mode** skill's Design and delegation section.
 
 Each investigator's prompt is `references/investigator-prompt.md` filled in, plus:
 - the category playbook `references/sources/<source>.md` for the selected MCP, adapted from the examples in `references/source-playbook.md`

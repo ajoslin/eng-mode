@@ -243,8 +243,8 @@ describe("pstack 0.15.13 port contracts", () => {
 
   it("records the current sync and teaches /eng-help in the operator guide", async () => {
     const readme = await read("README.md");
-    expect(readme).toContain("Synced with pstack 0.15.20");
-    expect(readme).toContain("1b6d44f");
+    expect(readme).toContain("Synced with pstack 0.15.24");
+    expect(readme).toContain("1e5c90a");
     expect(readme).toContain("`/eng-help`");
 
     const guide = await read("docs/guide/README.md");
@@ -281,5 +281,16 @@ describe("pstack 0.15.20 port contracts", () => {
   it("keeps the /eng-mode session as the runner rather than a spawned agent", async () => {
     const skill = await read("skills/eng-mode/SKILL.md");
     expect(skill).toContain("Never spawn a subagent to run Eng Mode itself");
+  });
+});
+
+describe("pstack 0.15.24 port contracts", () => {
+  it("registers typed-only /in-your-own-words and /sharpen and routes them from /eng-help", async () => {
+    const help = await read("skills/eng-help/SKILL.md");
+    for (const name of ["in-your-own-words", "sharpen"] as const) {
+      expect(skillNames).toContain(name);
+      expect(agentSkillsAllowlist).not.toContain(name);
+      expect(help).toContain("[`/" + name + "`](../" + name + "/SKILL.md)");
+    }
   });
 });
