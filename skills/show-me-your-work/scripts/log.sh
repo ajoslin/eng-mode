@@ -16,8 +16,8 @@ if [ -n "$logdir" ] && [ "$logdir" != "." ] && [ ! -d "$logdir" ]; then
 	mkdir -p "$logdir"
 fi
 
-if [ ! -f "$logfile" ]; then
-	# Publish a complete header atomically; a losing creator must never truncate.
+publish_header_atomically() {
+	local header
 	header="$(mktemp "${logfile}.init.XXXXXX")"
 	trap 'rm -f "$header"' EXIT
 	printf 'ts\tphase\tdecision\twhy\tevidence\tresult\n' > "$header"
@@ -27,16 +27,14 @@ if [ ! -f "$logfile" ]; then
 	fi
 	rm -f "$header"
 	trap - EXIT
+}
+
+if [ ! -f "$logfile" ]; then
+	publish_header_atomically
 fi
 
 ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-# Strip tabs/newlines/CR so cells stay on one line, and prefix any cell
-# whose first char a spreadsheet would parse as a formula (=, +, -, @)
-# with a single quote. The skill expects this log to be read in
-# spreadsheets, so attacker-controlled evidence (PR titles, filenames,
-# generated text) must not become formula execution when a reviewer
-# opens the file.
-clean() {
+escape_tsv_cell_for_spreadsheets() {
 	local v
 	v=$(printf '%s' "$1" | tr '\t\n\r' '   ')
 	case "$v" in
@@ -45,5 +43,5 @@ clean() {
 	esac
 }
 printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
-	"$ts" "$(clean "$1")" "$(clean "$2")" "$(clean "$3")" "$(clean "$4")" "$(clean "$5")" \
+	"$ts" "$(escape_tsv_cell_for_spreadsheets "$1")" "$(escape_tsv_cell_for_spreadsheets "$2")" "$(escape_tsv_cell_for_spreadsheets "$3")" "$(escape_tsv_cell_for_spreadsheets "$4")" "$(escape_tsv_cell_for_spreadsheets "$5")" \
 	>> "$logfile"

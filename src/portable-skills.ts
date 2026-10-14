@@ -3,14 +3,6 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import { join, relative, resolve } from "node:path";
 import { skillNames, type SkillName } from "./manifest.ts";
 
-/**
- * Skills copied verbatim into a host repository's `.agents/skills/` so agents
- * without the OMP plugin (Codex, Claude Code) read the same text OMP users do.
- * OMP resolves the plugin copy first (omp-plugins priority 90 beats .agents 70),
- * so the copy only ever serves non-OMP agents. Everything else in `skillNames`
- * is OMP-routed (playbooks, eng_orch, panel seats) and is deleted from the
- * repository when it shadows a manifest name.
- */
 export const portableSkillNames = [
   "unslop",
   "typescript-best-practices",

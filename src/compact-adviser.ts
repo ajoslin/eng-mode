@@ -84,9 +84,7 @@ function savedKey(agentDir: string): string | undefined {
       const key = (parsed as { typesafeApiKey?: unknown }).typesafeApiKey;
       return typeof key === "string" ? nonempty(key) : undefined;
     }
-  } catch {
-    // Missing or invalid settings mean no saved key.
-  }
+  } catch {}
   return undefined;
 }
 

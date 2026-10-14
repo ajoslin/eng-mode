@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "73528d40178ae6d0b196d2cf198dc9c090de9a5d",
+  "sourceCommit": "9705b8b2b54028c838a5c51a5ae581bc2ded5af9",
   "skills": {
     "unslop": {
       "SKILL.md": "996d82059bc84ea8cc22ad3306918240d52fed6e92b65efdea1c1789b233ca78"
@@ -16,7 +16,7 @@
     },
     "diagnosing-bugs": {
       "SKILL.md": "706baf54b94725436f1789f42de624be9cc2d649b2eaec9e9cc571ea59f190f7",
-      "scripts/hitl-loop.template.sh": "18ae07e1cc49b32c71767e241a6e8de4be74ef21d5e3b7e39034d9c7335f2d80"
+      "scripts/hitl-loop.template.sh": "7c972e32f492aac3c517642456be91898c36491a035070e1782d2589fd36a59d"
     },
     "domain-modeling": {
       "ADR-FORMAT.md": "30da0982e37ed2ceb59a5cdfdc114c16e7b06589ec266024b9dda5c8c2d06b37",

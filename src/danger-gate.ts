@@ -3,7 +3,6 @@ import type { ExtensionAPI, ExtensionEventContext, ToolCallEvent, ToolCallEventR
 import type { DangerVerdict, OperationClassifier } from "./typesafe.ts";
 
 const DANGER_GATE_TIMEOUT_MS = 5_000;
-/** Block at or above this probability that the call is severe and unauthorized. */
 const RISK_THRESHOLD = 0.5;
 
 export const HIGHLY_DANGEROUS_BLOCK_REASON =
@@ -14,11 +13,6 @@ interface GatedCall {
   readonly input: string;
 }
 
-/**
- * The call to classify, or undefined when it needs no gate. Shell and code execution are always
- * classified. File writes inside the project are reviewable through version control and skip the
- * classifier; writes outside it (dotfiles, crontabs, other repos) are classified.
- */
 function gatedCall(event: ToolCallEvent, cwd: string): GatedCall | undefined {
   const { toolName, input } = event;
   switch (toolName) {
@@ -42,7 +36,6 @@ function gatedCall(event: ToolCallEvent, cwd: string): GatedCall | undefined {
   }
 }
 
-/** User messages on the current branch, oldest first. Includes parent-agent messages, which relay the user. */
 function userMessages(ctx: ExtensionEventContext): string[] {
   const messages: string[] = [];
   for (const entry of ctx.sessionManager?.getBranch() ?? []) {
