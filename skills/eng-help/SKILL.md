@@ -73,7 +73,7 @@ The default answer is `/eng-mode`, which runs most of the others when its steps 
 | Build a throwaway in-app variant to answer a design question | [`/prototype`](../prototype/SKILL.md) |
 | Fix a bug test-first when a cheap local test exists | [`/tdd`](../tdd/SKILL.md) |
 | Apply TypeScript rules to `.ts` or `.tsx` work | [`/typescript-best-practices`](../typescript-best-practices/SKILL.md) |
-| Strip comments before review, using a reviewer that didn't write them | [`/no-comments`](../no-comments/SKILL.md) |
+| Strip comments before review, or sweep directories or the whole repo into a refactor-vs-delete plan | [`/no-comments`](../no-comments/SKILL.md) |
 | Clean AI tells out of prose | [`/unslop`](../unslop/SKILL.md) |
 | Write docs, an RFC, a README, a PR description, or a commit message to a standard | [`/technical-writing`](../technical-writing/SKILL.md) |
 | Hear the last reply again in plain words | [`/bro`](../bro/SKILL.md) |
