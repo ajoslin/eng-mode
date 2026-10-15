@@ -137,7 +137,7 @@ eng-github auto-merge REF disable
 
 Identity comes from `OMP_SESSION_ID`, `OMP_PARENT_SESSION_ID`, `HERDR_PANE_ID`, and `FLEET_WATCH_HOST`. Without a session id, eng-github finds the topmost ancestor `omp`, reads its pane id, and asks `herdr pane get` for the root session file. The host defaults to the short hostname. The project comes from the git toplevel's `.rifts` directory, or the repository name.
 
-Set `FLEET_WATCH_BIN` to override the default `fleet-watch` executable. Owner resolution has a five-second overall deadline. Registration has a ten-second deadline that also bounds waiting for subprocess output. Resolution and registration failures print a warning without failing PR creation. If no session can be found, creation proceeds without a marker or registration. Marker values strip whitespace, angle brackets, and consecutive hyphens; only complete single-line owner comments are replaced.
+Set `FLEET_WATCH_BIN` to override the default `fleet-watch` executable. Owner resolution has a five-second overall deadline that kills active discovery subprocess groups. A failed git lookup keeps a known owner and uses the repository name for the project. Registration has a ten-second deadline that also bounds waiting for subprocess output. Resolution and registration failures print a warning without failing PR creation. If no session can be found, creation proceeds without a marker or registration. Marker values strip whitespace, angle brackets, and consecutive hyphens; only complete single-line owner comments are replaced.
 
 ## Stacks
 

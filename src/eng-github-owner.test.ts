@@ -56,6 +56,49 @@ test("topmost omp supplies the pane for the root session fallback", async () => 
   expect(await resolveOwner(input)).toEqual({ ...owner, pane: null });
 });
 
+test("resolution deadline aborts discovery and handles a later pane rejection", async () => {
+  const input = deps({ HERDR_PANE_ID: "w:p" });
+  const pane = Promise.withResolvers<unknown>();
+  let signal: AbortSignal | undefined;
+  input.herdrPane = async (_pane, receivedSignal) => { signal = receivedSignal; return pane.promise; };
+  let expire: () => void = () => { throw new Error("deadline was not scheduled"); };
+  const schedule = globalThis.setTimeout;
+  const timer = spyOn(globalThis, "setTimeout").mockImplementation(Object.assign((...args: Parameters<typeof setTimeout>) => {
+    expire = () => args[0]();
+    return schedule(() => {}, 60_000);
+  }, { __promisify__: schedule.__promisify__ }));
+  const unhandled: unknown[] = [];
+  const listener = (error: unknown) => { unhandled.push(error); };
+  process.on("unhandledRejection", listener);
+  try {
+    const resolution = resolveOwner(input);
+    const result = resolution.catch((error: unknown) => String(error));
+    expire();
+    expect(await result).toBe("Error: owner resolution timed out");
+    expect(signal?.aborted).toBe(true);
+    pane.reject(new Error("late pane timeout"));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(unhandled).toEqual([]);
+  } finally {
+    timer.mockRestore();
+    process.off("unhandledRejection", listener);
+  }
+});
+
+test("git lookup failure retains the known owner with the repository project", async () => {
+  const input = deps({ OMP_SESSION_ID: "root", HERDR_PANE_ID: "w:p" });
+  input.gitToplevel = async () => { throw new Error("git timed out"); };
+  expect(await resolveOwner(input)).toEqual({ host: "mac", session: "root", parent: null, pane: "w:p", project: "eng-mode" });
+});
+
+test("aborting a subprocess rejects with the resolution deadline instead of its own timeout", async () => {
+  const controller = new AbortController();
+  const subprocess = run([process.execPath, "-e", "Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0)"], { signal: controller.signal, timeoutMs: 10_000 });
+  const result = subprocess.catch((error: unknown) => String(error));
+  controller.abort(new Error("owner resolution timed out"));
+  expect(await result).toBe("Error: owner resolution timed out");
+});
+
 const pr = { stack: null, id: "n", url: "https://github.com/ajoslin/eng-mode/pull/7", number: 7, title: "Title", state: "OPEN", isDraft: false, headRefName: "feature", headRefOid: "abc123", baseRefName: "main", baseRefOid: "base", mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", labels: { nodes: [] }, autoMergeRequest: null, baseRef: null, commits: { nodes: [] }, reviewThreads: { nodes: [] }, latestReviews: { nodes: [] }, comments: { nodes: [] } };
 
 async function mutation(kind: "pr create" | "pr edit", binary: string, bodyText = "Body") {

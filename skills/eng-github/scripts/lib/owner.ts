@@ -7,9 +7,9 @@ type OwnerProcess = { pid: number; command: string; env: Record<string, string |
 export type OwnerDeps = {
   env: Record<string, string | undefined>;
   hostname(): string;
-  processTree(): Promise<OwnerProcess[]>;
-  herdrPane(paneId: string): Promise<unknown>;
-  gitToplevel(cwd: string): Promise<string | undefined>;
+  processTree(signal: AbortSignal): Promise<OwnerProcess[]>;
+  herdrPane(paneId: string, signal: AbortSignal): Promise<unknown>;
+  gitToplevel(cwd: string, signal: AbortSignal): Promise<string | undefined>;
   repo: string;
   cwd?: string;
   timeoutMs?: number;
@@ -52,31 +52,38 @@ function sessionPath(value: unknown): string | null {
 }
 
 export async function resolveOwner(deps: OwnerDeps): Promise<PrOwner | null> {
+  const controller = new AbortController();
   const deadline = Promise.withResolvers<never>();
-  const timer = setTimeout(() => deadline.reject(new Error("owner resolution timed out")), deps.timeoutMs ?? 5_000);
+  const timer = setTimeout(() => {
+    const error = new Error("owner resolution timed out");
+    deadline.reject(error);
+    controller.abort(error);
+  }, deps.timeoutMs ?? 5_000);
+  const resolution = resolveOwnerDetails(deps, controller.signal);
+  void resolution.catch(() => {});
   try {
-    return await Promise.race([resolveOwnerDetails(deps), deadline.promise]);
+    return await Promise.race([resolution, deadline.promise]);
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function resolveOwnerDetails(deps: OwnerDeps): Promise<PrOwner | null> {
+async function resolveOwnerDetails(deps: OwnerDeps, signal: AbortSignal): Promise<PrOwner | null> {
   let session = clean(deps.env.OMP_SESSION_ID);
   let pane = clean(deps.env.HERDR_PANE_ID);
   if (!session) {
     if (!pane) {
-      const processes = await deps.processTree();
+      const processes = await deps.processTree(signal);
       const omp = processes.filter((entry) => basename(entry.command) === "omp").at(-1);
       pane = clean(omp?.env.HERDR_PANE_ID);
     }
     if (pane) {
-      const path = sessionPath(await deps.herdrPane(pane));
+      const path = sessionPath(await deps.herdrPane(pane, signal));
       session = path ? basename(path).match(/^[^_]+_(.+)\.jsonl$/)?.[1] ?? "" : "";
     }
   }
   if (!session) return null;
-  const top = await deps.gitToplevel(deps.cwd ?? process.cwd());
+  const top = await deps.gitToplevel(deps.cwd ?? process.cwd(), signal).catch(() => undefined);
   return {
     host: clean(deps.env.FLEET_WATCH_HOST) || deps.hostname().split(".")[0] || "",
     session, parent: clean(deps.env.OMP_SESSION_ID) ? clean(deps.env.OMP_PARENT_SESSION_ID) || null : null,
@@ -84,13 +91,13 @@ async function resolveOwnerDetails(deps: OwnerDeps): Promise<PrOwner | null> {
   };
 }
 
-async function processTree(): Promise<OwnerProcess[]> {
+async function processTree(signal: AbortSignal): Promise<OwnerProcess[]> {
   const tree: OwnerProcess[] = [];
   let pid = process.ppid;
   const seen = new Set<number>();
   while (pid > 1 && !seen.has(pid)) {
     seen.add(pid);
-    const info = await run(["ps", "-o", "ppid=,comm=", "-p", String(pid)], { timeoutMs: 1_000 });
+    const info = await run(["ps", "-o", "ppid=,comm=", "-p", String(pid)], { timeoutMs: 1_000, signal });
     const match = info.stdout.trim().match(/^(\d+)\s+(.+)$/);
     if (!match) break;
     let env: Record<string, string | undefined> = {};
@@ -99,7 +106,7 @@ async function processTree(): Promise<OwnerProcess[]> {
         const text = await Bun.file(`/proc/${pid}/environ`).text();
         env = Object.fromEntries(text.split("\0").filter((part) => part.includes("=")).map((part) => [part.slice(0, part.indexOf("=")), part.slice(part.indexOf("=") + 1)]));
       } else {
-        const command = await run(["ps", "eww", "-o", "command=", "-p", String(pid)], { timeoutMs: 1_000 });
+        const command = await run(["ps", "eww", "-o", "command=", "-p", String(pid)], { timeoutMs: 1_000, signal });
         env.HERDR_PANE_ID = command.stdout.match(/(?:^|\s)HERDR_PANE_ID=([^\s]+)/)?.[1];
       }
     }
@@ -111,12 +118,12 @@ async function processTree(): Promise<OwnerProcess[]> {
 
 export function ownerDeps(repo: string, cwd: string): OwnerDeps {
   return { env: process.env, hostname, processTree, repo, cwd,
-    async gitToplevel(directory) {
-      const result = await run(["git", "rev-parse", "--show-toplevel"], { cwd: directory, timeoutMs: 1_000 });
-      return result.code === 0 ? result.stdout.trim() : undefined;
+    async gitToplevel(directory, signal) {
+      const result = await run(["git", "rev-parse", "--show-toplevel"], { cwd: directory, timeoutMs: 1_000, signal }).catch(() => undefined);
+      return result?.code === 0 ? result.stdout.trim() : undefined;
     },
-    async herdrPane(pane) {
-      const result = await run(["herdr", "pane", "get", pane], { timeoutMs: 10_000 });
+    async herdrPane(pane, signal) {
+      const result = await run(["herdr", "pane", "get", pane], { timeoutMs: 10_000, signal });
       if (result.code !== 0) throw new Error(result.stderr.trim() || `herdr exited ${result.code}`);
       const value: unknown = JSON.parse(result.stdout);
       return value;

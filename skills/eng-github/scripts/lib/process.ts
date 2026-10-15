@@ -6,15 +6,16 @@ export interface RunResult {
 
 export async function run(
   argv: readonly string[],
-  options: { cwd?: string; env?: Record<string, string | undefined>; stdin?: string; timeoutMs?: number } = {},
+  options: { cwd?: string; env?: Record<string, string | undefined>; stdin?: string; timeoutMs?: number; signal?: AbortSignal } = {},
 ): Promise<RunResult> {
+  options.signal?.throwIfAborted();
   const proc = Bun.spawn([...argv], {
     cwd: options.cwd ?? process.cwd(),
     env: options.env ?? process.env,
     stdin: options.stdin === undefined ? "ignore" : new TextEncoder().encode(options.stdin),
     stdout: "pipe",
     stderr: "pipe",
-    detached: options.timeoutMs !== undefined,
+    detached: options.timeoutMs !== undefined || options.signal !== undefined,
   });
   const stdoutReader = proc.stdout.getReader();
   const stderrReader = proc.stderr.getReader();
@@ -28,21 +29,28 @@ export async function run(
     }
   }
   let timer: Timer | undefined;
+  const deadline = Promise.withResolvers<never>();
+  const stop = (error: unknown) => {
+    deadline.reject(error);
+    try { process.kill(-proc.pid, "SIGKILL"); } catch {
+      try { proc.kill("SIGKILL"); } catch {}
+    }
+    void stdoutReader.cancel().catch(() => {});
+    void stderrReader.cancel().catch(() => {});
+  };
+  const abort = () => stop(options.signal?.reason);
   try {
     const completed = Promise.all([text(stdoutReader), text(stderrReader), proc.exited]).then(([stdout, stderr, code]) => ({ code, stdout, stderr }));
-    if (options.timeoutMs === undefined) return await completed;
-    const deadline = Promise.withResolvers<never>();
-    timer = setTimeout(() => {
-      deadline.reject(new Error(`process timed out after ${options.timeoutMs}ms`));
-      try { process.kill(-proc.pid, "SIGKILL"); } catch {
-        try { proc.kill("SIGKILL"); } catch {}
-      }
-      void stdoutReader.cancel().catch(() => {});
-      void stderrReader.cancel().catch(() => {});
-    }, options.timeoutMs);
+    if (options.timeoutMs === undefined && options.signal === undefined) return await completed;
+    options.signal?.addEventListener("abort", abort, { once: true });
+    if (options.signal?.aborted) abort();
+    if (options.timeoutMs !== undefined) {
+      timer = setTimeout(() => stop(new Error(`process timed out after ${options.timeoutMs}ms`)), options.timeoutMs);
+    }
     return await Promise.race([completed, deadline.promise]);
   } finally {
     clearTimeout(timer);
+    options.signal?.removeEventListener("abort", abort);
   }
 }
 
