@@ -1,6 +1,6 @@
 import { hostname } from "node:os";
 import { basename } from "node:path";
-import { gitOut, run } from "./process.ts";
+import { run } from "./process.ts";
 
 export type PrOwner = { host: string; session: string; parent: string | null; pane: string | null; project: string | null };
 type OwnerProcess = { pid: number; command: string; env: Record<string, string | undefined> };
@@ -12,17 +12,18 @@ export type OwnerDeps = {
   gitToplevel(cwd: string): Promise<string | undefined>;
   repo: string;
   cwd?: string;
+  timeoutMs?: number;
 };
 
-const markers = () => /<!--\s*omp-owner:([^>]*?)-->/g;
-const clean = (value: string | null | undefined) => (value ?? "").replace(/\s/g, "");
+const markers = () => /<!--\s*omp-owner:([^\n<>]*?)-->/g;
+const clean = (value: string | null | undefined) => (value ?? "").replace(/[\s<>]/g, "").replace(/--+/g, "");
 
 export function formatOwnerMarker(owner: PrOwner): string {
   return `<!-- omp-owner: host=${clean(owner.host)} session=${clean(owner.session)} parent=${clean(owner.parent)} pane=${clean(owner.pane)} project=${clean(owner.project)} -->`;
 }
 
 export function applyOwnerMarker(body: string, owner: PrOwner): string {
-  return `${body.replace(/(?:\r?\n[ \t]*){0,2}<!--\s*omp-owner:([^>]*?)-->/g, "").trimEnd()}\n\n${formatOwnerMarker(owner)}\n`;
+  return `${body.replace(/(?:\r?\n[ \t]*){0,2}<!--\s*omp-owner:[^\n<>]*?-->/g, "").trimEnd()}\n\n${formatOwnerMarker(owner)}\n`;
 }
 
 export function parseOwnerMarker(body: string): PrOwner | null {
@@ -51,6 +52,16 @@ function sessionPath(value: unknown): string | null {
 }
 
 export async function resolveOwner(deps: OwnerDeps): Promise<PrOwner | null> {
+  const deadline = Promise.withResolvers<never>();
+  const timer = setTimeout(() => deadline.reject(new Error("owner resolution timed out")), deps.timeoutMs ?? 5_000);
+  try {
+    return await Promise.race([resolveOwnerDetails(deps), deadline.promise]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function resolveOwnerDetails(deps: OwnerDeps): Promise<PrOwner | null> {
   let session = clean(deps.env.OMP_SESSION_ID);
   let pane = clean(deps.env.HERDR_PANE_ID);
   if (!session) {
@@ -79,7 +90,7 @@ async function processTree(): Promise<OwnerProcess[]> {
   const seen = new Set<number>();
   while (pid > 1 && !seen.has(pid)) {
     seen.add(pid);
-    const info = await run(["ps", "-o", "ppid=,comm=", "-p", String(pid)]);
+    const info = await run(["ps", "-o", "ppid=,comm=", "-p", String(pid)], { timeoutMs: 1_000 });
     const match = info.stdout.trim().match(/^(\d+)\s+(.+)$/);
     if (!match) break;
     let env: Record<string, string | undefined> = {};
@@ -88,7 +99,7 @@ async function processTree(): Promise<OwnerProcess[]> {
         const text = await Bun.file(`/proc/${pid}/environ`).text();
         env = Object.fromEntries(text.split("\0").filter((part) => part.includes("=")).map((part) => [part.slice(0, part.indexOf("=")), part.slice(part.indexOf("=") + 1)]));
       } else {
-        const command = await run(["ps", "eww", "-o", "command=", "-p", String(pid)]);
+        const command = await run(["ps", "eww", "-o", "command=", "-p", String(pid)], { timeoutMs: 1_000 });
         env.HERDR_PANE_ID = command.stdout.match(/(?:^|\s)HERDR_PANE_ID=([^\s]+)/)?.[1];
       }
     }
@@ -100,7 +111,10 @@ async function processTree(): Promise<OwnerProcess[]> {
 
 export function ownerDeps(repo: string, cwd: string): OwnerDeps {
   return { env: process.env, hostname, processTree, repo, cwd,
-    gitToplevel: (directory) => gitOut(["rev-parse", "--show-toplevel"], directory),
+    async gitToplevel(directory) {
+      const result = await run(["git", "rev-parse", "--show-toplevel"], { cwd: directory, timeoutMs: 1_000 });
+      return result.code === 0 ? result.stdout.trim() : undefined;
+    },
     async herdrPane(pane) {
       const result = await run(["herdr", "pane", "get", pane], { timeoutMs: 10_000 });
       if (result.code !== 0) throw new Error(result.stderr.trim() || `herdr exited ${result.code}`);
@@ -114,7 +128,7 @@ export function ownerWarning(error: unknown): void {
   process.stderr.write(`eng-github: warning: fleet-watch owner registration failed: ${String(error instanceof Error ? error.message : error).replace(/\s+/g, " ")}\n`);
 }
 
-export async function registerOwner(input: { owner: PrOwner; repo: string; number: number; headRef: string; headSha: string }, deps = { env: process.env, run, warn: ownerWarning }): Promise<void> {
+export async function registerOwner(input: { owner: PrOwner; repo: string; number: number; headRef: string; headSha: string }, deps = { env: process.env, run, warn: ownerWarning }, timeoutMs = 10_000): Promise<void> {
   const { owner } = input;
   const argv = [deps.env.FLEET_WATCH_BIN || "fleet-watch", "pr", "register-owner", "--repo", input.repo, "--number", String(input.number), "--head-ref", input.headRef, "--head-sha", input.headSha, "--session", owner.session];
   if (owner.parent) argv.push("--parent", owner.parent);
@@ -122,7 +136,7 @@ export async function registerOwner(input: { owner: PrOwner; repo: string; numbe
   argv.push("--host", owner.host);
   if (owner.project) argv.push("--project", owner.project);
   try {
-    const result = await deps.run(argv, { timeoutMs: 10_000 });
+    const result = await deps.run(argv, { timeoutMs });
     if (result.code !== 0) deps.warn(result.stderr.trim() || `process exited ${result.code}`);
   } catch (error) {
     deps.warn(error);

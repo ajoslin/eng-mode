@@ -8,6 +8,8 @@ import { GitHubClient, apiRoot } from "../skills/eng-github/scripts/lib/client.t
 import { StateStore } from "../skills/eng-github/scripts/lib/state.ts";
 import { applyOwnerMarker, formatOwnerMarker, parseOwnerMarker, resolveOwner, registerOwner, type OwnerDeps } from "../skills/eng-github/scripts/lib/owner.ts";
 import type { Credential } from "../skills/eng-github/scripts/lib/credentials.ts";
+import * as ownerModule from "../skills/eng-github/scripts/lib/owner.ts";
+import { run } from "../skills/eng-github/scripts/lib/process.ts";
 
 const owner = { host: "mac", session: "root", parent: null, pane: "w:p", project: "eng-mode" };
 const marker = "<!-- omp-owner: host=mac session=root parent= pane=w:p project=eng-mode -->";
@@ -56,10 +58,10 @@ test("topmost omp supplies the pane for the root session fallback", async () => 
 
 const pr = { stack: null, id: "n", url: "https://github.com/ajoslin/eng-mode/pull/7", number: 7, title: "Title", state: "OPEN", isDraft: false, headRefName: "feature", headRefOid: "abc123", baseRefName: "main", baseRefOid: "base", mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", labels: { nodes: [] }, autoMergeRequest: null, baseRef: null, commits: { nodes: [] }, reviewThreads: { nodes: [] }, latestReviews: { nodes: [] }, comments: { nodes: [] } };
 
-async function mutation(kind: "pr create" | "pr edit", binary: string) {
+async function mutation(kind: "pr create" | "pr edit", binary: string, bodyText = "Body") {
   const dir = directory();
   const body = join(dir, "body.txt");
-  writeFileSync(body, "Body");
+  writeFileSync(body, bodyText);
   process.env.OMP_SESSION_ID = "root";
   delete process.env.OMP_PARENT_SESSION_ID;
   process.env.HERDR_PANE_ID = "w:p";
@@ -121,4 +123,53 @@ test("registration has a ten second timeout and preserves optional routing field
   });
   expect(calls).toEqual([[["custom", "pr", "register-owner", "--repo", "a/b", "--number", "9", "--head-ref", "branch", "--head-sha", "sha", "--session", "root", "--parent", "parent", "--pane", "w:p", "--host", "mac", "--project", "eng-mode"], { timeoutMs: 10000 }]]);
   expect(warnings).toEqual(["Error: timeout"]);
+});
+
+test("body edits with an explicit owner do not fetch the previous body", async () => {
+  const { result, requests } = await mutation("pr edit", "/does/not/exist", `New\n\n${marker}\n`);
+  expect(requests).toEqual([{ method: "PATCH", body: { body: `New\n\n${marker}\n` } }]);
+  expect(result).toMatchObject({ number: 7, headSha: "abc123" });
+});
+
+test("incomplete owner examples and unrelated comments survive marker application", () => {
+  const body = "Example\n```html\n<!-- omp-owner: host=example session=sample\n```\n\n<!-- note -->";
+  expect(parseOwnerMarker(body)).toBeNull();
+  expect(applyOwnerMarker(body, owner)).toBe(`${body}\n\n${marker}\n`);
+});
+
+test("owner values cannot terminate or corrupt their comment", () => {
+  const input = { ...owner, project: "team>tools", parent: "a-<->b" };
+  const expected = "Body\n\n<!-- omp-owner: host=mac session=root parent=ab pane=w:p project=teamtools -->\n";
+  expect(applyOwnerMarker("Body", input)).toBe(expected);
+  expect(parseOwnerMarker(expected)).toEqual({ ...owner, project: "teamtools", parent: "ab" });
+  expect(applyOwnerMarker(expected, input)).toBe(expected);
+});
+
+test("create posts without a marker when git owner discovery never resolves", async () => {
+  const input = deps({ OMP_SESSION_ID: "root" });
+  input.gitToplevel = () => Promise.withResolvers<string | undefined>().promise;
+  input.timeoutMs = 10;
+  const discovery = spyOn(ownerModule, "ownerDeps").mockReturnValue(input);
+  const warnings: string[] = [];
+  const stderr = spyOn(process.stderr, "write").mockImplementation((text) => { warnings.push(String(text)); return true; });
+  try {
+    const { result, requests } = await mutation("pr create", "/does/not/exist");
+    expect(requests).toEqual([{ method: "POST", body: { base: "main", head: "feature", title: "Title", body: "Body", draft: false } }]);
+    expect(result).toMatchObject({ number: 7, headSha: "abc123" });
+    expect(warnings).toEqual(["eng-github: warning: fleet-watch owner registration failed: owner resolution timed out\n"]);
+  } finally { discovery.mockRestore(); stderr.mockRestore(); }
+});
+
+test("registration deadline stops waiting for inherited stdout pipes", async () => {
+  const binary = join(directory(), "fleet-watch");
+  writeFileSync(binary, "#!/bin/sh\nsleep 30 &\nwait\n");
+  chmodSync(binary, 0o755);
+  const warnings: string[] = [];
+  const started = performance.now();
+  await registerOwner({ owner, repo: "a/b", number: 9, headRef: "branch", headSha: "sha" }, {
+    env: { FLEET_WATCH_BIN: binary }, run,
+    warn: (error) => { warnings.push(String(error)); },
+  }, 500);
+  expect(warnings).toEqual(["Error: process timed out after 500ms"]);
+  expect(performance.now() - started).toBeLessThan(2_000);
 });

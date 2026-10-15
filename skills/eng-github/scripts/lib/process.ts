@@ -14,15 +14,36 @@ export async function run(
     stdin: options.stdin === undefined ? "ignore" : new TextEncoder().encode(options.stdin),
     stdout: "pipe",
     stderr: "pipe",
+    detached: options.timeoutMs !== undefined,
   });
-  const timer = options.timeoutMs === undefined ? undefined : setTimeout(() => proc.kill(), options.timeoutMs);
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
-  clearTimeout(timer);
-  return { code, stdout, stderr };
+  const stdoutReader = proc.stdout.getReader();
+  const stderrReader = proc.stderr.getReader();
+  async function text(reader: { read(): Promise<{ done: true; value?: Uint8Array | undefined } | { done: false; value: Uint8Array }> }): Promise<string> {
+    const decoder = new TextDecoder();
+    let output = "";
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) return output + decoder.decode();
+      output += decoder.decode(chunk.value, { stream: true });
+    }
+  }
+  let timer: Timer | undefined;
+  try {
+    const completed = Promise.all([text(stdoutReader), text(stderrReader), proc.exited]).then(([stdout, stderr, code]) => ({ code, stdout, stderr }));
+    if (options.timeoutMs === undefined) return await completed;
+    const deadline = Promise.withResolvers<never>();
+    timer = setTimeout(() => {
+      deadline.reject(new Error(`process timed out after ${options.timeoutMs}ms`));
+      try { process.kill(-proc.pid, "SIGKILL"); } catch {
+        try { proc.kill("SIGKILL"); } catch {}
+      }
+      void stdoutReader.cancel().catch(() => {});
+      void stderrReader.cancel().catch(() => {});
+    }, options.timeoutMs);
+    return await Promise.race([completed, deadline.promise]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function git(args: readonly string[], cwd?: string): Promise<RunResult> {

@@ -114,12 +114,10 @@ export const mutationCommands: CommandTable = {
       let body = flag(ctx.args, "body-file") === undefined ? undefined : await bodyFile(ctx.args);
       if (flag(ctx.args, "body") !== undefined) throw new UsageError("use --body-file, not --body");
       const ref = await reference(ctx);
-      if (body !== undefined) {
+      if (body !== undefined && !parseOwnerMarker(body)) {
         const current = await ctx.client.rest<{ body: string | null }>({ path: path(ref) });
-        if (!parseOwnerMarker(body)) {
-          const owner = parseOwnerMarker(current.data.body ?? "");
-          if (owner) body = applyOwnerMarker(body, owner);
-        }
+        const owner = parseOwnerMarker(current.data.body ?? "");
+        if (owner) body = applyOwnerMarker(body, owner);
       }
       if (title !== undefined || body !== undefined) await ctx.client.rest({ method: "PATCH", path: path(ref), body: { ...(title === undefined ? {} : { title }), ...(body === undefined ? {} : { body }) } });
       const labels = flags(ctx.args, "add-label");
