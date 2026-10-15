@@ -4,7 +4,7 @@ OMP `eval` is a retained computation runtime. Eng's **prove-out** is a blinded e
 
 ## OMP workflows
 
-Eval retains state across cells and exposes tools, structured display, `completion()`, `agent()`, `parallel()`, `pipeline()`, and budgets. Use `omp-workflows` for matrices, deterministic transformations, schema validation, barriered research, and agent map/reduce. Eval children are one-shot and cannot receive hub follow-up; use normal tasks when steering matters.
+Eval retains state across cells and exposes tools, structured display, `completion()`, `agent()`, `parallel()`, `pipeline()`, and budgets. Use `omp-workflows` for matrices, deterministic transformations, schema validation, barriered research, and agent map/reduce. Eval children are one-shot; use normal tasks when follow-up steering matters.
 
 ## Prove-outs
 

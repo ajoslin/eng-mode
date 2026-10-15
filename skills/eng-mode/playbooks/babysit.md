@@ -9,13 +9,25 @@
 7. Classify CI before retrying. Trust `eng-github snapshot REF`'s mergeability, not a green check list. Never retry the same job snapshot. Use `eng-github rerun RUN_ID [--failed]` before rebuilding on a fresh ref. Read failures with `eng-github ci REF`. A failure in code the diff never touches is a stale base (`git merge-base --is-ancestor`). Report the owning branch, required rebase, and trunk-drift evidence instead of burning retries. Allow one proven-flake retry. Repeated identical failure is not a flake. Only a failure in the diff's own code gets a new `git commit`.
 8. Only the main session owns requested watching. Freeze the ordered PR references and head SHAs before watching a stack or queue. Do not add PRs discovered after the queue was frozen. Record every wake as `{ event, ref, head, base, reason }` and classify it as `WAITING`, `READY`, `ADVANCE`, or `COMPLETE`. `WAITING` means the frozen frontier is unchanged and the watch is armed. `READY` means a fresh `eng-github snapshot REF` shows the frontier merge-ready at that head. `ADVANCE` means the frozen frontier merged by another actor; move to the next frozen PR and snapshot it before watching. `COMPLETE` means every frozen PR merged.
 
-   Watching is one blocking `eng-github watch` per event, never a poll. Start one managed process for the frozen PR references, then wait for that process to exit:
+   Watching uses one blocking `eng-github watch` per event, never a poll. Start one async Bash job for the frozen PR references, wait for it to finish, then take a fresh snapshot:
 
-   ```sh
-   hub start name=pr-watch application=eng-github args=[watch, REF..., --until, any]
-   hub wait name=pr-watch for=exit timeout=1800
-   eng-github snapshot REF...
-   ```
+   1. Call `bash` to start the watcher:
 
-   After handling an event, start one new managed `eng-github watch` if watching must continue. Do not run separate `eng-github snapshot`, `eng-github ci`, or `sleep` loops while a watch is armed. If any `eng-github` command exits 75, record the printed reset time and wait until it passes before starting a new command. Never retry that command sooner. Use `eng-github diff REF` to read the PR diff; do not use a compare API. When repeated turns are required, keep merge-ready in `goal` and invoke `loop` with a prompt and limit. A delegated babysitter reports the watch request to its lead instead. `drive` stops when `eng-github snapshot REF` shows merge-ready, CI, required approvals, review-agent inventory, and blocking-change-request gates all pass. `check`, `threads-only`, and `background` perform their mapped scope and report. Every mode stops and reports at merge-ready or at a blocker, none merges, auto-merges, force-pushes, restacks, or changes stack topology. Route every request to merge, land, ship, or merge when ready to Shipping, which alone may land with explicit authority.
+      ```json
+      {"command":"eng-github watch REF... --until any","async":true,"timeout":0}
+      ```
+
+   2. Call `wait` for its completion:
+
+      ```json
+      {}
+      ```
+
+   3. Call `bash` to snapshot the frozen PR references:
+
+      ```json
+      {"command":"eng-github snapshot REF..."}
+      ```
+
+   After handling an event, start one new async `eng-github watch` if watching must continue. Do not run separate `eng-github snapshot`, `eng-github ci`, or `sleep` loops while a watch is armed. If any `eng-github` command exits 75, record the printed reset time and wait until it passes before starting a new command. Never retry that command sooner. Use `eng-github diff REF` to read the PR diff; do not use a compare API. When repeated turns are required, keep merge-ready in `goal` and invoke `loop` with a prompt and limit. A delegated babysitter sends the watch request to its lead with `write` to `agent://<lead-id>` instead. `drive` stops when `eng-github snapshot REF` shows merge-ready, CI, required approvals, review-agent inventory, and blocking-change-request gates all pass. `check`, `threads-only`, and `background` perform their mapped scope and report. Every mode stops and reports at merge-ready or at a blocker, none merges, auto-merges, force-pushes, restacks, or changes stack topology. Route every request to merge, land, ship, or merge when ready to Shipping, which alone may land with explicit authority.
 9. Report mode, frozen frontier, inventoried agents, passes, fixes, dismissals, checks, and either `merge-ready` or the blocker and remaining gate. Never report a merge result from Babysit.

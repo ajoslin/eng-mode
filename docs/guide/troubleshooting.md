@@ -4,7 +4,7 @@
 - **Checkpoint missing:** inspect `checkpoint.enabled`; restart after enabling.
 - **Wrong panel model:** enable resolved-model badges; use actual vendors and fallbacks.
 - **Isolated worker cannot revive:** expected; isolation is terminal.
-- **Eval child cannot receive hub:** expected; use normal tasks for steering.
+- **Eval child cannot receive follow-up:** expected; use normal tasks when steering matters.
 - **UI tests pass but proof is inconclusive:** drive the mapped feature through the repository health gate.
 - **Wrong playbook:** restate problem, finish condition, and edit permission, not skill ceremony. Or type `/eng-help` with the question.
 - **Skill or agent shadow:** remove unintended repository copies; rerun setup.

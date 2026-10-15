@@ -30,7 +30,7 @@ Learning: Capture an evidence-bearing candidate ticket. Do not create a rule yet
 - Taking the first design: ask for prototypes or `/architect` and pick from evidence.
 - Polishing an abstract plan: settle open questions with prototypes, then review what got built.
 - Arena for coverage or swarm for competition: wrong selection policy.
-- Hub messages to eval children: children are disposed.
+- Messaging disposed eval children: no recipient exists.
 - Concurrent writers in one tree: collisions and ambiguous ownership.
 - Trusting an unvetted number: run `benchmark-checklist` before the number goes anywhere.
 - Correcting the same mistake by hand: `/correct` fixes the repo so no later run repeats it.

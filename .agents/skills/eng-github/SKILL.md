@@ -77,15 +77,27 @@ eng-github watch REF... [--until any|ci|comments] [--interval 120] [--timeout 18
 
 The interval defaults to 120 seconds and cannot go below 30, because checks take minutes and every request spends quota shared by every machine on the account. While the credential is rate limited, `watch` sleeps until the reset and keeps watching. It exits 1 only after 8 consecutive failures that are not rate limits.
 
-Run `watch` as one managed background process and wait for it to exit. Do not run `snapshot`, `ci`, or `sleep` in a loop while it is armed.
+Run `watch` as one async `bash` job and wait for it to finish. Do not run `snapshot`, `ci`, or `sleep` in a loop while it is armed.
 
-```
-hub start name=pr-watch application=eng-github args=[watch, REF, --until, ci]
-hub wait name=pr-watch for=exit timeout=1800
-eng-github snapshot REF
-```
+1. Call `bash` to start the CI watcher:
 
-A wake is news, not readiness. Classify it from a fresh `snapshot`.
+   ```json
+   {"command":"eng-github watch REF --until ci","async":true,"timeout":0}
+   ```
+
+2. Call `wait` for its completion:
+
+   ```json
+   {}
+   ```
+
+3. Call `bash` to take a fresh snapshot:
+
+   ```json
+   {"command":"eng-github snapshot REF"}
+   ```
+
+A wake is news, not readiness. Classify it from the fresh `snapshot`.
 
 ## Watcher events for queues
 
@@ -130,6 +142,14 @@ eng-github auto-merge REF disable
 `auto-merge enable` arms GitHub auto-merge with `expectedHeadOid` set to `--head` and prints a fresh snapshot. Arming is confirmed only when that snapshot shows `autoMerge` non-null at the same `headSha`. Disarm with `auto-merge disable` and confirm `autoMerge` is null.
 
 `--action default` uses the merge queue when the base branch has one. `direct` skips it. `queue` forces it and takes the queue's configured merge method, so it refuses `--method`. `--admin` sets `bypass_rules` and requires explicit operator authorization.
+
+## PR owner registration
+
+`pr create` adds `<!-- omp-owner: host=HOST session=SESSION parent=PARENT pane=PANE project=PROJECT -->` to the body and registers the snapshot head with fleet-watch. `pr edit --body-file` preserves the existing marker when the replacement body has none.
+
+Identity comes from `OMP_SESSION_ID`, `OMP_PARENT_SESSION_ID`, `HERDR_PANE_ID`, and `FLEET_WATCH_HOST`. Without a session id, eng-github finds the topmost ancestor `omp`, reads its pane id, and asks `herdr pane get` for the root session file. The host defaults to the short hostname. The project comes from the git toplevel's `.rifts` directory, or the repository name.
+
+Set `FLEET_WATCH_BIN` to override the default `fleet-watch` executable. Owner resolution has a five-second overall deadline that kills active discovery subprocess groups. A failed git lookup keeps a known owner and uses the repository name for the project. Registration has a ten-second deadline that also bounds waiting for subprocess output. Resolution and registration failures print a warning without failing PR creation. If no session can be found, creation proceeds without a marker or registration. Marker values strip whitespace, angle brackets, and consecutive hyphens; only complete single-line owner comments are replaced.
 
 ## Stacks
 

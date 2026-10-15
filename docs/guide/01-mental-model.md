@@ -26,6 +26,6 @@ When you can't tell which skill or playbook fits, type `/eng-help`. It answers a
 
 Eng chooses execution. The repository decides validity and proof through standing context, `project-standards`, `verify-project`, rules, domain vocabulary, and ADRs.
 
-A normal `task` agent stays addressable through `hub`. An eval agent is one-shot; use it only with a complete brief and schema.
+An ordinary `task` agent stays addressable with `write agent://<id>`. Read `agent://<id>` for its output, `history://<id>` for its transcript, and `proc://<id>` for process status. An eval agent is one-shot; use it only with a complete brief and schema.
 
 Complete means behavior exists, callers and docs agree, obsolete paths are gone, and proof matches the changed surface.

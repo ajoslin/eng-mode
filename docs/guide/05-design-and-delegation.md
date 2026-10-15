@@ -8,7 +8,7 @@ Use a worker when the lead needs the result and evidence, not the execution deta
 | `arena` | Same brief, scored candidates | Design or implementation bakeoff |
 | `swarm` | Distinct slices or race arms | Coverage and bounded races |
 | `interrogate` | Same review rubric | Adversarial review |
-| `task` + `hub` | Addressable workers | Steering, follow-up, revival |
+| `task` + `write agent://<id>` | Addressable workers | Steering, follow-up, revival |
 | Eval `parallel()` | One-shot independent callables | Deterministic fan-out |
 | Eval `pipeline()` | Barriered one-shot stages | Map/reduce and staged synthesis |
 | `completion()` | Stateless tool-free prompt | Classification or bounded reduction |
@@ -17,7 +17,7 @@ Use normal tasks when work needs follow-up. Use eval agents only when the comple
 
 Before fan-out, fix ownership, shared interfaces, output schema, and integration policy. Concurrent writers need disjoint paths or verified isolation. Subagents skip shared validation; the lead integrates and verifies once.
 
-Do not use arena for coverage, swarm for competing designs, hub with disposed eval children, or delegation for top-level product judgment.
+Do not use arena for coverage, swarm for competing designs, or message disposed eval children. Keep top-level product judgment with the lead.
 
 Never take the first design. Ask for a few prototypes and pick from evidence you can see. Prototypes answer open questions by running something. Don't spend reviewers on an abstract plan. `/interrogate` belongs on a diff.
 
