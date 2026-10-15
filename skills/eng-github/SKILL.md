@@ -131,6 +131,14 @@ eng-github auto-merge REF disable
 
 `--action default` uses the merge queue when the base branch has one. `direct` skips it. `queue` forces it and takes the queue's configured merge method, so it refuses `--method`. `--admin` sets `bypass_rules` and requires explicit operator authorization.
 
+## PR owner registration
+
+`pr create` adds `<!-- omp-owner: host=HOST session=SESSION parent=PARENT pane=PANE project=PROJECT -->` to the body and registers the snapshot head with fleet-watch. `pr edit --body-file` preserves the existing marker when the replacement body has none.
+
+Identity comes from `OMP_SESSION_ID`, `OMP_PARENT_SESSION_ID`, `HERDR_PANE_ID`, and `FLEET_WATCH_HOST`. Without a session id, eng-github finds the topmost ancestor `omp`, reads its pane id, and asks `herdr pane get` for the root session file. The host defaults to the short hostname. The project comes from the git toplevel's `.rifts` directory, or the repository name.
+
+Set `FLEET_WATCH_BIN` to override the default `fleet-watch` executable. Owner resolution has a five-second overall deadline that kills active discovery subprocess groups. A failed git lookup keeps a known owner and uses the repository name for the project. Registration has a ten-second deadline that also bounds waiting for subprocess output. Resolution and registration failures print a warning without failing PR creation. If no session can be found, creation proceeds without a marker or registration. Marker values strip whitespace, angle brackets, and consecutive hyphens; only complete single-line owner comments are replaced.
+
 ## Stacks
 
 GitHub stacks are the source of truth for stack topology. `eng-github` reads and changes them through the stacks REST API and moves branches with local git.
