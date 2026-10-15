@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "9705b8b2b54028c838a5c51a5ae581bc2ded5af9",
+  "sourceCommit": "31607a0891fcd4ed5d0120e0f130e6b9e0eb9ed1",
   "skills": {
     "unslop": {
       "SKILL.md": "996d82059bc84ea8cc22ad3306918240d52fed6e92b65efdea1c1789b233ca78"
@@ -49,8 +49,8 @@
       "SKILL.md": "2e10745b97f5862323dcda3b29ca60d56b5c3c98e37020085d26b48efbe0a436"
     },
     "eng-github": {
-      "SKILL.md": "5af7856b39cbfdd2979118b86bc039d767d346277e96abac93f5cf82457c12b8",
-      "scripts/commands/mutate.ts": "421bdb040a43b4b01f9a9f7c0f358554174efc20a4fa177a97176ea065efea78",
+      "SKILL.md": "b4ced3a31c342fd0d24def5e57a09d8bf096ffe7e3411c24a0aadecac075eaab",
+      "scripts/commands/mutate.ts": "79ec6a2b18fa3bd6fdf8597d5906d8d8efe5d38f207282e78e0ef0420ad6f2a7",
       "scripts/commands/read.ts": "86c325437e4a65a86913a9d19f44369d2f8b07a8d2a058f22accf7284ca63522",
       "scripts/commands/stack.ts": "a215e2d4aeff292457fbda0cc3f19550005b957bb8c7efc6750ef26fdd9d125c",
       "scripts/eng-github.ts": "11efee413f2645ca26326070f0a7ccd61b6d1a8f73945c361d5c0b907c270655",
@@ -60,8 +60,9 @@
       "scripts/lib/credentials.ts": "609491a2e9d345166ea27dfd67970c8122ea669149a45940d80d3d8b47c03146",
       "scripts/lib/errors.ts": "1398c45b6467c2eae5058fdf13057d022aa31d908053c30ca820eb16e5ac6a77",
       "scripts/lib/merge-async.ts": "02e1ea3e47a2d8086421bc7459c21b0df12b701e21350a7527494e99431ac292",
+      "scripts/lib/owner.ts": "07634712f8c07c7dc9f2b5471ce369f9b523810c115dee08c12d5e6e40d9c0fe",
       "scripts/lib/pr-query.ts": "7b2884f0ed84d62f5f3e97e9f2d1cfa7385f7de3b37e2a1d20f96f37ea0a46d6",
-      "scripts/lib/process.ts": "c608dace83136dc24c5ea5bb9dada15293a448903de9b7d4c4bfe67e7120f76b",
+      "scripts/lib/process.ts": "87ffd8848d483fc4cd31353e991c6761d864c61cb446353c266a3bd3238a2fc5",
       "scripts/lib/rebase.ts": "45d82633ff497fbca9d7e3c19db952aa56de87a2f26f317cbe2d91f503fc5862",
       "scripts/lib/ref.ts": "e3442d78f58055cdce400ffdb0af66f8cd3347319badf3a821b0ea1374a28bf4",
       "scripts/lib/state.ts": "e83908a21a54dac3f50cc09e2831aec054a9e3b8e9b2648c7a88beb734451ce6",

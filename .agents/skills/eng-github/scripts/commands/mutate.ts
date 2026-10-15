@@ -4,6 +4,7 @@ import { ApiError, EngGithubError, UsageError } from "../lib/errors.ts";
 import { fetchSnapshots } from "../lib/pr-query.ts";
 import { mergeAsync } from "../lib/merge-async.ts";
 import { currentRepo, parsePrRef, parseRepo, repoSlug, type PrRef } from "../lib/ref.ts";
+import { applyOwnerMarker, ownerDeps, ownerWarning, parseOwnerMarker, registerOwner, resolveOwner } from "../lib/owner.ts";
 
 function positional(args: ParsedArgs, index: number, name: string): string {
   const value = args.positionals[index];
@@ -90,10 +91,19 @@ export const mutationCommands: CommandTable = {
       const base = required(ctx.args, "base");
       const head = required(ctx.args, "head");
       const title = required(ctx.args, "title");
-      const body = await bodyFile(ctx.args);
+      let body = await bodyFile(ctx.args);
       const repo = await currentRepo(ctx.cwd);
+      let owner = null;
+      try {
+        owner = await resolveOwner(ownerDeps(repoSlug(repo), ctx.cwd));
+        if (owner) body = applyOwnerMarker(body, owner);
+      } catch (error) {
+        ownerWarning(error);
+      }
       const response = await ctx.client.rest<{ number: number }>({ method: "POST", path: `repos/${repoSlug(repo)}/pulls`, body: { base, head, title, body, draft: bool(ctx.args, "draft") } });
-      return snapshot(ctx, { ...repo, number: response.data.number });
+      const result = await snapshot(ctx, { ...repo, number: response.data.number });
+      if (owner) await registerOwner({ owner, repo: repoSlug(repo), number: response.data.number, headRef: result.headRef, headSha: result.headSha });
+      return result;
     },
   },
   "pr edit": {
@@ -101,9 +111,14 @@ export const mutationCommands: CommandTable = {
     async run(ctx) {
       if (bool(ctx.args, "ready") && bool(ctx.args, "draft")) throw new UsageError("--ready and --draft are mutually exclusive");
       const title = flag(ctx.args, "title");
-      const body = flag(ctx.args, "body-file") === undefined ? undefined : await bodyFile(ctx.args);
+      let body = flag(ctx.args, "body-file") === undefined ? undefined : await bodyFile(ctx.args);
       if (flag(ctx.args, "body") !== undefined) throw new UsageError("use --body-file, not --body");
       const ref = await reference(ctx);
+      if (body !== undefined && !parseOwnerMarker(body)) {
+        const current = await ctx.client.rest<{ body: string | null }>({ path: path(ref) });
+        const owner = parseOwnerMarker(current.data.body ?? "");
+        if (owner) body = applyOwnerMarker(body, owner);
+      }
       if (title !== undefined || body !== undefined) await ctx.client.rest({ method: "PATCH", path: path(ref), body: { ...(title === undefined ? {} : { title }), ...(body === undefined ? {} : { body }) } });
       const labels = flags(ctx.args, "add-label");
       if (labels.length) await ctx.client.rest({ method: "POST", path: `${path(ref, "issues")}/labels`, body: { labels } });

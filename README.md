@@ -14,7 +14,7 @@ Eng Mode exists to:
 Eng Mode uses OMP primitives directly:
 
 - `todo` for the active finite work list;
-- `task` and `hub` for typed agents, parallel work, and coordination;
+- `task` for typed agents and parallel work; `write` with `agent://<id>` for messages; `read` of `proc://<name>`, `history://<id>`, and `agent://<id>` for process status, transcripts, and agent output;
 - LSP, debugger, and browser tools for grounded code and runtime evidence;
 - plain `git commit` for commits and `eng-github` for GitHub and PR operations;
 - `goal` for durable objectives;

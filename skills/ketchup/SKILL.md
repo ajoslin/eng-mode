@@ -6,13 +6,13 @@ disable-model-invocation: true
 
 # Ketchup
 
-Catch the user up on what changed in this chat since the last message they wrote before `/ketchup`. Notifications and agent results from `task` or `hub` are not their messages. Assume the user remembers their last message and nothing after it.
+Catch the user up on what changed in this chat since the last message they wrote before `/ketchup`. Notifications and agent results from `task` or `agent://<id>` are not their messages. Assume the user remembers their last message and nothing after it.
 
 Use [`/bro`](../bro/SKILL.md)'s voice, not its task: plain words, short sentences, no jargon, like one person catching up another. Say what changed for the user, not how you did it. Say "the tests pass", not "CI is green". Leave out hashes, file paths, commands, build numbers, and test counts unless the user needs one to act. Call each PR, branch, or agent by a name the user would know, not by a label you invented. If a fact needs context to make sense, give the context or leave the fact out.
 
 ## Gather what changed
 
-Keep this turn read-only. Make visuals only from what you already have: do not change code, start an app or a job, or post anything. Collect your own work since that message, reports from agents via `task` or `hub`, and messages from anyone else in this chat. Check the current state of each PR, CI run, or agent this chat touched. Use `eng-github` for GitHub state and `hub` for agent state. Check each number you will show against the facts it comes from, and say so when you correct one.
+Keep this turn read-only. Make visuals only from what you already have: do not change code, start an app or a job, or post anything. Collect your own work since that message, reports from agents via `task` or `agent://<id>`, and messages from anyone else in this chat. Check the current state of each PR, CI run, or agent this chat touched. Use `eng-github` for GitHub state. Read `agent://<id>` for agent status, progress, and output, `history://<id>` for transcripts, and `proc://<name>` for managed-process lifecycle and status. Check each number you will show against the facts it comes from, and say so when you correct one.
 
 An action item is a decision or step only the user can take, such as a product choice, an approval, an irreversible action, or access you lack. Include any still waiting on the user, even one raised before their last message. Work you can still do yourself is not an action item. Never make up a call to fill the reply. A step the user did not ask for and the work does not need is not an action item, unless it is irreversible and waiting on the user: give it one action line, no visual, and skip what happens if the user does not answer.
 

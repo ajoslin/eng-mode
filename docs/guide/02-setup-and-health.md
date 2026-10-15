@@ -23,7 +23,7 @@ GitHub work uses [`eng-github`](../../skills/eng-github/SKILL.md). Setup checks 
 | Resolved-model badges | Nominal seat hides fallback |
 | Task isolation | Concurrent writers collide |
 
-Agents select semantic roles, not provider IDs. Actual models matter when claiming vendor diversity. Isolation is terminal; use ordinary tasks when later hub steering is required.
+Agents select semantic roles, not provider IDs. Actual models matter when claiming vendor diversity. Isolation is terminal; use ordinary tasks when later steering with `write agent://<id>` is required.
 
 If the repository has no `verify-project` contract, run `create-verification-skill`. An agent that can check its own work keeps going until the check passes. An agent that can't hands every result back to you.
 

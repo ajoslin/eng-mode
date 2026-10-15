@@ -37,7 +37,7 @@ Dispatch all N independent workers in one `task` batch. Shared batch `context` s
 - the scoped verification to perform, while skipping formatters, linters, and project-wide suites
 - the report contract: `PASS`, `ISSUES`, or `BLOCKED`, with evidence and the output location. A worker that can prove a defect reports `ISSUES` and lists every issue it can prove, not only the first.
 
-Continue lead work while workers run. Task results deliver asynchronously. Use `hub` only for needed messages and completion notifications. Never poll workers.
+Continue lead work while workers run. Task results deliver asynchronously. Use `write` with `agent://<id>` only for needed messages. Read `history://<id>` for transcripts and `agent://<id>` for worker output.
 
 ## Drain
 

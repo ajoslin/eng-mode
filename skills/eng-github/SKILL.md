@@ -77,15 +77,27 @@ eng-github watch REF... [--until any|ci|comments] [--interval 120] [--timeout 18
 
 The interval defaults to 120 seconds and cannot go below 30, because checks take minutes and every request spends quota shared by every machine on the account. While the credential is rate limited, `watch` sleeps until the reset and keeps watching. It exits 1 only after 8 consecutive failures that are not rate limits.
 
-Run `watch` as one managed background process and wait for it to exit. Do not run `snapshot`, `ci`, or `sleep` in a loop while it is armed.
+Run `watch` as one async `bash` job and wait for it to finish. Do not run `snapshot`, `ci`, or `sleep` in a loop while it is armed.
 
-```
-hub start name=pr-watch application=eng-github args=[watch, REF, --until, ci]
-hub wait name=pr-watch for=exit timeout=1800
-eng-github snapshot REF
-```
+1. Call `bash` to start the CI watcher:
 
-A wake is news, not readiness. Classify it from a fresh `snapshot`.
+   ```json
+   {"command":"eng-github watch REF --until ci","async":true,"timeout":0}
+   ```
+
+2. Call `wait` for its completion:
+
+   ```json
+   {}
+   ```
+
+3. Call `bash` to take a fresh snapshot:
+
+   ```json
+   {"command":"eng-github snapshot REF"}
+   ```
+
+A wake is news, not readiness. Classify it from the fresh `snapshot`.
 
 ## Watcher events for queues
 

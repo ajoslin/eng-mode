@@ -1,6 +1,6 @@
 ---
 name: omp-workflows
-description: Build deterministic multi-stage OMP eval workflows with retained computation state, structured schemas, parallel fan-out, pipeline barriers, and bounded budgets. Use for matrices, batch classification, prove-outs, staged research synthesis, or repeatable agent map-reduce where children need no hub follow-up.
+description: Build deterministic multi-stage OMP eval workflows with retained computation state, structured schemas, parallel fan-out, pipeline barriers, and bounded budgets. Use for matrices, batch classification, prove-outs, staged research synthesis, or repeatable agent map-reduce where children need no messages after return.
 disable-model-invocation: true
 ---
 # OMP Workflows
@@ -13,7 +13,7 @@ Use OMP `eval` as executable glue around tools and one-shot agents. Keep product
 - `agent()`: one complete brief and output schema. Child is disposed after return.
 - `parallel(thunks)`: independent work with results returned in input order.
 - `pipeline(items, ...stages)`: barriered waves. Every item completes a stage before the next begins.
-- Normal `task` + `hub`: work needs steering, revival, model badges, or a long-lived worker.
+- Normal `task` and `write` to `agent://<id>`: use them when work needs steering, revival, model badges, or a long-lived worker.
 
 Do not move ordinary edits into eval merely to look systematic.
 
@@ -39,7 +39,7 @@ Persist normalized intermediate results in kernel bindings or `local://` artifac
 - Retry transient tool failures only.
 - Preserve provenance from output to input and transcript.
 - Check `budget.remaining()` before another wave.
-- Never use hub with eval children. They no longer exist after return.
+- Eval children cannot receive `write` messages at `agent://<id>`. Do not design an eval workflow that depends on child follow-up.
 
 ## Finish
 

@@ -15,7 +15,7 @@ disable-model-invocation: true
 
 **Pattern:**
 - **Delegate the loop, not the decision.** An edit-test-fix cycle belongs in a worker with a fresh context. The lead decides scope and reads the result.
-- **Wait once, never poll.** One blocking `hub wait` (timeout at least 15 minutes), one managed process, or one provider listen. Short waits and `sleep` each replay the whole context.
+- **Wait once, never poll.** Use one blocking `wait` for an async job or managed process. Results also auto-deliver. `wait` has no timeout argument; owned-job and service waits have a 30-minute safety cap. Repeated status checks and `sleep` each replay the whole context.
 - **Don't read what you won't use.** Read ranges, not files. If a file isn't needed for the current task, skip it.
 - **Hand off at phase boundaries.** Above 200k tokens, `/handoff` before the next phase. Automatic compaction at 400k is the backstop.
 - **Answer status from state.** A "how close are we" question is answered from `todo view` and `goal get`, not a re-verification pass.
