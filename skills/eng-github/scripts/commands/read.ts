@@ -422,13 +422,16 @@ export const readCommands: CommandTable = {
         "method",
         "GET",
       );
-      const normalizedPath = decodeURIComponent(path).replace(/^\/+/, "").split(/[?#]/)[0] ?? "";
+      const normalizedPath = (decodeURIComponent(path).replace(/^https:\/\/api\.github\.com\//i, "").replace(/^\/+/, "").split(/[?#]/)[0] ?? "").toLowerCase();
+      if (method !== "GET" && /^graphql\/?$/.test(normalizedPath)) throw new UsageError("use eng-github graphql for gated GraphQL requests");
+      if (method !== "GET" && /^repos\/[^/]+\/[^/]+\/merges\/?$/.test(normalizedPath)) throw new UsageError("use the gated merge command");
       if (method === "PUT" && /(?:^|\/)repos\/[^/]+\/[^/]+\/pulls\/\d+\/merge(?:-async)?\/?$/i.test(normalizedPath)) throw new UsageError("use the gated merge command");
       if (["POST", "PUT", "PATCH"].includes(method) && /(?:^|\/)repos\/[^/]+\/[^/]+\/issues\/\d+\/labels(?:\/|$)/i.test(normalizedPath)) throw new UsageError("use pr edit --add-label for gated label mutations");
       const input = flag(ctx.args, "input");
       const body: unknown = input
         ? await Bun.file(input).json()
         : fields(flags(ctx.args, "field"));
+      if (method === "PATCH" && /^repos\/[^/]+\/[^/]+\/(?:issues|pulls)\/\d+\/?$/.test(normalizedPath) && Object.hasOwn(object(body), "labels")) throw new UsageError("use pr edit --add-label for gated label mutations");
       const requestPath =
         method === "GET" && !input && flags(ctx.args, "field").length
           ? `${path}${path.includes("?") ? "&" : "?"}${new URLSearchParams(Object.entries(object(body)).map(([key, value]): [string, string] => [key, String(value)]))}`
@@ -451,7 +454,7 @@ export const readCommands: CommandTable = {
     run: async (ctx) => {
       const document = await Bun.file(required(ctx.args, "query-file")).text();
       const mutationDocument = document.replace(/#[^\r\n]*/g, "");
-      if (/\b(?:mergePullRequest|enablePullRequestAutoMerge|enqueuePullRequest|addLabelsToLabelable|mergeBranch)\b/.test(mutationDocument)) throw new UsageError("use gated merge, auto-merge enable, stack merge, or pr edit --add-label instead of raw GraphQL mutations");
+      if (/\b(?:mergePullRequest|enablePullRequestAutoMerge|enqueuePullRequest|addLabelsToLabelable|mergeBranch)\b/i.test(mutationDocument) || (/\b(?:updatePullRequest|updateIssue|createIssue|createPullRequest)\b/i.test(mutationDocument) && /\blabelIds\b/i.test(mutationDocument))) throw new UsageError("use gated merge, auto-merge enable, stack merge, or pr edit --add-label instead of raw GraphQL mutations");
       const variables = fields(flags(ctx.args, "var"));
       const pages = [];
       do {

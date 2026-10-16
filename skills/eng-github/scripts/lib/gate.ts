@@ -2,6 +2,7 @@ import type { GitHubClient } from "./client.ts";
 import { EngGithubError } from "./errors.ts";
 import { fetchSnapshots } from "./pr-query.ts";
 import { repoSlug, type PrRef } from "./ref.ts";
+import { failing } from "./watch-eval.ts";
 
 export type GateMarker = { v: 1; kind: "evidence"; sha: string; verdict: "pass" | "fail"; producer: string; surface: "ui" | "non-ui" } | { v: 1; kind: "signoff"; sha: string; evidence: number; verdict: "approve" | "block"; reviewer: string };
 export type GateRecord = GateMarker & { id: number; url: string; createdAt: string };
@@ -40,9 +41,9 @@ export function evaluateGate({ head, records, unresolvedThreads, failingChecks }
     if (evidence.verdict === "fail") reasons.push(`evidence ${evidence.id} failed for HEAD ${head}`);
     const signoffs = records.filter((record): record is Extract<GateRecord, { kind: "signoff" }> => record.kind === "signoff" && record.sha === head && record.evidence === evidence.id);
     if (signoffs.some((record) => record.verdict === "block")) reasons.push(`reviewer blocked evidence ${evidence.id}`);
-    if (signoffs.some((record) => record.verdict === "approve" && identity(record.reviewer) === identity(evidence.producer))) reasons.push("self-signoff does not count: reviewer equals evidence producer");
+    const selfApproval = signoffs.find((record) => record.verdict === "approve" && identity(record.reviewer) === identity(evidence.producer));
     approval = signoffs.find((record) => record.verdict === "approve" && identity(record.reviewer) !== identity(evidence.producer));
-    if (!approval) reasons.push("no independent sign-off");
+    if (!approval) reasons.push(selfApproval ? `no independent sign-off (self-signoff by ${selfApproval.reviewer.trim()} does not count)` : "no independent sign-off");
   }
   if (unresolvedThreads) reasons.push(`${unresolvedThreads} unresolved review thread(s)`);
   if (failingChecks.length) reasons.push(`failing checks: ${failingChecks.join(", ")}`);
@@ -57,7 +58,7 @@ export async function requireGate(client: GitHubClient, ref: PrRef, head: string
   const snapshot = (await fetchSnapshots(client, [ref]))[0];
   if (!snapshot) throw new EngGithubError("failure", "GitHub returned no pull request snapshot");
   if (snapshot.headSha !== head) throw new EngGithubError("changed", "Pull request head differs from --head");
-  const result = evaluateGate({ head, records: await gateRecords(client, ref), unresolvedThreads: snapshot.threads.filter((thread) => !thread.resolved).length, failingChecks: snapshot.checks.filter((check) => ["FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE", "ERROR"].includes(check.conclusion ?? "")).map((check) => check.name) });
+  const result = evaluateGate({ head, records: await gateRecords(client, ref), unresolvedThreads: snapshot.threads.filter((thread) => !thread.resolved).length, failingChecks: snapshot.checks.filter(failing).map((check) => check.name) });
   if (result.state === "blocked") throw new EngGithubError("gate", "pre-merge gate blocked", result);
   return result;
 }

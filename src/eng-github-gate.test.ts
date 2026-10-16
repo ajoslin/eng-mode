@@ -23,10 +23,10 @@ function evidence(sha = head, verdict = "pass", association = "OWNER", id = 1) {
 function signoff(verdict = "approve", reviewer = "reviewer") {
   return { id: 3, html_url: "https://github.com/o/r/pull/7#issuecomment-3", created_at: "2026-10-16T00:00:03Z", author_association: "MEMBER", body: `<!-- eng-gate ${JSON.stringify({ v: 1, kind: "signoff", sha: head, evidence: 1, verdict, reviewer })} -->\nReviewed` };
 }
-function fake(comments: unknown[] = [], options: { unresolved?: boolean; failing?: boolean } = {}) {
+function fake(comments: unknown[] = [], options: { unresolved?: boolean; failing?: boolean; staleCheck?: boolean } = {}) {
   const dir = mkdtempSync(join(tmpdir(), "eng-gate-")); dirs.push(dir);
   const requests: { path: string; method: string; body: unknown }[] = [];
-  const pr = { stack: null, id: "n", url: "https://github.com/o/r/pull/7", number: 7, title: "Title", state: "OPEN", isDraft: false, headRefName: "feature", headRefOid: head, baseRefName: "main", baseRefOid: stale, mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", labels: { nodes: [] }, autoMergeRequest: null, baseRef: null, commits: { nodes: options.failing ? [{ commit: { statusCheckRollup: { contexts: { nodes: [{ __typename: "CheckRun", name: "unit", status: "COMPLETED", conclusion: "FAILURE", isRequired: false, detailsUrl: null, databaseId: 1, checkSuite: null }] } } } }] : [] }, reviewThreads: { nodes: options.unresolved ? [{ id: "thread", isResolved: false, isOutdated: false, path: "x", line: 1, comments: { totalCount: 0, nodes: [] } }] : [] }, latestReviews: { nodes: [] }, comments: { nodes: [] } };
+  const pr = { stack: null, id: "n", url: "https://github.com/o/r/pull/7", number: 7, title: "Title", state: "OPEN", isDraft: false, headRefName: "feature", headRefOid: head, baseRefName: "main", baseRefOid: stale, mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", labels: { nodes: [] }, autoMergeRequest: null, baseRef: null, commits: { nodes: options.failing || options.staleCheck ? [{ commit: { statusCheckRollup: { contexts: { nodes: [{ __typename: "CheckRun", name: "unit", status: "COMPLETED", conclusion: options.staleCheck ? "STALE" : "FAILURE", isRequired: false, detailsUrl: null, databaseId: 1, checkSuite: null }] } } } }] : [] }, reviewThreads: { nodes: options.unresolved ? [{ id: "thread", isResolved: false, isOutdated: false, path: "x", line: 1, comments: { totalCount: 0, nodes: [] } }] : [] }, latestReviews: { nodes: [] }, comments: { nodes: [] } };
   globalThis.fetch = Object.assign(async (input: string | URL | Request, init: RequestInit = {}) => {
     const path = new URL(String(input)).pathname;
     const method = init.method ?? "GET";
@@ -74,9 +74,24 @@ for (const [name, records, reason] of [
 });
 test("unresolved review thread blocks merge", async () => { const github = fake([evidence(), signoff()], { unresolved: true }); await blocked(github.run("merge", ["o/r#7", "--head", head]), "1 unresolved review thread(s)"); });
 test("failing check blocks merge", async () => { const github = fake([evidence(), signoff()], { failing: true }); await blocked(github.run("merge", ["o/r#7", "--head", head]), "failing checks: unit"); });
+test("STALE check blocks merge", async () => {
+  const github = fake([evidence(), signoff()], { staleCheck: true });
+  await expect(github.run("merge", ["o/r#7", "--head", head])).rejects.toMatchObject({ exit: "gate", details: { state: "blocked", head, reasons: ["failing checks: unit"] } });
+  expect(github.requests.filter((request) => request.path.includes("/merge"))).toEqual([]);
+});
 test("independent signoff at HEAD permits a SHA-pinned merge request", async () => {
   const github = fake([evidence(), signoff()]); await github.run("merge", ["o/r#7", "--head", head]);
   expect(github.requests.filter((request) => request.path.includes("/merge"))).toEqual([{ path: "/repos/o/r/pulls/7/merge-async", method: "PUT", body: { sha: head, merge_method: "squash", merge_action: "default" } }]);
+});
+test("self-approval does not veto an independent approval", async () => {
+  const github = fake([evidence(), signoff("approve", " AUTHOR "), signoff()]);
+  await github.run("merge", ["o/r#7", "--head", head]);
+  expect(github.requests.filter((request) => request.path.includes("/merge"))).toEqual([{ path: "/repos/o/r/pulls/7/merge-async", method: "PUT", body: { sha: head, merge_method: "squash", merge_action: "default" } }]);
+});
+test("self-approval alone reports one independent sign-off reason", async () => {
+  const github = fake([evidence(), signoff("approve", " AUTHOR ")]);
+  await expect(github.run("merge", ["o/r#7", "--head", head])).rejects.toMatchObject({ exit: "gate", details: { state: "blocked", head, reasons: ["no independent sign-off (self-signoff by AUTHOR does not count)"] } });
+  expect(github.requests.filter((request) => request.path.includes("/merge"))).toEqual([]);
 });
 test("babysit complete label is refused before any mutation without gate", async () => {
   const github = fake(); await blocked(github.run("pr edit", ["o/r#7", "--add-label", " BABYSIT COMPLETE ", "--title", "changed"]), "no evidence");
@@ -107,6 +122,34 @@ test("raw api merge and graphql mergePullRequest cannot bypass gate", async () =
   const github = fake(); await expect(github.run("api", ["repos/o/r/pulls/7/merge", "--method", "PUT"], readCommands)).rejects.toMatchObject({ exit: "usage" });
   const query = join(github.dir, "query"); writeFileSync(query, "mutation { mergePullRequest(input: {pullRequestId: \"x\"}) { clientMutationId } }");
   await expect(github.run("graphql", ["--query-file", query], readCommands)).rejects.toMatchObject({ exit: "usage" }); expect(github.requests).toEqual([]);
+});
+for (const path of ["graphql", "/graphql", "https://api.github.com/%47RAPHQL?x=1"]) test(`raw api refuses non-GET GraphQL at ${path}`, async () => {
+  const github = fake();
+  await expect(github.run("api", [path, "--method", "POST", "--field", "query=mutation { mergeBranch }"], readCommands)).rejects.toMatchObject({ exit: "usage", message: "use eng-github graphql for gated GraphQL requests" });
+  expect(github.requests).toEqual([]);
+});
+for (const method of ["POST", "PUT", "PATCH", "DELETE"]) test(`raw api refuses ${method} branch merge`, async () => {
+  const github = fake();
+  await expect(github.run("api", ["https://api.github.com//REPOS/o/r/%6Derges?x=1", "--method", method], readCommands)).rejects.toMatchObject({ exit: "usage", message: "use the gated merge command" });
+  expect(github.requests).toEqual([]);
+});
+for (const resource of ["issues", "pulls"]) for (const source of ["input", "field"]) test(`raw api refuses ${resource} PATCH labels from ${source}`, async () => {
+  const github = fake(); const input = join(github.dir, "input.json"); writeFileSync(input, '{"labels":["babysit complete"]}');
+  const body = source === "input" ? ["--input", input] : ["--field", "labels=babysit complete"];
+  await expect(github.run("api", [`/REPOS/o/r/${resource}/7?x=1`, "--method", "PATCH", ...body], readCommands)).rejects.toMatchObject({ exit: "usage", message: "use pr edit --add-label for gated label mutations" });
+  expect(github.requests).toEqual([]);
+});
+for (const mutation of ["updatePullRequest", "updateIssue", "createIssue", "createPullRequest"]) test(`raw graphql refuses ${mutation} with labelIds`, async () => {
+  const github = fake(); const query = join(github.dir, "query");
+  writeFileSync(query, `mutation { ${mutation}(input: {labelIds: ["label"]}) { clientMutationId } }`);
+  await expect(github.run("graphql", ["--query-file", query], readCommands)).rejects.toMatchObject({ exit: "usage", message: "use gated merge, auto-merge enable, stack merge, or pr edit --add-label instead of raw GraphQL mutations" });
+  expect(github.requests).toEqual([]);
+});
+test("raw graphql leaves updatePullRequestBranch ungated", async () => {
+  const github = fake(); const query = join(github.dir, "query"); const document = 'mutation { updatePullRequestBranch(input: {pullRequestId: "x"}) { clientMutationId } }';
+  writeFileSync(query, document);
+  await github.run("graphql", ["--query-file", query], readCommands);
+  expect(github.requests).toEqual([{ path: "/graphql", method: "POST", body: { query: document, variables: {} } }]);
 });
 
 test("stack merge is blocked when a lower layer lacks the gate", async () => {
