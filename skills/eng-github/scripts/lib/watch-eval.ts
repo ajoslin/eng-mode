@@ -56,11 +56,11 @@ export function evaluateWake(
     return wake("closed", "PR closed");
   if (current.headSha !== baseline.headSha)
     return wake("head-changed", "Head changed");
-  if (
-    current.mergeable === "CONFLICTING" &&
-    baseline.mergeable !== "CONFLICTING"
-  )
-    return wake("conflict", "PR became unmergeable");
+  const newBlocking = current.blocking.filter(
+    (entry) => !baseline.blocking.includes(entry),
+  );
+  if (newBlocking.length)
+    return wake("conflict", `PR became blocked: ${newBlocking.join(", ")}`);
   if (until !== "comments") {
     const previous = new Set(
       baseline.checks.filter(failing).map((c) => c.name),

@@ -8,6 +8,7 @@ import { apiRoot, GitHubClient, type Clock } from "../skills/eng-github/scripts/
 import type { Credential } from "../skills/eng-github/scripts/lib/credentials.ts";
 import { EngGithubError, RateLimitedError, UsageError } from "../skills/eng-github/scripts/lib/errors.ts";
 import { mergeAsync } from "../skills/eng-github/scripts/lib/merge-async.ts";
+import { fetchSnapshots } from "../skills/eng-github/scripts/lib/pr-query.ts";
 import { digest, StateStore } from "../skills/eng-github/scripts/lib/state.ts";
 
 const credential: Credential = { host: "github.com", token: "secret-token", source: "ENG_GITHUB_TOKEN", fingerprint: "github.com:test" };
@@ -274,6 +275,22 @@ describe("merge", () => {
 });
 
 describe("snapshot", () => {
+  test.each([
+    { mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", behindBy: 0, blocking: [] },
+    { mergeable: "CONFLICTING", mergeStateStatus: "DIRTY", behindBy: 0, blocking: ["conflict"] },
+    { mergeable: "UNKNOWN", mergeStateStatus: "DIRTY", behindBy: 0, blocking: ["conflict"] },
+    { mergeable: "MERGEABLE", mergeStateStatus: "BEHIND", behindBy: 1, blocking: ["behind"] },
+    { mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", behindBy: 5, blocking: [] },
+    { mergeable: "CONFLICTING", mergeStateStatus: "CLEAN", behindBy: 0, blocking: ["conflict"] },
+    { mergeable: "CONFLICTING", mergeStateStatus: "BEHIND", behindBy: 1, blocking: ["conflict", "behind"] },
+  ])("derives blocking for $mergeable/$mergeStateStatus with behindBy $behindBy", async ({ mergeable, mergeStateStatus, behindBy, blocking }) => {
+    const pr = { stack: null, id: "n", url: "u", number: 1, title: "t", state: "OPEN", isDraft: false, headRefName: "h", headRefOid: "abc1234", baseRefName: "main", baseRefOid: "b", mergeable, mergeStateStatus, reviewDecision: null, labels: { nodes: [] }, autoMergeRequest: null, baseRef: { compare: { behindBy } }, commits: { nodes: [] }, reviewThreads: { nodes: [] }, latestReviews: { nodes: [] }, comments: { nodes: [] } };
+    const { client: c } = client();
+    stubFetch(() => new Response(JSON.stringify({ data: { p0: { pullRequest: pr } } })));
+    const snapshots = await fetchSnapshots(c, [{ owner: "o", name: "r", number: 1 }]);
+    expect(snapshots.map((snapshot) => snapshot.blocking)).toEqual([[...blocking]]);
+  });
+
   function threadNode(id: string, resolved: boolean) {
     return { id, isResolved: resolved, isOutdated: false, path: "a.ts", line: 1, comments: { totalCount: 1, nodes: [{ author: { login: "cursor" }, body: id, createdAt: "t" }], pageInfo: { hasNextPage: false, endCursor: null } } };
   }

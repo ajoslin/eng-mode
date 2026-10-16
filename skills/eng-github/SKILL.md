@@ -44,7 +44,7 @@ Never wrap `eng-github` in a retry loop or `sleep`. Exit 75 already tells you wh
 
 | Command | Returns |
 |---|---|
-| `eng-github snapshot REF...` | One GraphQL document for up to 25 PRs. Per PR: `headSha`, `baseRef`, `baseSha`, `behindBy`, `state`, `isDraft`, `mergeable`, `mergeStateStatus`, `reviewDecision`, `autoMerge`, `labels`, `checks` (name, status, conclusion, required), `threads` (id, resolved, outdated, path, line, author, body, comment count), latest review per author, and stack membership. One ref prints one object; several print an array. |
+| `eng-github snapshot REF...` | One GraphQL document for up to 25 PRs. Per PR: `headSha`, `baseRef`, `baseSha`, `behindBy`, `state`, `isDraft`, `mergeable`, `mergeStateStatus`, `blocking` (`conflict` when GitHub reports CONFLICTING or DIRTY, `behind` when it reports BEHIND), `reviewDecision`, `autoMerge`, `labels`, `checks` (name, status, conclusion, required), `threads` (id, resolved, outdated, path, line, author, body, comment count), latest review per author, and stack membership. One ref prints one object; several print an array. |
 | `eng-github fingerprint REF...` | The cheap change detector `watch` uses: state, head, mergeability, check counts by state, comment and review counts with newest timestamps. |
 | `eng-github threads REF [--unresolved]` | Every review thread with all comments, paginated. Thread `id` is the handle for `reply` and `resolve`. |
 | `eng-github comments REF` | Issue comments and review bodies, oldest first, each as `{ kind, id, author, authorType, state, body, createdAt, url }` (`state` on reviews only). |
@@ -68,7 +68,7 @@ eng-github watch REF... [--until any|ci|comments] [--interval 120] [--timeout 18
 - `checks-failed`: a check newly failed, was cancelled, or needs approval. Repeated failures of the same check do not wake it again.
 - `checks-passed`: every required check passed, or every check when none are required.
 - `activity`: someone other than you commented, reviewed, or replied to a thread.
-- `conflict`: the PR became unmergeable.
+- `conflict`: the PR became unmergeable or fell behind a base that requires it to be up to date (a new `blocking` entry).
 - `head-changed`: a new head was pushed.
 - `merged` or `closed`.
 - `timeout`: nothing changed before `--timeout`.
