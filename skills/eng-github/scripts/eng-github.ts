@@ -6,9 +6,8 @@ import { EngGithubError, EXIT, UsageError } from "./lib/errors.ts";
 import { mutationCommands } from "./commands/mutate.ts";
 import { readCommands } from "./commands/read.ts";
 import { stackCommands } from "./commands/stack.ts";
-import { gateCommands } from "./commands/gate.ts";
 
-const commands: CommandTable = { ...readCommands, ...mutationCommands, ...stackCommands, ...gateCommands };
+const commands: CommandTable = { ...readCommands, ...mutationCommands, ...stackCommands };
 
 const USAGE = `usage: eng-github COMMAND [args]
 

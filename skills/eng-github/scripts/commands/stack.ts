@@ -1,4 +1,3 @@
-import { requireGate } from "../lib/gate.ts";
 import { flag, headPairs, oneOf, positiveInt, required, type ParsedArgs } from "../lib/args.ts";
 import type { GitHubClient } from "../lib/client.ts";
 import type { CommandTable } from "../lib/command.ts";
@@ -184,9 +183,6 @@ export const stackCommands: CommandTable = {
       const drafts = upTo.filter((layer) => layer.state === "open" && layer.draft).map((layer) => `#${layer.number}`);
       if (drafts.length > 0) throw new UsageError(`draft layers cannot merge: ${drafts.join(", ")}`);
       const method = oneOf<MergeMethod>(flag(args, "method"), ["squash", "merge", "rebase"], "method", "squash");
-      for (const layer of upTo) {
-        if (layer.state === "open") await requireGate(client, { ...repo, number: layer.number }, layer.headSha);
-      }
       const result = await mergeAsync(client, { ...repo, number: target }, { head: targetLayer.headSha, method, action: "default" });
       if (result.status === "failed") throw new EngGithubError("conflict", `merge of #${target} failed`, result.details);
       return result;

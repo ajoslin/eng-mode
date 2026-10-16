@@ -19,6 +19,7 @@ const baseline: Snapshot = {
   behindBy: 0,
   mergeable: "MERGEABLE",
   mergeStateStatus: "CLEAN",
+  blocking: [],
   reviewDecision: null,
   autoMerge: null,
   nodeId: "id",

@@ -32,7 +32,6 @@ Set `ENG_GITHUB_ACCOUNT` when the active `gh` account cannot write to the reposi
 | 2 | Bad arguments. |
 | 3 | A merge conflict, failed rebase, or failed merge rule. |
 | 4 | Head or stack changed since the SHA you pinned. Re-snapshot before deciding. |
-| 5 | Pre-merge gate blocked. Fix every reported reason before retrying. |
 | 75 | Rate limited. stderr names the reset time. Wait until then. It is never a failure and never a reason to retry sooner. |
 
 ## Rate limits
@@ -45,7 +44,7 @@ Never wrap `eng-github` in a retry loop or `sleep`. Exit 75 already tells you wh
 
 | Command | Returns |
 |---|---|
-| `eng-github snapshot REF...` | One GraphQL document for up to 25 PRs. Per PR: `headSha`, `baseRef`, `baseSha`, `behindBy`, `state`, `isDraft`, `mergeable`, `mergeStateStatus`, `reviewDecision`, `autoMerge`, `labels`, `checks` (name, status, conclusion, required), `threads` (id, resolved, outdated, path, line, author, body, comment count), latest review per author, and stack membership. One ref prints one object; several print an array. |
+| `eng-github snapshot REF...` | One GraphQL document for up to 25 PRs. Per PR: `headSha`, `baseRef`, `baseSha`, `behindBy`, `state`, `isDraft`, `mergeable`, `mergeStateStatus`, `blocking` (`conflict` when GitHub reports CONFLICTING or DIRTY, `behind` when it reports BEHIND), `reviewDecision`, `autoMerge`, `labels`, `checks` (name, status, conclusion, required), `threads` (id, resolved, outdated, path, line, author, body, comment count), latest review per author, and stack membership. One ref prints one object; several print an array. |
 | `eng-github fingerprint REF...` | The cheap change detector `watch` uses: state, head, mergeability, check counts by state, comment and review counts with newest timestamps. |
 | `eng-github threads REF [--unresolved]` | Every review thread with all comments, paginated. Thread `id` is the handle for `reply` and `resolve`. |
 | `eng-github comments REF` | Issue comments and review bodies, oldest first, each as `{ kind, id, author, authorType, state, body, createdAt, url }` (`state` on reviews only). |
@@ -130,27 +129,7 @@ eng-github rerun RUN_ID [--failed]
 
 `pr create` opens ready for review unless `--draft` is passed and prints the new PR's snapshot. Confirm the URL, `headSha`, `baseRef`, and `isDraft: false` from that output.
 
-## Pre-merge gate
-
-Re-run every verification lane on the final HEAD, upload fresh evidence, and obtain a fresh independent reviewer agent's sign-off before landing or marking Babysit complete. Any new push invalidates these SHA-bound records.
-
-```sh
-eng-github gate evidence REF --head SHA --verdict pass|fail --producer NAME --surface ui|non-ui --body-file FILE
-eng-github gate signoff REF --head SHA --evidence ID --verdict approve|block --reviewer NAME --body-file FILE
-eng-github gate check REF [--head SHA]
-```
-
-Bodies must be non-empty. UI evidence must include screenshots or video links. Posting returns `{ id, url, sha, kind }`. A head mismatch exits 4; a blocked check exits 5 with all reasons and the HEAD SHA.
-
-Records are PR issue comments whose first line is `<!-- eng-gate {JSON} -->`, followed by human-readable evidence or review. Evidence JSON is `{"v":1,"kind":"evidence","sha":"<40-hex>","verdict":"pass|fail","producer":"<name>","surface":"ui|non-ui"}`; sign-off JSON is `{"v":1,"kind":"signoff","sha":"<40-hex>","evidence":123,"verdict":"approve|block","reviewer":"<name>"}`. The pipe-separated strings denote choices, not literal values. Only OWNER, MEMBER, or COLLABORATOR comments count. Malformed and unknown-version records are ignored.
-
-The latest evidence by creation time and id at HEAD must pass. Sign-offs must reference that evidence at that HEAD; any block prevents passage, and at least one approval must name a reviewer other than the producer (case-insensitive, trimmed). Self-approvals do not count and do not veto an independent approval. Unresolved review threads and failing checks block; pending checks wait under auto-merge. All failures are reported together.
-
-`merge` (including `--admin`), `auto-merge enable`, every open layer through a `stack merge` target, and `pr edit --add-label "babysit complete"` require a passing gate before mutation. Auto-merge disable and other labels remain ungated. Raw API pull-request merges, branch merges, label writes (including issue and pull-request PATCH bodies with `labels`), and non-GET requests to `graphql` are refused; use the gated commands or `eng-github graphql`. Raw GraphQL merge, auto-merge enable, enqueue, branch merge, label-add, and issue or pull-request create/update documents mentioning `labelIds` are refused. `updatePullRequestBranch` remains ungated.
-
 ## Merge
-
-Merge and auto-merge enable refuse without a passing pre-merge gate at the pinned HEAD.
 
 ```sh
 eng-github merge REF --head SHA [--method squash|merge|rebase] [--action default|direct|queue]

@@ -4,7 +4,6 @@ export const EXIT = {
   usage: 2,
   conflict: 3,
   changed: 4,
-  gate: 5,
   rateLimited: 75,
 } as const;
 

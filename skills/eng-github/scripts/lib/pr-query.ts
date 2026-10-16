@@ -41,6 +41,7 @@ export interface Snapshot {
   behindBy: number | null;
   mergeable: string;
   mergeStateStatus: string;
+  blocking: ("conflict" | "behind")[];
   reviewDecision: string | null;
   autoMerge: null | {
     method: string;
@@ -220,6 +221,12 @@ function parseSnapshot(value: unknown, ref: PrRef, threadNodes: unknown[]): Snap
     base?.compare === null || base?.compare === undefined
       ? null
       : object(base.compare);
+  const mergeable = text(v.mergeable);
+  const mergeStateStatus = text(v.mergeStateStatus);
+  const blocking: Snapshot["blocking"] = [];
+  if (mergeable === "CONFLICTING" || mergeStateStatus === "DIRTY")
+    blocking.push("conflict");
+  if (mergeStateStatus === "BEHIND") blocking.push("behind");
   return {
     ref: refString(ref),
     url: text(v.url),
@@ -233,8 +240,9 @@ function parseSnapshot(value: unknown, ref: PrRef, threadNodes: unknown[]): Snap
     baseSha: text(v.baseRefOid),
     behindBy:
       typeof comparison?.behindBy === "number" ? comparison.behindBy : null,
-    mergeable: text(v.mergeable),
-    mergeStateStatus: text(v.mergeStateStatus),
+    mergeable,
+    mergeStateStatus,
+    blocking,
     reviewDecision: nullableText(v.reviewDecision),
     autoMerge:
       auto === null
