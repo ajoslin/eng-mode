@@ -61,6 +61,16 @@ export interface Snapshot {
   labels: string[];
   activity: Activity[];
 }
+export function blockingOf(
+  mergeable: string,
+  mergeStateStatus: string,
+): Snapshot["blocking"] {
+  const blocking: Snapshot["blocking"] = [];
+  if (mergeable === "CONFLICTING" || mergeStateStatus === "DIRTY")
+    blocking.push("conflict");
+  if (mergeStateStatus === "BEHIND") blocking.push("behind");
+  return blocking;
+}
 export function object(value: unknown): Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value))
     throw new ApiError(200, "Malformed GitHub object", value);
@@ -223,10 +233,7 @@ function parseSnapshot(value: unknown, ref: PrRef, threadNodes: unknown[]): Snap
       : object(base.compare);
   const mergeable = text(v.mergeable);
   const mergeStateStatus = text(v.mergeStateStatus);
-  const blocking: Snapshot["blocking"] = [];
-  if (mergeable === "CONFLICTING" || mergeStateStatus === "DIRTY")
-    blocking.push("conflict");
-  if (mergeStateStatus === "BEHIND") blocking.push("behind");
+  const blocking = blockingOf(mergeable, mergeStateStatus);
   return {
     ref: refString(ref),
     url: text(v.url),
@@ -299,6 +306,7 @@ export interface Fingerprint {
   state: string;
   headSha: string;
   mergeable: string;
+  mergeStateStatus: string;
   checks: Record<string, number>;
   comments: { count: number; latest: string | null };
   reviews: { count: number; latest: string | null };
@@ -312,7 +320,7 @@ export async function fetchFingerprints(
   priority: Priority = "interactive",
 ): Promise<Fingerprint[]> {
   const selection =
-    "state mergeable headRefOid comments(first:100,orderBy:{field:UPDATED_AT,direction:DESC}){totalCount nodes{lastEditedAt updatedAt}} reviews(last:100){totalCount nodes{lastEditedAt submittedAt}} reviewThreads{totalCount} commits(last:1){nodes{commit{statusCheckRollup{contexts{checkRunCountsByState{state count} statusContextCountsByState{state count}}}}}}";
+    "state mergeable mergeStateStatus headRefOid comments(first:100,orderBy:{field:UPDATED_AT,direction:DESC}){totalCount nodes{lastEditedAt updatedAt}} reviews(last:100){totalCount nodes{lastEditedAt submittedAt}} reviewThreads{totalCount} commits(last:1){nodes{commit{statusCheckRollup{contexts{checkRunCountsByState{state count} statusContextCountsByState{state count}}}}}}";
   const values = await aliased(client, refs, () => selection, priority, false);
   return values.map((raw, i) => {
     const v = object(raw);
@@ -351,7 +359,8 @@ export async function fetchFingerprints(
     if (!ref) throw new ApiError(200, "Missing reference", null);
     const state = text(v.state),
       headSha = text(v.headRefOid),
-      mergeable = text(v.mergeable);
+      mergeable = text(v.mergeable),
+      mergeStateStatus = text(v.mergeStateStatus);
     const comments = edits(v.comments),
       reviews = edits(v.reviews),
       threads = number(object(v.reviewThreads).totalCount);
@@ -360,6 +369,7 @@ export async function fetchFingerprints(
       state,
       headSha,
       mergeable,
+      mergeStateStatus,
       checks,
       comments,
       reviews,
@@ -368,6 +378,7 @@ export async function fetchFingerprints(
         state,
         headSha,
         mergeable,
+        mergeStateStatus,
         Object.entries(checks).sort(),
       ]),
       remarks: JSON.stringify([comments, reviews, threads]),

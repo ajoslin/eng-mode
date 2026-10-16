@@ -68,7 +68,7 @@ eng-github watch REF... [--until any|ci|comments] [--interval 120] [--timeout 18
 - `checks-failed`: a check newly failed, was cancelled, or needs approval. Repeated failures of the same check do not wake it again.
 - `checks-passed`: every required check passed, or every check when none are required.
 - `activity`: someone other than you commented, reviewed, or replied to a thread.
-- `conflict`: the PR became unmergeable.
+- `conflict`: the PR became unmergeable or fell behind a base that requires it to be up to date (a new `blocking` entry).
 - `head-changed`: a new head was pushed.
 - `merged` or `closed`.
 - `timeout`: nothing changed before `--timeout`.

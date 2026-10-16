@@ -1,4 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { apiRoot, GitHubClient } from "../skills/eng-github/scripts/lib/client.ts";
+import type { Credential } from "../skills/eng-github/scripts/lib/credentials.ts";
+import { blockingOf, fetchFingerprints } from "../skills/eng-github/scripts/lib/pr-query.ts";
+import { StateStore } from "../skills/eng-github/scripts/lib/state.ts";
 import type {
   Check,
   Snapshot,
@@ -42,6 +49,33 @@ function check(name: string, conclusion: string, required = false): Check {
   };
 }
 describe("watch wakes", () => {
+  test.each([
+    ["MERGEABLE", "BEHIND", "behind"],
+    ["UNKNOWN", "DIRTY", "conflict"],
+  ])("CLEAN to %s/%s wakes conflict naming %s", (mergeable, mergeStateStatus, entry) => {
+    const current = {
+      ...baseline,
+      mergeable,
+      mergeStateStatus,
+      blocking: blockingOf(mergeable, mergeStateStatus),
+    };
+    expect(evaluateWake(baseline, current, "me", since)).toEqual({
+      event: "conflict",
+      ref: "o/r#1",
+      head: "a",
+      base: "b",
+      reason: `PR became blocked: ${entry}`,
+    });
+  });
+  test("BEHIND to BEHIND does not wake", () => {
+    const behind = {
+      ...baseline,
+      mergeStateStatus: "BEHIND",
+      blocking: blockingOf("MERGEABLE", "BEHIND"),
+    };
+    expect(evaluateWake(behind, behind, "me", since)).toBeNull();
+    expect(evaluateWake(baseline, behind, "me", since)?.reason).toBe("PR became blocked: behind");
+  });
   test("only new failing names wake and seen failures are deduped per head", () => {
     const old = { ...baseline, checks: [check("old", "FAILURE")] };
     const current = {
@@ -175,4 +209,32 @@ describe("watch wakes", () => {
       )?.event,
     ).toBe("head-changed");
   });
+});
+
+test("fingerprint status changes when only mergeStateStatus changes", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "eng-github-watch-"));
+  const originalFetch = globalThis.fetch;
+  let mergeStateStatus = "CLEAN";
+  globalThis.fetch = Object.assign(async (_input: string | URL | Request, init?: RequestInit) => {
+    expect(String(init?.body)).toContain("mergeStateStatus");
+    return new Response(JSON.stringify({ data: { p0: { pullRequest: {
+      state: "OPEN", mergeable: "MERGEABLE", mergeStateStatus, headRefOid: "a",
+      comments: { totalCount: 0, nodes: [] }, reviews: { totalCount: 0, nodes: [] },
+      reviewThreads: { totalCount: 0 }, commits: { nodes: [] },
+    } } } }));
+  }, { preconnect: originalFetch.preconnect });
+  try {
+    const credential: Credential = { host: "github.com", token: "test-token", source: "ENG_GITHUB_TOKEN", fingerprint: "github.com:watch-test" };
+    const client = new GitHubClient(credential, new StateStore(credential.fingerprint, dir), apiRoot("github.com"));
+    const refs = [{ owner: "o", name: "r", number: 1 }];
+    const clean = await fetchFingerprints(client, refs);
+    mergeStateStatus = "BEHIND";
+    const behind = await fetchFingerprints(client, refs);
+    expect(clean.map((value) => value.status)).toEqual(['["OPEN","a","MERGEABLE","CLEAN",[]]']);
+    expect(behind.map((value) => value.status)).toEqual(['["OPEN","a","MERGEABLE","BEHIND",[]]']);
+    expect(behind.map((value) => value.mergeStateStatus)).toEqual(["BEHIND"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
