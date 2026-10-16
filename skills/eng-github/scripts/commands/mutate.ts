@@ -5,6 +5,7 @@ import { fetchSnapshots } from "../lib/pr-query.ts";
 import { mergeAsync } from "../lib/merge-async.ts";
 import { currentRepo, parsePrRef, parseRepo, repoSlug, type PrRef } from "../lib/ref.ts";
 import { applyOwnerMarker, ownerDeps, ownerWarning, parseOwnerMarker, registerOwner, resolveOwner } from "../lib/owner.ts";
+import { requireGate } from "../lib/gate.ts";
 
 function positional(args: ParsedArgs, index: number, name: string): string {
   const value = args.positionals[index];
@@ -72,6 +73,7 @@ async function merge(ctx: CommandContext): Promise<unknown> {
   const method = action === "queue" ? undefined : oneOf(flag(ctx.args, "method"), ["squash", "merge", "rebase"], "method", "squash");
   const ref = await reference(ctx);
   if ((await snapshot(ctx, ref)).headSha !== head) throw new EngGithubError("changed", "Pull request head differs from --head");
+  await requireGate(ctx.client, ref, head);
   let result;
   try {
     result = await mergeAsync(ctx.client, ref, { head, action, admin: bool(ctx.args, "admin"), ...(method === undefined ? {} : { method }) });
@@ -114,6 +116,9 @@ export const mutationCommands: CommandTable = {
       let body = flag(ctx.args, "body-file") === undefined ? undefined : await bodyFile(ctx.args);
       if (flag(ctx.args, "body") !== undefined) throw new UsageError("use --body-file, not --body");
       const ref = await reference(ctx);
+      if (flags(ctx.args, "add-label").some((label) => label.trim().toLowerCase() === "babysit complete")) {
+        await requireGate(ctx.client, ref, (await snapshot(ctx, ref)).headSha);
+      }
       if (body !== undefined && !parseOwnerMarker(body)) {
         const current = await ctx.client.rest<{ body: string | null }>({ path: path(ref) });
         const owner = parseOwnerMarker(current.data.body ?? "");
@@ -181,6 +186,7 @@ export const mutationCommands: CommandTable = {
     const ref = await reference(ctx);
     const current = await snapshot(ctx, ref);
     if (head !== undefined && current.headSha !== head) throw new EngGithubError("changed", "Pull request head differs from --head");
+    if (head !== undefined) await requireGate(ctx.client, ref, head);
     if (action === "enable") await graphql(ctx, "mutation($id: ID!, $head: GitObjectID!, $method: PullRequestMergeMethod!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, expectedHeadOid: $head, mergeMethod: $method}) { pullRequest { id } } }", { id: current.nodeId, head, method: method.toUpperCase() });
     else await graphql(ctx, "mutation($id: ID!) { disablePullRequestAutoMerge(input: {pullRequestId: $id}) { pullRequest { id } } }", { id: current.nodeId });
     return snapshot(ctx, ref);

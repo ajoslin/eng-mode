@@ -21,6 +21,8 @@ Eng Mode uses OMP primitives directly:
 - `loop` for bounded repetition;
 - plugin discovery for skills and agents, plus `eng_orch` for repository contracts and durable orchestration state.
 
+Landing and the `babysit complete` label require the final SHA-bound evidence and independent sign-off gate documented in [`eng-github`](skills/eng-github/SKILL.md#pre-merge-gate).
+
 ## Operator guide
 
 Start with the [Eng Mode operator guide](docs/guide/README.md). It explains the runtime mental model, setup gates, routing, delegation, verification, context management, blinded evals, and repository adoption for complex monorepos.

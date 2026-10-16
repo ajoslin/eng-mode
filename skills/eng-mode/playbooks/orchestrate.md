@@ -94,6 +94,7 @@ A dependency is a context relay, not just ordering. Undeclared upstream context 
 - Exactly one stack owner may mutate topology for a stack. Record the owner in the standing orders.
 - A dependent stack exists only after `eng-github stack view` confirms it. Never emulate one with independent PR creation. Never enable auto-merge on a dependent stack when it can collapse unprotected parents.
 - PR closes and retargets go through the stack owner only. Closing a base PR orphans every chain above it. Merges and stack changes are units with briefs like any other.
+- Landing and the `babysit complete` label require `eng-github`'s final SHA-bound pre-merge gate, including fresh evidence and independent sign-off.
 
 #### Verification
 

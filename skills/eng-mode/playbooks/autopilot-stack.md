@@ -9,6 +9,8 @@
 5. Use only `eng-github` for PR state, topology, and watching, with the watcher, exit-75, and `loop` rules of Autopilot-full step 7. Count topology changes as progress in Autopilot-full step 8's stuck test.
 6. **Deliver the chain, then keep your hands off it.** Each layer carries its verdict in its PR. Nothing in this playbook merges, closes, or arms auto-merge. The operator lands through **Shipping**. There `eng-github stack merge` lands every layer below the target, so nothing needs retargeting after a merge. Once landing starts, nobody writes to the stack, because a second writer breaks a landing in flight. A mid-landing problem goes through the root to the operator, and any fix waits for the operator's go.
 
+   Every open layer through the landing target needs the final SHA-bound pre-merge gate documented in `eng-github`; new pushes invalidate it.
+
 **Choosing between the autopilots.** Autopilot-full when the PRs are independent and landing authority is granted. Autopilot-stack when the operator wants review before landing, the work is sequenced or coupled, or merge authority is withheld.
 
 **Reply:** catch the operator up per the **ketchup** skill. Report stack root and tip. For every PR, cover owner or successor, current head SHA, intended and actual base, `READY` / `WAITING` / `ADVANCE` / `COMPLETE`, Babysit gate, posted `VERIFIED` verdict and lane receipts, `STACK-READY` state, countersign, decision-trail location, and any parked or excluded item with its reason.

@@ -121,6 +121,7 @@ Playbooks are step lists inside `/eng-mode`, not skills, so they have no slash c
 
 - "babysit this pr" or "check on pr 123" runs Babysit. Babysit ends at merge-ready and never merges. Landing belongs to Shipping.
 - "land the stack" runs Shipping. Owners land only through Shipping with lead countersign. The lead never merges.
+- Before landing or applying `babysit complete`, require the final SHA-bound pre-merge gate documented in `eng-github`.
 - "take over this branch" runs Session pickup.
 - "pause safely" runs Pause safely.
 - "full autopilot on this queue" runs Autopilot-full. "stack them, don't ship" runs Autopilot-stack. Neither playbook merges. The operator lands through Shipping.

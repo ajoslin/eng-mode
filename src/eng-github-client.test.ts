@@ -253,13 +253,15 @@ describe("admission", () => {
 });
 
 describe("merge", () => {
-  const snapshot = { data: { p0: { pullRequest: { stack: null, id: "n", url: "u", number: 1, title: "t", state: "OPEN", isDraft: false, headRefName: "h", headRefOid: "abc1234", baseRefName: "main", baseRefOid: "b", mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", reviewDecision: null, labels: { nodes: [] }, autoMergeRequest: null, baseRef: null, commits: { nodes: [] }, reviewThreads: { nodes: [] }, latestReviews: { nodes: [] }, comments: { nodes: [] } } } } };
+  const head = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const snapshot = { data: { p0: { pullRequest: { stack: null, id: "n", url: "u", number: 1, title: "t", state: "OPEN", isDraft: false, headRefName: "h", headRefOid: head, baseRefName: "main", baseRefOid: "b", mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", reviewDecision: null, labels: { nodes: [] }, autoMergeRequest: null, baseRef: null, commits: { nodes: [] }, reviewThreads: { nodes: [] }, latestReviews: { nodes: [] }, comments: { nodes: [] } } } } };
   function run(action: string) {
     const { client: c } = client({ now: () => Date.now(), sleep: async () => {} });
-    stubFetch((url) => (url.endsWith("/graphql") ? new Response(JSON.stringify(snapshot)) : url.endsWith("/merge-async") ? new Response('{"message":"Not Found"}', { status: 404 }) : new Response('{"merged":true}')));
+    const comments = [{ id: 1, html_url: "evidence", created_at: "2026-10-16T00:00:00Z", author_association: "OWNER", body: `<!-- eng-gate ${JSON.stringify({ v: 1, kind: "evidence", sha: head, verdict: "pass", producer: "author", surface: "non-ui" })} -->` }, { id: 2, html_url: "signoff", created_at: "2026-10-16T00:00:01Z", author_association: "MEMBER", body: `<!-- eng-gate ${JSON.stringify({ v: 1, kind: "signoff", sha: head, evidence: 1, verdict: "approve", reviewer: "reviewer" })} -->` }];
+    stubFetch((url) => (url.endsWith("/graphql") ? new Response(JSON.stringify(snapshot)) : url.includes("/comments?") ? Response.json(comments) : url.endsWith("/merge-async") ? new Response('{"message":"Not Found"}', { status: 404 }) : new Response('{"merged":true}')));
     const command = mutationCommands.merge;
     if (command === undefined) throw new Error("merge command missing");
-    return command.run({ client: c, cwd: dir, args: { positionals: ["o/r#1"], flags: new Map([["head", ["abc1234"]], ["action", [action]]]) } });
+    return command.run({ client: c, cwd: dir, args: { positionals: ["o/r#1"], flags: new Map([["head", [head]], ["action", [action]]]) } });
   }
 
   test("queue does not fall back to the synchronous merge endpoint", async () => {
