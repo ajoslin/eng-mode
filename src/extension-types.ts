@@ -56,7 +56,12 @@ export interface ToolCallEventResult {
 
 export interface SessionEntryView {
   readonly type: string;
-  readonly message?: { readonly role?: string; readonly content?: unknown };
+  readonly customType?: string;
+  readonly message?: {
+    readonly role?: string;
+    readonly content?: unknown;
+    readonly usage?: { readonly input?: number; readonly output?: number };
+  };
 }
 
 export interface ExtensionEventContext {

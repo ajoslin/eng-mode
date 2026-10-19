@@ -10,6 +10,7 @@ import engModeExtension, {
 } from "./extension.ts";
 import { MINIMUM_GOAL_TOKEN_BUDGET } from "./goal-tool.ts";
 import type { OperationClassifier } from "./typesafe.ts";
+import type { ExtensionEventContext } from "./extension-types.ts";
 
 const roots: string[] = [];
 
@@ -142,7 +143,7 @@ describe("eng_orch executable entrypoint", () => {
     const repositoryRoot = await root();
     await contract(repositoryRoot, "project-standards");
     await contract(repositoryRoot, "verify-project");
-    type BeforeAgentStartHandler = (event: { prompt: string }) => Promise<{
+    type BeforeAgentStartHandler = (event: { prompt: string }, context: ExtensionEventContext) => Promise<{
       message?: {
         customType: string;
         content: string;
@@ -224,10 +225,11 @@ describe("eng_orch executable entrypoint", () => {
       expect(existsSync(join(repositoryRoot, ".agents"))).toBeFalse();
     });
     expect(registered.get("loop")).toMatchObject({ strict: true, loadMode: "essential" });
-    const expertResult = await Promise.all(beforeAgentStartHandlers.map((handler) => handler({ prompt: "Review the architecture" })));
+    const eventContext: ExtensionEventContext = { hasUI: false, cwd: repositoryRoot, ui: { confirm: async () => false } };
+    const expertResult = await Promise.all(beforeAgentStartHandlers.map((handler) => handler({ prompt: "Review the architecture" }, eventContext)));
     const beforeAgentStartHandler = beforeAgentStartHandlers[expertResult.findIndex((result) => result.message?.customType === "eng-mode-expert-decision-guidance")];
     expect(beforeAgentStartHandler).toBeDefined();
-    const skillMessages = async (prompt: string) => (await Promise.all(beforeAgentStartHandlers.map((handler) => handler({ prompt })))).flatMap((result) => result.message?.customType === "eng-mode-skill-invocation" ? [result.message] : []);
+    const skillMessages = async (prompt: string) => (await Promise.all(beforeAgentStartHandlers.map((handler) => handler({ prompt }, eventContext)))).flatMap((result) => result.message?.customType === "eng-mode-skill-invocation" ? [result.message] : []);
     const messages = await skillMessages("/no-comments src/");
     expect(messages).toHaveLength(1);
     expect(messages[0]).toMatchObject({ customType: "eng-mode-skill-invocation", display: false, attribution: "user" });
@@ -249,9 +251,8 @@ describe("eng_orch executable entrypoint", () => {
     for (const prompt of ["/skill:no-comments", "/not-a-skill x", "please run /no-comments"]) {
       expect(await skillMessages(prompt)).toEqual([]);
     }
-    await expect(beforeAgentStartHandler?.({ prompt: "Explore these files and report findings" })).resolves.toEqual({});
-    await expect(beforeAgentStartHandler?.({ prompt: EXPERT_DECISION_GUIDANCE })).resolves.toEqual({});
-    await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" })).resolves.toEqual({
+    await expect(beforeAgentStartHandler?.({ prompt: "Explore these files and report findings" }, eventContext)).resolves.toEqual({});
+    await expect(beforeAgentStartHandler?.({ prompt: "Review the architecture" }, eventContext)).resolves.toEqual({
       message: {
         customType: "eng-mode-expert-decision-guidance",
         content: EXPERT_DECISION_GUIDANCE,
@@ -259,6 +260,7 @@ describe("eng_orch executable entrypoint", () => {
         attribution: "agent",
       },
     });
+    await expect(beforeAgentStartHandler?.({ prompt: EXPERT_DECISION_GUIDANCE }, eventContext)).resolves.toEqual({});
     expect(classifierOutputNeedsExpertGuidance("ordinary")).toBeFalse();
     expect(classifierOutputNeedsExpertGuidance("expert")).toBeTrue();
     expect(classifierOutputNeedsExpertGuidance(undefined)).toBeFalse();
