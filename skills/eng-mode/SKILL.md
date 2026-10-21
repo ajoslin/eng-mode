@@ -36,7 +36,9 @@ At Eng Mode entry, call the `eng_orch` tool's `contracts` action before reposito
 - `inconclusive-verification`. Behavioral claims on the product surface are `INCONCLUSIVE`. Never substitute OMP `browser` for an unknown or private project driver.
 - `unconfigured`. A contract is an explicit `UNCONFIGURED` sentinel. Run `setup-eng-mode`.
 
-Use `eng-github` for all GitHub and PR work. Read its skill once, then run `eng-github COMMAND`. Use only commands documented by that skill. For an undocumented operation, use `eng-github api` or `eng-github graphql`; never use raw `gh`, `curl`, or another tool.
+Inside T3 Code (`T3CODE_OMP_SESSION=1`), `eng-github` is off. Use `gh` directly, and register and watch every PR with T3's `t3__link_pull_request` and `t3__watch_pull_request` tools. This rule overrides `eng-github` instructions in every skill and playbook.
+
+Outside T3 Code, use `eng-github` for all GitHub and PR work. Read its skill once, then run `eng-github COMMAND`. Use only commands documented by that skill. For an undocumented operation, use `eng-github api` or `eng-github graphql`; never use raw `gh`, `curl`, or another tool.
 
 The contracts decision is auditable on-disk validation, not model self-report. `setup-eng-mode` validates only the documented prerequisites. Outside Eng invocation, OMP and repository context remain authoritative.
 

@@ -114,6 +114,7 @@ babysit:
     - merge-when-ready-request
     - force-push
     - restack
+# Inside T3 Code (`T3CODE_OMP_SESSION=1`), `eng-github` is off. Use `gh` directly, and link and watch every PR with T3's `t3__link_pull_request` and `t3__watch_pull_request`. This overrides `eng-github` instructions in all skills and playbooks.
 providers:
   - id: eng-github
     sourceRef: eng-github
