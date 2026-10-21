@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { cp, mkdtemp, mkdir, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { hostedByT3Code } from "./t3-host.ts";
+import { hostedByT3Code } from "../skills/eng-github/scripts/lib/t3-host.ts";
 
 const packageRoot = resolve(import.meta.dir, "..");
 
@@ -16,7 +16,7 @@ describe("T3 Code hosting", () => {
     try {
       const installed = join(root, "node_modules", "eng-mode");
       await mkdir(installed, { recursive: true });
-      await cp(join(packageRoot, "src"), join(installed, "src"), { recursive: true });
+      for (const dir of ["src", "skills"]) await cp(join(packageRoot, dir), join(installed, dir), { recursive: true });
       await symlink(join(packageRoot, "node_modules"), join(root, "node_modules", "eng-mode", "node_modules"), "dir");
       await Bun.write(join(root, "probe.ts"), `
 import engModeExtension from ${JSON.stringify(join(installed, "src", "extension.ts"))};

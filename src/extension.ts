@@ -9,7 +9,7 @@ import type { ExtensionAPI } from "./extension-types.ts";
 import { registerGoalTool } from "./goal-tool.ts";
 import { registerLoopTool } from "./loop-tool.ts";
 import { registerSkillCommands } from "./skill-commands.ts";
-import { hostedByT3Code } from "./t3-host.ts";
+import { hostedByT3Code } from "../skills/eng-github/scripts/lib/t3-host.ts";
 import { makeClassifier, type OperationClassifier } from "./typesafe.ts";
 
 export { classifierOutputNeedsExpertGuidance, EXPERT_DECISION_GUIDANCE };

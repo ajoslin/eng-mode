@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { hostedByT3Code } from "../../../src/t3-host.ts";
+import { hostedByT3Code } from "./lib/t3-host.ts";
 import { parseArgs } from "./lib/args.ts";
 import { GitHubClient } from "./lib/client.ts";
 import type { CommandTable } from "./lib/command.ts";
