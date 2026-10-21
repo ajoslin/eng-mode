@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { hostedByT3Code } from "./lib/t3-host.ts";
 import { parseArgs } from "./lib/args.ts";
 import { GitHubClient } from "./lib/client.ts";
 import type { CommandTable } from "./lib/command.ts";
@@ -23,6 +24,12 @@ function commandName(argv: readonly string[]): { name: string; rest: readonly st
 }
 
 async function main(argv: readonly string[]): Promise<number> {
+  if (hostedByT3Code()) {
+    console.error(
+      "eng-github: disabled inside T3 Code; use gh for GitHub operations and t3__link_pull_request / t3__watch_pull_request / t3__list_thread_pull_requests to register/watch PRs.",
+    );
+    return EXIT.failure;
+  }
   if (argv.length === 0 || argv[0] === "--help" || argv[0] === "help") {
     console.log(USAGE);
     return EXIT.ok;
