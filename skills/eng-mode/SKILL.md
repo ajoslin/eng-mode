@@ -38,6 +38,8 @@ At Eng Mode entry, call the `eng_orch` tool's `contracts` action before reposito
 
 Inside T3 Code (`T3CODE_OMP_SESSION=1`), `eng-github` is off. Use `gh` directly, and register and watch every PR with T3's `t3__link_pull_request` and `t3__watch_pull_request` tools. This rule overrides `eng-github` instructions in every skill and playbook.
 
+Inside T3 Code, end the body of every GitHub comment, review and review reply you post with `<!-- fleet-watch:self-authored -->` on its own line. You post as the user's account, so T3 ignores the comment and fleet-watch forwards it to you unless it carries this marker. Never add the marker to text the user wrote.
+
 Outside T3 Code, use `eng-github` for all GitHub and PR work. Read its skill once, then run `eng-github COMMAND`. Use only commands documented by that skill. For an undocumented operation, use `eng-github api` or `eng-github graphql`; never use raw `gh`, `curl`, or another tool.
 
 The contracts decision is auditable on-disk validation, not model self-report. `setup-eng-mode` validates only the documented prerequisites. Outside Eng invocation, OMP and repository context remain authoritative.
