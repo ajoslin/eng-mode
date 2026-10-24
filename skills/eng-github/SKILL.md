@@ -143,6 +143,20 @@ eng-github auto-merge REF disable
 
 `--action default` uses the merge queue when the base branch has one. `direct` skips it. `queue` forces it and takes the queue's configured merge method, so it refuses `--method`. `--admin` sets `bypass_rules` and requires explicit operator authorization.
 
+For an unstacked PR, check `eng-github api repos/OWNER/REPO/rules/branches/BASE` for a rule with `"type": "merge_queue"`. When present, land with `eng-github merge REF --head SHA --action queue` without `--method`, and keep watching after `enqueued` until `merged`. Never squash-merge directly onto a queue-protected base or use `--action direct` or `--admin` there. Without a queue, use `eng-github auto-merge REF enable --head SHA [--method squash|merge|rebase]` and confirm arming as above. Stacked PRs retain the stack-owner path below.
+
+There is no dequeue subcommand. To leave a merge queue, use GitHub's UI or `eng-github graphql --query-file FILE --var pullRequestId=NODE_ID` with this query file:
+
+```graphql
+mutation($pullRequestId: ID!) {
+	dequeuePullRequest(input: {id: $pullRequestId}) {
+		mergeQueueEntry { id }
+	}
+}
+```
+
+Get `NODE_ID` with `eng-github api repos/OWNER/REPO/pulls/NUMBER` from `node_id`. After dequeueing, query that node with `node(id: $pullRequestId) { ... on PullRequest { mergeQueueEntry { id } } }` through `eng-github graphql` and confirm `mergeQueueEntry` is null before changing the PR.
+
 ## PR owner registration
 
 `pr create` adds `<!-- omp-owner: host=HOST session=SESSION parent=PARENT pane=PANE project=PROJECT -->` to the body and registers the snapshot head with fleet-watch. `pr edit --body-file` preserves the existing marker when the replacement body has none.
