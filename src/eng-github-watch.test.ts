@@ -28,6 +28,7 @@ const baseline: Snapshot = {
   mergeStateStatus: "CLEAN",
   blocking: [],
   reviewDecision: null,
+  mergeQueue: null,
   autoMerge: null,
   nodeId: "id",
   checks: [],
@@ -49,6 +50,23 @@ function check(name: string, conclusion: string, required = false): Check {
   };
 }
 describe("watch wakes", () => {
+  test("queued to absent while OPEN wakes dequeued", () => {
+    const queued: Snapshot = { ...baseline, mergeQueue: { state: "QUEUED", position: 1 } };
+    expect(evaluateWake(queued, baseline, "me", since)?.event).toBe("dequeued");
+  });
+  test("queued to absent with MERGED wakes merged", () => {
+    const queued: Snapshot = { ...baseline, mergeQueue: { state: "QUEUED", position: 1 } };
+    expect(evaluateWake(queued, { ...baseline, state: "MERGED" }, "me", since)?.event).toBe("merged");
+  });
+  test("no queue entry on either side does not wake dequeued", () => {
+    expect(evaluateWake(baseline, baseline, "me", since)).toBeNull();
+  });
+  test("retained queue entry becoming UNMERGEABLE wakes once", () => {
+    const queued: Snapshot = { ...baseline, mergeQueue: { state: "AWAITING_CHECKS", position: 1 } };
+    const blocked: Snapshot = { ...baseline, mergeQueue: { state: "UNMERGEABLE", position: 1 } };
+    expect(evaluateWake(queued, blocked, "me", since)?.event).toBe("dequeued");
+    expect(evaluateWake(blocked, blocked, "me", since)).toBeNull();
+  });
   test.each([
     ["MERGEABLE", "BEHIND", "behind"],
     ["UNKNOWN", "DIRTY", "conflict"],
@@ -215,10 +233,12 @@ test("fingerprint status changes when only mergeStateStatus changes", async () =
   const dir = mkdtempSync(join(tmpdir(), "eng-github-watch-"));
   const originalFetch = globalThis.fetch;
   let mergeStateStatus = "CLEAN";
+  let mergeQueueEntry: { state: string; position: number } | null = null;
   globalThis.fetch = Object.assign(async (_input: string | URL | Request, init?: RequestInit) => {
     expect(String(init?.body)).toContain("mergeStateStatus");
     return new Response(JSON.stringify({ data: { p0: { pullRequest: {
       state: "OPEN", mergeable: "MERGEABLE", mergeStateStatus, headRefOid: "a",
+      mergeQueueEntry,
       comments: { totalCount: 0, nodes: [] }, reviews: { totalCount: 0, nodes: [] },
       reviewThreads: { totalCount: 0 }, commits: { nodes: [] },
     } } } }));
@@ -230,9 +250,16 @@ test("fingerprint status changes when only mergeStateStatus changes", async () =
     const clean = await fetchFingerprints(client, refs);
     mergeStateStatus = "BEHIND";
     const behind = await fetchFingerprints(client, refs);
-    expect(clean.map((value) => value.status)).toEqual(['["OPEN","a","MERGEABLE","CLEAN",[]]']);
-    expect(behind.map((value) => value.status)).toEqual(['["OPEN","a","MERGEABLE","BEHIND",[]]']);
+    expect(clean.map((value) => value.status)).toEqual(['["OPEN","a","MERGEABLE","CLEAN",null,[]]']);
+    expect(behind.map((value) => value.status)).toEqual(['["OPEN","a","MERGEABLE","BEHIND",null,[]]']);
     expect(behind.map((value) => value.mergeStateStatus)).toEqual(["BEHIND"]);
+    mergeQueueEntry = { state: "QUEUED", position: 1 };
+    const queued = await fetchFingerprints(client, refs);
+    expect(queued.map((value) => value.mergeQueue)).toEqual([{ state: "QUEUED", position: 1 }]);
+    expect(queued.map((value) => value.status)).toEqual(['["OPEN","a","MERGEABLE","BEHIND",{"state":"QUEUED","position":1},[]]']);
+    mergeQueueEntry = null;
+    const dequeued = await fetchFingerprints(client, refs);
+    expect(dequeued.map((value) => value.status)).toEqual(behind.map((value) => value.status));
   } finally {
     globalThis.fetch = originalFetch;
     rmSync(dir, { recursive: true, force: true });

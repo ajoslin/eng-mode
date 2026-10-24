@@ -4,6 +4,7 @@ export interface Wake {
   event:
     | "merged"
     | "closed"
+    | "dequeued"
     | "head-changed"
     | "conflict"
     | "checks-failed"
@@ -54,6 +55,13 @@ export function evaluateWake(
     return wake("merged", "PR merged");
   if (current.state !== baseline.state && current.state === "CLOSED")
     return wake("closed", "PR closed");
+  if (
+    current.state === "OPEN" &&
+    baseline.mergeQueue !== null &&
+    (current.mergeQueue === null ||
+      (current.mergeQueue.state === "UNMERGEABLE" && baseline.mergeQueue.state !== "UNMERGEABLE"))
+  )
+    return wake("dequeued", current.mergeQueue === null ? "PR left the merge queue" : "Merge queue entry became unmergeable");
   if (current.headSha !== baseline.headSha)
     return wake("head-changed", "Head changed");
   const newBlocking = current.blocking.filter(

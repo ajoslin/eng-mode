@@ -56,6 +56,7 @@ Never wrap `eng-github` in a retry loop or `sleep`. Exit 75 already tells you wh
 | `eng-github whoami` | Login, token source, and remaining REST and GraphQL quota. |
 
 `snapshot` replaces the old paired snapshot. It is one request, so its head, base, checks, and threads come from one GraphQL execution. Treat it as the pinned snapshot for every decision. A later snapshot with a different `headSha` or `baseSha` invalidates it.
+`snapshot` also returns `mergeQueue: { state, position } | null`. States are `QUEUED`, `AWAITING_CHECKS`, `MERGEABLE`, `UNMERGEABLE`, or `LOCKED`. The cheap fingerprint includes queue state and position so membership changes wake the watcher.
 
 ## Wait
 
@@ -71,6 +72,7 @@ eng-github watch REF... [--until any|ci|comments] [--interval 120] [--timeout 18
 - `conflict`: the PR became unmergeable or fell behind a base that requires it to be up to date (a new `blocking` entry).
 - `head-changed`: a new head was pushed.
 - `merged` or `closed`.
+- `dequeued`: a queued PR is still open but its entry disappeared, or its retained entry newly became `UNMERGEABLE`. This blocks landing: read the PR timeline reason, fix, re-verify, and re-enqueue instead of waiting.
 - `timeout`: nothing changed before `--timeout`.
 
 `--until ci` ignores `activity`. `--until comments` ignores the check events. Only changes after `watch` starts wake it. Handle what is already there first.
@@ -142,6 +144,20 @@ eng-github auto-merge REF disable
 `auto-merge enable` arms GitHub auto-merge with `expectedHeadOid` set to `--head` and prints a fresh snapshot. Arming is confirmed only when that snapshot shows `autoMerge` non-null at the same `headSha`. Disarm with `auto-merge disable` and confirm `autoMerge` is null.
 
 `--action default` uses the merge queue when the base branch has one. `direct` skips it. `queue` forces it and takes the queue's configured merge method, so it refuses `--method`. `--admin` sets `bypass_rules` and requires explicit operator authorization.
+
+For an unstacked PR, check `eng-github api repos/OWNER/REPO/rules/branches/BASE` for a rule with `"type": "merge_queue"`. When present, land with `eng-github merge REF --head SHA --action queue` without `--method`, and keep watching after `enqueued` until `merged`. Never squash-merge directly onto a queue-protected base or use `--action direct` or `--admin` there. Without a queue, use `eng-github auto-merge REF enable --head SHA [--method squash|merge|rebase]` and confirm arming as above. Stacked PRs retain the stack-owner path below.
+
+There is no dequeue subcommand. To leave a merge queue, use GitHub's UI or `eng-github graphql --query-file FILE --var pullRequestId=NODE_ID` with this query file:
+
+```graphql
+mutation($pullRequestId: ID!) {
+	dequeuePullRequest(input: {id: $pullRequestId}) {
+		mergeQueueEntry { id }
+	}
+}
+```
+
+Get `NODE_ID` with `eng-github api repos/OWNER/REPO/pulls/NUMBER` from `node_id`. After dequeueing, query that node with `node(id: $pullRequestId) { ... on PullRequest { mergeQueueEntry { id } } }` through `eng-github graphql` and confirm `mergeQueueEntry` is null before changing the PR.
 
 ## PR owner registration
 

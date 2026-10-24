@@ -43,6 +43,10 @@ export interface Snapshot {
   mergeStateStatus: string;
   blocking: ("conflict" | "behind")[];
   reviewDecision: string | null;
+  mergeQueue: null | {
+    state: "QUEUED" | "AWAITING_CHECKS" | "MERGEABLE" | "UNMERGEABLE" | "LOCKED";
+    position: number;
+  };
   autoMerge: null | {
     method: string;
     enabledBy: string | null;
@@ -193,8 +197,17 @@ export async function reviewThreadPage(
   const connection = object(object(data.repository).pullRequest).reviewThreads;
   return { nodes: nodes(connection), cursor: nextCursor(connection) };
 }
+function mergeQueueEntry(value: unknown): Snapshot["mergeQueue"] {
+  if (value === null || value === undefined) return null;
+  const entry = object(value);
+  const state = entry.state;
+  if (state !== "QUEUED" && state !== "AWAITING_CHECKS" && state !== "MERGEABLE" && state !== "UNMERGEABLE" && state !== "LOCKED")
+    throw new ApiError(200, "Unknown merge queue entry state", state);
+  return { state, position: number(entry.position) };
+}
 function snapshotSelection(ref: PrRef): string {
-  return `stack{number size} stackEntry{position} id url number title state isDraft headRefName headRefOid baseRefName baseRefOid mergeable mergeStateStatus reviewDecision labels(first:50){nodes{name}} autoMergeRequest{mergeMethod enabledBy{login}} baseRef{target{oid} compare(headRef:${JSON.stringify(`refs/pull/${ref.number}/head`)}){behindBy}} commits(last:1){nodes{commit{oid statusCheckRollup{state contexts(first:100){nodes{__typename ... on CheckRun{name status conclusion isRequired(pullRequestNumber:${ref.number}) detailsUrl databaseId checkSuite{workflowRun{databaseId}}} ... on StatusContext{context state isRequired(pullRequestNumber:${ref.number}) targetUrl}}}}}}} reviewThreads(first:100){${threadPageSelection}} latestReviews(first:20){nodes{author{login} state submittedAt body}} comments(last:100){nodes{author{login} body createdAt}}`;
+  const queue = "mergeQueueEntry{state position enqueuedAt}";
+  return `${queue} stack{number size} stackEntry{position} id url number title state isDraft headRefName headRefOid baseRefName baseRefOid mergeable mergeStateStatus reviewDecision labels(first:50){nodes{name}} autoMergeRequest{mergeMethod enabledBy{login}} baseRef{target{oid} compare(headRef:${JSON.stringify(`refs/pull/${ref.number}/head`)}){behindBy}} commits(last:1){nodes{commit{oid statusCheckRollup{state contexts(first:100){nodes{__typename ... on CheckRun{name status conclusion isRequired(pullRequestNumber:${ref.number}) detailsUrl databaseId checkSuite{workflowRun{databaseId}}} ... on StatusContext{context state isRequired(pullRequestNumber:${ref.number}) targetUrl}}}}}}} reviewThreads(first:100){${threadPageSelection}} latestReviews(first:20){nodes{author{login} state submittedAt body}} comments(last:100){nodes{author{login} body createdAt}}`;
 }
 function parseSnapshot(value: unknown, ref: PrRef, threadNodes: unknown[]): Snapshot {
   const v = object(value);
@@ -251,6 +264,7 @@ function parseSnapshot(value: unknown, ref: PrRef, threadNodes: unknown[]): Snap
     mergeStateStatus,
     blocking,
     reviewDecision: nullableText(v.reviewDecision),
+    mergeQueue: mergeQueueEntry(v.mergeQueueEntry),
     autoMerge:
       auto === null
         ? null
@@ -307,6 +321,7 @@ export interface Fingerprint {
   headSha: string;
   mergeable: string;
   mergeStateStatus: string;
+  mergeQueue: Snapshot["mergeQueue"];
   checks: Record<string, number>;
   comments: { count: number; latest: string | null };
   reviews: { count: number; latest: string | null };
@@ -320,7 +335,7 @@ export async function fetchFingerprints(
   priority: Priority = "interactive",
 ): Promise<Fingerprint[]> {
   const selection =
-    "state mergeable mergeStateStatus headRefOid comments(first:100,orderBy:{field:UPDATED_AT,direction:DESC}){totalCount nodes{lastEditedAt updatedAt}} reviews(last:100){totalCount nodes{lastEditedAt submittedAt}} reviewThreads{totalCount} commits(last:1){nodes{commit{statusCheckRollup{contexts{checkRunCountsByState{state count} statusContextCountsByState{state count}}}}}}";
+    "mergeQueueEntry{state position} state mergeable mergeStateStatus headRefOid comments(first:100,orderBy:{field:UPDATED_AT,direction:DESC}){totalCount nodes{lastEditedAt updatedAt}} reviews(last:100){totalCount nodes{lastEditedAt submittedAt}} reviewThreads{totalCount} commits(last:1){nodes{commit{statusCheckRollup{contexts{checkRunCountsByState{state count} statusContextCountsByState{state count}}}}}}";
   const values = await aliased(client, refs, () => selection, priority, false);
   return values.map((raw, i) => {
     const v = object(raw);
@@ -370,6 +385,7 @@ export async function fetchFingerprints(
       headSha,
       mergeable,
       mergeStateStatus,
+      mergeQueue: mergeQueueEntry(v.mergeQueueEntry),
       checks,
       comments,
       reviews,
@@ -379,6 +395,7 @@ export async function fetchFingerprints(
         headSha,
         mergeable,
         mergeStateStatus,
+        mergeQueueEntry(v.mergeQueueEntry),
         Object.entries(checks).sort(),
       ]),
       remarks: JSON.stringify([comments, reviews, threads]),
