@@ -56,6 +56,7 @@ Never wrap `eng-github` in a retry loop or `sleep`. Exit 75 already tells you wh
 | `eng-github whoami` | Login, token source, and remaining REST and GraphQL quota. |
 
 `snapshot` replaces the old paired snapshot. It is one request, so its head, base, checks, and threads come from one GraphQL execution. Treat it as the pinned snapshot for every decision. A later snapshot with a different `headSha` or `baseSha` invalidates it.
+`snapshot` also returns `mergeQueue: { state, position } | null`. States are `QUEUED`, `AWAITING_CHECKS`, `MERGEABLE`, `UNMERGEABLE`, or `LOCKED`. The cheap fingerprint includes queue state and position so membership changes wake the watcher.
 
 ## Wait
 
@@ -71,6 +72,7 @@ eng-github watch REF... [--until any|ci|comments] [--interval 120] [--timeout 18
 - `conflict`: the PR became unmergeable or fell behind a base that requires it to be up to date (a new `blocking` entry).
 - `head-changed`: a new head was pushed.
 - `merged` or `closed`.
+- `dequeued`: a queued PR is still open but its entry disappeared, or its retained entry newly became `UNMERGEABLE`. This blocks landing: read the PR timeline reason, fix, re-verify, and re-enqueue instead of waiting.
 - `timeout`: nothing changed before `--timeout`.
 
 `--until ci` ignores `activity`. `--until comments` ignores the check events. Only changes after `watch` starts wake it. Handle what is already there first.

@@ -275,6 +275,15 @@ describe("merge", () => {
 });
 
 describe("snapshot", () => {
+  test.each([null, ...["QUEUED", "AWAITING_CHECKS", "MERGEABLE", "UNMERGEABLE", "LOCKED"].map((state) => ({ state, position: 2, enqueuedAt: "2026-10-24T00:00:00Z" }))])("parses merge queue membership %j", async (mergeQueueEntry) => {
+    const { client: c } = client();
+    stubFetch((_url, init) => {
+      expect(String(init?.body)).toContain("mergeQueueEntry{state position enqueuedAt}");
+      return new Response(JSON.stringify({ data: { p0: { pullRequest: { id: "n", url: "u", number: 1, title: "t", headRefName: "h", headRefOid: "a", baseRefName: "main", baseRefOid: "b", mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", state: "OPEN", mergeQueueEntry, stack: null, autoMergeRequest: null, baseRef: null, commits: { nodes: [] }, reviewThreads: { nodes: [] }, latestReviews: { nodes: [] }, comments: { nodes: [] }, labels: { nodes: [] } } } } }));
+    });
+    const snapshots = await fetchSnapshots(c, [{ owner: "o", name: "r", number: 1 }]);
+    expect(JSON.stringify(snapshots.map((snapshot) => snapshot.mergeQueue))).toBe(JSON.stringify([mergeQueueEntry === null ? null : { state: mergeQueueEntry.state, position: 2 }]));
+  });
   test.each([
     { mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", behindBy: 0, blocking: [] },
     { mergeable: "CONFLICTING", mergeStateStatus: "DIRTY", behindBy: 0, blocking: ["conflict"] },
