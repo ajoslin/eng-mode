@@ -27,7 +27,7 @@ engModeExtension({
   zod: new Proxy({}, { get: () => () => chain }),
   on: (event, handler) => { if (event === "tool_call") handlers.push(handler); },
   registerMessageRenderer() {}, registerCommand() {}, registerTool() {},
-}, { classifyDanger: async () => ({ kind: "error" }), classifyExpert: async () => ({ kind: "error" }) });
+}, { classifyExpert: async () => ({ kind: "error" }) });
 const results = await Promise.all(handlers.map(handler => handler({ type: "tool_call", toolCallId: "1", toolName: "bash", input: { command: "gh pr list" } }, { cwd: ${JSON.stringify(root)}, hasUI: false })));
 console.log(JSON.stringify({ blocked: results.some(result => result?.block === true) }));
 `);

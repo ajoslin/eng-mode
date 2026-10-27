@@ -9,7 +9,7 @@ import engModeExtension, {
   EXPERT_DECISION_GUIDANCE,
 } from "./extension.ts";
 import { MINIMUM_GOAL_TOKEN_BUDGET } from "./goal-tool.ts";
-import type { OperationClassifier } from "./typesafe.ts";
+import type { ExpertClassifier } from "./typesafe.ts";
 import type { ExtensionEventContext } from "./extension-types.ts";
 
 const roots: string[] = [];
@@ -175,8 +175,7 @@ describe("eng_orch executable entrypoint", () => {
       boolean: () => chain,
       array: () => chain,
     };
-    const fakeClassifier: OperationClassifier = {
-      classifyDanger: async () => ({ kind: "error" }),
+    const fakeClassifier: ExpertClassifier = {
       classifyExpert: async (prompt: string) => ({
         kind: "classified",
         lens: prompt.includes("architecture") ? "expert" : "ordinary",
