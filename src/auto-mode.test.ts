@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { classifierOutputNeedsExpertGuidance, registerAutoMode } from "./auto-mode.ts";
 import type { CustomMessagePayload, ExtensionAPI, ExtensionEventContext, SessionEntryView } from "./extension-types.ts";
-import type { DangerVerdict, ExpertVerdict, OperationClassifier } from "./typesafe.ts";
+import type { ExpertVerdict, ExpertClassifier } from "./typesafe.ts";
 
 const message: CustomMessagePayload = {
   customType: "test",
@@ -10,9 +10,8 @@ const message: CustomMessagePayload = {
   attribution: "agent",
 };
 
-function fakeClassifier(danger: DangerVerdict, expert: ExpertVerdict): OperationClassifier {
+function fakeClassifier(expert: ExpertVerdict): ExpertClassifier {
   return {
-    classifyDanger: async () => danger,
     classifyExpert: async () => expert,
   };
 }
@@ -71,32 +70,31 @@ describe("classifierOutputNeedsExpertGuidance", () => {
 describe("registerAutoMode", () => {
   it("injects the expert message when classified expert", async () => {
     const captured = captureHandler();
-    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "error" }, { kind: "classified", lens: "expert" }));
+    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "classified", lens: "expert" }));
     await expect(captured.handler?.({ prompt: "Choose the storage architecture" })).resolves.toEqual({ message });
   });
 
   it("does not inject for an ordinary lens", async () => {
     const captured = captureHandler();
-    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "error" }, { kind: "classified", lens: "ordinary" }));
+    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "classified", lens: "ordinary" }));
     await expect(captured.handler?.({ prompt: "Fix this failing test" })).resolves.toEqual({});
   });
 
   it("fails open when the classifier is disabled", async () => {
     const captured = captureHandler();
-    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "error" }, { kind: "disabled" }));
+    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "disabled" }));
     await expect(captured.handler?.({ prompt: "Review the architecture" })).resolves.toEqual({});
   });
 
   it("fails open when the classifier errors", async () => {
     const captured = captureHandler();
-    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "error" }, { kind: "error" }));
+    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "error" }));
     await expect(captured.handler?.({ prompt: "Review the architecture" })).resolves.toEqual({});
   });
 
   it("fails open when the classifier throws", async () => {
     const captured = captureHandler();
-    const throwing: OperationClassifier = {
-      classifyDanger: async () => ({ kind: "error" }),
+    const throwing: ExpertClassifier = {
       classifyExpert: async () => {
         throw new Error("boom");
       },
@@ -108,8 +106,7 @@ describe("registerAutoMode", () => {
   it("skips classification when the prompt already carries the guidance", async () => {
     const captured = captureHandler();
     let calls = 0;
-    const counting: OperationClassifier = {
-      classifyDanger: async () => ({ kind: "error" }),
+    const counting: ExpertClassifier = {
       classifyExpert: async () => {
         calls += 1;
         return { kind: "classified", lens: "expert" };
@@ -124,7 +121,6 @@ describe("registerAutoMode", () => {
     const captured = captureHandler();
     let calls = 0;
     registerAutoMode(captured.pi, "guidance", message, {
-      classifyDanger: async () => ({ kind: "error" }),
       classifyExpert: async () => {
         calls += 1;
         return { kind: "classified", lens: "expert" };
@@ -143,7 +139,7 @@ describe("registerAutoMode", () => {
 
   it("does not double-count reasoning tokens or count non-assistant usage", async () => {
     const captured = captureHandler();
-    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "error" }, { kind: "classified", lens: "expert" }));
+    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "classified", lens: "expert" }));
     const branch = [
       { type: "custom_message", customType: "test" },
       { type: "message", message: { role: "assistant", usage: { input: 0, output: 30_000, reasoningTokens: 30_000 } } },
@@ -155,7 +151,7 @@ describe("registerAutoMode", () => {
   for (const type of ["reset_boundary", "compaction"]) {
     it(`injects after a branch ${type}`, async () => {
       const captured = captureHandler();
-      registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "error" }, { kind: "classified", lens: "expert" }));
+      registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "classified", lens: "expert" }));
       expect(await captured.handler({ prompt: "Choose deployment" }, [
         { type: "custom_message", customType: "test" }, { type },
       ])).toEqual({ message: { customType: "test", content: "expert guidance", display: false, attribution: "agent" } });
@@ -164,7 +160,7 @@ describe("registerAutoMode", () => {
 
   it("injects twice on the same empty branch after an aborted delivery", async () => {
     const captured = captureHandler();
-    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "error" }, { kind: "classified", lens: "expert" }));
+    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "classified", lens: "expert" }));
     const branch: SessionEntryView[] = [];
     expect(await captured.handler({ prompt: "Choose storage" }, branch)).toEqual({ message: { customType: "test", content: "expert guidance", display: false, attribution: "agent" } });
     expect(await captured.handler({ prompt: "Choose deployment" }, branch)).toEqual({ message: { customType: "test", content: "expert guidance", display: false, attribution: "agent" } });
@@ -174,7 +170,6 @@ describe("registerAutoMode", () => {
     const captured = captureHandler();
     const prompts: string[] = [];
     registerAutoMode(captured.pi, "guidance", message, {
-      classifyDanger: async () => ({ kind: "error" }),
       classifyExpert: async (prompt) => {
         prompts.push(prompt);
         return { kind: "classified", lens: "expert" };
@@ -186,7 +181,7 @@ describe("registerAutoMode", () => {
 
   it("treats invalid assistant usage as zero independently", async () => {
     const captured = captureHandler();
-    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "error" }, { kind: "classified", lens: "expert" }));
+    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "classified", lens: "expert" }));
     expect(await captured.handler({ prompt: "Choose storage" }, [
       { type: "custom_message", customType: "test" },
       { type: "message", message: { role: "assistant", usage: { input: NaN, output: 49_999 } } },
@@ -199,7 +194,6 @@ describe("registerAutoMode", () => {
     const captured = captureHandler();
     let ordinary = true;
     registerAutoMode(captured.pi, "guidance", message, {
-      classifyDanger: async () => ({ kind: "error" }),
       classifyExpert: async () => ({ kind: "classified", lens: ordinary ? "ordinary" : "expert" }),
     });
     expect(await captured.handler({ prompt: "Rename heading" })).toEqual({});
@@ -209,7 +203,7 @@ describe("registerAutoMode", () => {
 
   it("skips when a branch user message contains guidance followed by low usage", async () => {
     const captured = captureHandler();
-    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "error" }, { kind: "classified", lens: "expert" }));
+    registerAutoMode(captured.pi, "guidance", message, fakeClassifier({ kind: "classified", lens: "expert" }));
     for (const content of ["Existing guidance", [{ type: "text", text: "Existing guidance" }, { type: "image" }]]) {
       expect(await captured.handler({ prompt: "Choose storage" }, [
         { type: "message", message: { role: "user", content } },

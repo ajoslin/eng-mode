@@ -13,7 +13,7 @@ Install dependencies with `bun install --frozen-lockfile`. Select a configured m
 omp --profile eng-mode-verification-<unique-suffix> --model <provider/model> --no-extensions -e "$PWD/src/extension.ts"
 ```
 
-Copy the workstation `config.yml` and `models.yml` into the profile's `agent/` directory before launch so the selected model resolves. The Expert lens and danger gate classify through TypeSafe AI and need `TYPESAFE_API_KEY` in the launch environment; export it without recording the value. Without it both hooks are disabled by design, and their positive paths are `verified-unreachable`. Readiness is the OMP composer accepting input. Stop only the managed process that this run started. Remove the disposable profile after evidence is captured.
+Copy the workstation `config.yml` and `models.yml` into the profile's `agent/` directory before launch so the selected model resolves. The Expert lens classifies through TypeSafe AI and needs `TYPESAFE_API_KEY` in the launch environment; export it without recording the value. Without it the hook is disabled by design, and its positive path is `verified-unreachable`. Readiness is the OMP composer accepting input. Stop only the managed process that this run started. Remove the disposable profile after evidence is captured.
 
 ## Doctor
 
@@ -50,4 +50,3 @@ Where a loop recipe applies, invoke `loop` with `op: status` and confirm `{ "ava
 - [Repository contract gate](features/repository-contracts.md)
 - [Durable orchestration store](features/orchestration-store.md)
 - [Automatic expert lens](features/expert-lens.md)
-- [Danger gate](features/danger-gate.md)

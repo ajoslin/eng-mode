@@ -1,5 +1,5 @@
 import type { BeforeAgentStartEvent, CustomMessagePayload, ExtensionAPI, SessionEntryView } from "./extension-types.ts";
-import type { ExpertLens, OperationClassifier } from "./typesafe.ts";
+import type { ExpertLens, ExpertClassifier } from "./typesafe.ts";
 
 const PROMPT_CLASSIFIER_TIMEOUT_MS = 5_000;
 const EXPERT_GUIDANCE_COOLDOWN_TOKENS = 50_000;
@@ -52,7 +52,7 @@ export function registerAutoMode(
   pi: ExtensionAPI,
   expertGuidance: string,
   expertMessage: CustomMessagePayload,
-  classifier: OperationClassifier,
+  classifier: ExpertClassifier,
   classifierTimeoutMs = PROMPT_CLASSIFIER_TIMEOUT_MS,
 ): void {
   pi.on("before_agent_start", async (event, ctx) => {
