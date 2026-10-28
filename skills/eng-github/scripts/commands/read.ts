@@ -26,7 +26,7 @@ import {
   type Fingerprint,
 } from "../lib/pr-query.ts";
 import { currentRepo, parsePrRef, repoSlug, type PrRef } from "../lib/ref.ts";
-import { evaluateWake, failing } from "../lib/watch-eval.ts";
+import { checkKey, evaluateWake, failing, owedChecks } from "../lib/watch-eval.ts";
 
 async function refs(ctx: CommandContext): Promise<PrRef[]> {
   if (!ctx.args.positionals.length)
@@ -129,6 +129,7 @@ async function watch(ctx: CommandContext) {
   let viewer = "";
   let failures = 0;
   const seen = new Set<string>();
+  const owed = new Map<string, ReadonlySet<string>>();
   let lastPollStart = 0;
   while (Date.now() < deadline) {
     const wait = lastPollStart + interval - Date.now();
@@ -154,7 +155,8 @@ async function watch(ctx: CommandContext) {
           ),
         );
         for (const value of baseline.values()) {
-          for (const check of value.checks.filter(failing)) seen.add(`${value.headSha}:${check.name}`);
+          owed.set(value.ref, owedChecks(value));
+          for (const check of value.checks.filter(failing)) seen.add(`${value.headSha}:${checkKey(check)}`);
         }
       } else {
         const changed = references.filter(
@@ -173,9 +175,10 @@ async function watch(ctx: CommandContext) {
               since,
               until,
               seen,
+              owed.get(value.ref),
             );
             for (const c of value.checks.filter(failing))
-              seen.add(`${value.headSha}:${c.name}`);
+              seen.add(`${value.headSha}:${checkKey(c)}`);
             baseline.set(value.ref, value);
             if (event) return event;
           }
@@ -235,7 +238,7 @@ export const readCommands: CommandTable = {
       return [
         ...comments.map((raw) => compact(raw, "comment")),
         ...reviews.map((raw) => compact(raw, "review")),
-      ].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      ].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
     },
   },
   diff: {

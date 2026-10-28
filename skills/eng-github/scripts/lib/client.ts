@@ -258,6 +258,7 @@ export class GitHubClient {
     const { response, github } = await this.send(url, init);
     if (response.status === 304 && cached !== undefined) {
       this.clearBackoff(seq);
+      this.store.touchEtag(url, new Date(this.clock.now()));
       const headers = new Headers(response.headers);
       if (cached.link !== undefined) headers.set("link", cached.link);
       return { status: 200, data: parse<T>(cached.body), text: cached.body, headers };
@@ -273,7 +274,7 @@ export class GitHubClient {
       throw new ApiError(response.status, `GitHub ${method} ${request.path} returned ${response.status}: ${message}`, data);
     }
     const etag = response.headers.get("etag");
-    if (method === "GET" && etag !== null && text.length < 4_000_000) this.store.writeEtag(url, etag, text, response.headers.get("link"));
+    if (github && method === "GET" && etag !== null && text.length < 4_000_000) this.store.writeEtag(url, etag, text, response.headers.get("link"));
     if (method !== "GET") this.store.dropEtag(url);
     return { status: response.status, data, text, headers: response.headers };
   }

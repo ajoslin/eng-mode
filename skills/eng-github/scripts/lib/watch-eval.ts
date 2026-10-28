@@ -36,6 +36,17 @@ export function passed(checks: readonly Check[]): boolean {
     )
   );
 }
+export function checkKey(check: Check): string {
+  return JSON.stringify([check.workflowName ?? "", check.name]);
+}
+export function pending(check: Check): boolean {
+  return check.conclusion === null || ["PENDING", "EXPECTED"].includes(check.conclusion) || (check.status !== "COMPLETED" && check.status !== check.conclusion);
+}
+export function owedChecks(snapshot: Snapshot): ReadonlySet<string> {
+  return new Set(snapshot.checks.some((check) => check.required) && passed(snapshot.checks)
+    ? snapshot.checks.filter((check) => !check.required && pending(check)).map(checkKey)
+    : []);
+}
 export function evaluateWake(
   baseline: Snapshot,
   current: Snapshot,
@@ -43,6 +54,7 @@ export function evaluateWake(
   since: string,
   until: Until = "any",
   seenFailures: ReadonlySet<string> = new Set(),
+  owed: ReadonlySet<string> = new Set(),
 ): Wake | null {
   const wake = (event: Wake["event"], reason: string): Wake => ({
     event,
@@ -71,18 +83,20 @@ export function evaluateWake(
     return wake("conflict", `PR became blocked: ${newBlocking.join(", ")}`);
   if (until !== "comments") {
     const previous = new Set(
-      baseline.checks.filter(failing).map((c) => c.name),
+      baseline.checks.filter(failing).map(checkKey),
     );
     const fresh = current.checks.filter(
       (c) =>
         failing(c) &&
-        !previous.has(c.name) &&
-        !seenFailures.has(`${current.headSha}:${c.name}`),
+        !previous.has(checkKey(c)) &&
+        !seenFailures.has(`${current.headSha}:${checkKey(c)}`),
     );
     if (fresh.length)
       return wake("checks-failed", fresh.map((c) => c.name).join(", "));
     if (passed(current.checks) && !passed(baseline.checks))
       return wake("checks-passed", "All selected checks passed");
+    if (owed.size > 0 && current.checks.some((check) => owed.has(checkKey(check))) && !current.checks.some(failing) && !current.checks.some(pending))
+      return wake("checks-passed", "Remaining checks finished");
   }
   if (until !== "ci") {
     const activity = [
@@ -95,7 +109,7 @@ export function evaluateWake(
     ];
     if (
       activity.some(
-        (a) => a.author !== null && a.author !== viewer && a.createdAt > since,
+        (a) => a.author !== null && a.author !== viewer && Date.parse(a.createdAt) > Date.parse(since),
       )
     )
       return wake("activity", "New activity from another author");

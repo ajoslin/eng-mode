@@ -10,7 +10,7 @@ import type {
   Check,
   Snapshot,
 } from "../skills/eng-github/scripts/lib/pr-query.ts";
-import { evaluateWake } from "../skills/eng-github/scripts/lib/watch-eval.ts";
+import { evaluateWake, owedChecks } from "../skills/eng-github/scripts/lib/watch-eval.ts";
 const since = "2026-10-07T00:00:00Z";
 const baseline: Snapshot = {
   ref: "o/r#1",
@@ -41,6 +41,7 @@ const baseline: Snapshot = {
 function check(name: string, conclusion: string, required = false): Check {
   return {
     name,
+    workflowName: null,
     conclusion,
     required,
     status: "COMPLETED",
@@ -50,6 +51,24 @@ function check(name: string, conclusion: string, required = false): Check {
   };
 }
 describe("watch wakes", () => {
+  test("overlapping names in different workflows fail independently", () => {
+    const old = { ...baseline, checks: [{ ...check("test", "FAILURE"), workflowName: "one" }] };
+    const current = { ...old, checks: [...old.checks, { ...check("test", "FAILURE"), workflowName: "two" }] };
+    expect(evaluateWake(old, current, "me", since)?.reason).toBe("test");
+  });
+  test("owed advisory checks wake only after the armed work finishes", () => {
+    const old = { ...baseline, checks: [check("required", "SUCCESS", true), check("bot", "PENDING")] };
+    const owed = owedChecks(old);
+    const current = { ...old, checks: [check("required", "SUCCESS", true), check("bot", "SUCCESS")] };
+    expect(evaluateWake(old, current, "me", since, "ci", new Set(), owed)?.reason).toBe("Remaining checks finished");
+    expect(evaluateWake(old, current, "me", since, "ci")).toBeNull();
+    expect([...owedChecks({ ...old, checks: [check("bot", "PENDING")] })]).toEqual([]);
+  });
+  test("activity compares instants across fractional timestamp formats", () => {
+    const current = { ...baseline, activity: [{ author: "other", body: "old", createdAt: "2026-10-07T00:00:00Z" }] };
+    expect(evaluateWake(baseline, current, "me", "2026-10-07T00:00:00.500Z")).toBeNull();
+    expect(evaluateWake(baseline, current, "me", "2026-10-06T23:59:59.999Z")?.event).toBe("activity");
+  });
   test("queued to absent while OPEN wakes dequeued", () => {
     const queued: Snapshot = { ...baseline, mergeQueue: { state: "QUEUED", position: 1 } };
     expect(evaluateWake(queued, baseline, "me", since)?.event).toBe("dequeued");
@@ -105,10 +124,10 @@ describe("watch wakes", () => {
     );
     expect(evaluateWake(old, old, "me", since)).toBeNull();
     expect(
-      evaluateWake(old, current, "me", since, "any", new Set(["a:new"])),
+      evaluateWake(old, current, "me", since, "any", new Set(['a:["","new"]'])),
     ).toBeNull();
     expect(
-      evaluateWake(old, current, "me", since, "any", new Set(["other:new"]))
+      evaluateWake(old, current, "me", since, "any", new Set(['other:["","new"]']))
         ?.event,
     ).toBe("checks-failed");
   });
