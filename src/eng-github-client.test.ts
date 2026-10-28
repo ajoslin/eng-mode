@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mutationCommands } from "../skills/eng-github/scripts/commands/mutate.ts";
@@ -45,6 +45,20 @@ afterEach(() => {
 });
 
 describe("state store", () => {
+  test("off-origin validators are not cached", async () => {
+    const { client: c, store } = client();
+    stubFetch((url) => url.includes("api.github.com") ? new Response(null, { status: 302, headers: { location: "https://blob.example/log" } }) : new Response("zip", { headers: { etag: "0x8D" } }));
+    await c.rest({ path: "repos/o/r/actions/logs" });
+    expect(store.readEtag("https://api.github.com/repos/o/r/actions/logs")).toBeUndefined();
+  });
+  test("validator cache evicts least recently used entries at 512", () => {
+    const store = new StateStore("bounded", dir);
+    store.writeEtag("hot", "v", "{}", null);
+    store.touchEtag("hot", new Date("2100-01-01"));
+    for (let i = 0; i < 512; i++) store.writeEtag(String(i), "v", "{}", null);
+    expect(store.readEtag("hot")).toEqual({ etag: "v", body: "{}" });
+    expect(readdirSync(join(dir, "etag", digest("bounded").slice(0, 32))).length).toBe(512);
+  });
   test("update reads under the lock, so a stale snapshot cannot drop another writer's field", () => {
     const a = new StateStore("fp", dir);
     const b = new StateStore("fp", dir);
@@ -263,6 +277,16 @@ describe("merge", () => {
     return command.run({ client: c, cwd: dir, args: { positionals: ["o/r#1"], flags: new Map([["head", ["abc1234"]], ["action", [action]]]) } });
   }
 
+  test.each(["CLEAN", "HAS_HOOKS", "UNSTABLE"])("auto-merge refuses %s without mutation", async (state) => {
+    const { client: c } = client();
+    const value = structuredClone(snapshot);
+    value.data.p0.pullRequest.mergeStateStatus = state;
+    stubFetch(() => new Response(JSON.stringify(value)));
+    const command = mutationCommands["auto-merge"];
+    if (!command) throw new Error("missing auto-merge");
+    await expect(command.run({ client: c, cwd: dir, args: { positionals: ["o/r#1", "enable"], flags: new Map([["head", ["abc1234"]]]) } })).rejects.toMatchObject({ exit: "conflict", message: `Auto-merge cannot wait in state ${state}; land with eng-github merge o/r#1 --head abc1234 [--method M]` });
+    expect(calls.length).toBe(1);
+  });
   test("queue does not fall back to the synchronous merge endpoint", async () => {
     await expect(run("queue")).rejects.toBeInstanceOf(EngGithubError);
     expect(calls.some((call) => call.url.endsWith("/pulls/1/merge"))).toBe(false);

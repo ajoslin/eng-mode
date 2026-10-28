@@ -190,3 +190,11 @@ Eng Mode's [`eng-github` skill](../../skills/eng-github/SKILL.md) adopts these m
 - Read a cheap fingerprint before fetching a full snapshot.
 - Pause requests for the rate-limited credential until its reset time. `eng-github` exits with code 75 while paused; do not retry sooner.
 - Stop background reads when 10% of the GraphQL quota remains, reserving it for interactive commands.
+
+## Synced to 9826dbb990 (2026-10-28)
+
+- `0ea5e5a53e`: bound the validator cache, refresh recency on 304, and exclude off-origin downloads.
+- `5e5c52b7a7`: distinguish checks by workflow and name.
+- `09bb9f157b`: wake when advisory checks pending at arming finish after required checks passed.
+- `6ae212e6dc`: compare activity timestamps by instant.
+- `d1066d2f42`: refuse auto-merge in states that cannot wait, with exit 3 and an explicit merge command.

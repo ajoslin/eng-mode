@@ -181,6 +181,7 @@ export const mutationCommands: CommandTable = {
     const ref = await reference(ctx);
     const current = await snapshot(ctx, ref);
     if (head !== undefined && current.headSha !== head) throw new EngGithubError("changed", "Pull request head differs from --head");
+    if (action === "enable" && ["CLEAN", "HAS_HOOKS", "UNSTABLE"].includes(current.mergeStateStatus)) throw new EngGithubError("conflict", `Auto-merge cannot wait in state ${current.mergeStateStatus}; land with eng-github merge ${current.ref} --head ${head} [--method M]`);
     if (action === "enable") await graphql(ctx, "mutation($id: ID!, $head: GitObjectID!, $method: PullRequestMergeMethod!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, expectedHeadOid: $head, mergeMethod: $method}) { pullRequest { id } } }", { id: current.nodeId, head, method: method.toUpperCase() });
     else await graphql(ctx, "mutation($id: ID!) { disablePullRequestAutoMerge(input: {pullRequestId: $id}) { pullRequest { id } } }", { id: current.nodeId });
     return snapshot(ctx, ref);

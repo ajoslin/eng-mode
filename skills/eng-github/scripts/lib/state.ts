@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { closeSync, mkdirSync, openSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync, writeSync } from "node:fs";
+import { closeSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, utimesSync, writeFileSync, writeSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { EngGithubError } from "./errors.ts";
@@ -8,6 +8,8 @@ const LOCK_STALE_MS = 10_000;
 const LOCK_TIMEOUT_MS = 20_000;
 const LOCK_SPIN_MS = 5;
 const spinCell = new Int32Array(new SharedArrayBuffer(4));
+export const ETAG_MAX_ENTRIES = 512;
+export const ETAG_MAX_BYTES = 256 * 1024 * 1024;
 
 export interface QuotaSnapshot {
   readonly limit: number;
@@ -128,9 +130,40 @@ export class StateStore {
     return readJson(join(this.etagDir, `${digest(url)}.json`));
   }
 
+  touchEtag(url: string, now = new Date()): void {
+    try {
+      utimesSync(join(this.etagDir, `${digest(url)}.json`), now, now);
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+    }
+  }
+
   writeEtag(url: string, etag: string, body: string, link: string | null): void {
     mkdirSync(this.etagDir, { recursive: true, mode: 0o700 });
     writeAtomic(join(this.etagDir, `${digest(url)}.json`), JSON.stringify({ etag, body, ...(link === null ? {} : { link }) }));
+    const entries = readdirSync(this.etagDir).flatMap((name) => {
+      if (!name.endsWith(".json")) return [];
+      const path = join(this.etagDir, name);
+      try {
+        const stat = statSync(path);
+        return [{ path, size: stat.size, mtime: stat.mtimeMs }];
+      } catch (error) {
+        if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+        throw error;
+      }
+    }).sort((a, b) => a.mtime - b.mtime);
+    let bytes = entries.reduce((sum, entry) => sum + entry.size, 0);
+    let count = entries.length;
+    for (const entry of entries) {
+      if (count <= ETAG_MAX_ENTRIES && bytes <= ETAG_MAX_BYTES) break;
+      try {
+        unlinkSync(entry.path);
+      } catch (error) {
+        if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+      }
+      count--;
+      bytes -= entry.size;
+    }
   }
 
   dropEtag(url: string): void {

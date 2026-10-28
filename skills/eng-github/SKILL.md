@@ -67,7 +67,7 @@ eng-github watch REF... [--until any|ci|comments] [--interval 120] [--timeout 18
 `watch` blocks. Every interval it reads the fingerprints of all watched PRs in one request and exits as soon as one of them has news. It prints `{ "event", "ref", "head", "base", "reason" }`. The events are:
 
 - `checks-failed`: a check newly failed, was cancelled, or needs approval. Repeated failures of the same check do not wake it again.
-- `checks-passed`: every required check passed, or every check when none are required.
+- `checks-passed`: every required check passed, or every check when none are required. If required checks already passed when armed, pending advisory checks owed at that moment also wake once all checks finish without failures. Advisory checks first seen later do not create an owed wake.
 - `activity`: someone other than you commented, reviewed, or replied to a thread.
 - `conflict`: the PR became unmergeable or fell behind a base that requires it to be up to date (a new `blocking` entry).
 - `head-changed`: a new head was pushed.
@@ -143,6 +143,8 @@ eng-github auto-merge REF disable
 
 `auto-merge enable` arms GitHub auto-merge with `expectedHeadOid` set to `--head` and prints a fresh snapshot. Arming is confirmed only when that snapshot shows `autoMerge` non-null at the same `headSha`. Disarm with `auto-merge disable` and confirm `autoMerge` is null.
 
+States `CLEAN`, `HAS_HOOKS`, and `UNSTABLE` cannot wait for auto-merge. Enabling there exits 3 without mutation. Land explicitly with `eng-github merge REF --head SHA [--method M]`.
+
 `--action default` uses the merge queue when the base branch has one. `direct` skips it. `queue` forces it and takes the queue's configured merge method, so it refuses `--method`. `--admin` sets `bypass_rules` and requires explicit operator authorization.
 
 For an unstacked PR, check `eng-github api repos/OWNER/REPO/rules/branches/BASE` for a rule with `"type": "merge_queue"`. When present, land with `eng-github merge REF --head SHA --action queue` without `--method`, and keep watching after `enqueued` until `merged`. Never squash-merge directly onto a queue-protected base or use `--action direct` or `--admin` there. Without a queue, use `eng-github auto-merge REF enable --head SHA [--method squash|merge|rebase]` and confirm arming as above. Stacked PRs retain the stack-owner path below.
@@ -209,6 +211,8 @@ eng-github graphql --query-file FILE [--var key=value]... [--paginate]
 ```
 
 These go through the same credential, pause, budget, and conditional-request cache as every other command. `--paginate` follows `Link` headers for REST and `pageInfo.endCursor` for GraphQL queries that declare `$endCursor`. Use them only for operations the commands above do not cover.
+
+The conditional cache stores only authenticated GitHub-origin validators. Each credential keeps at most 512 entries and 256 MiB, evicting least recently used entries. A 304 refreshes recency. There is no TTL.
 
 ## Failure rules
 

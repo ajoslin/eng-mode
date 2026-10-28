@@ -4,6 +4,7 @@ import { refString, type PrRef } from "./ref.ts";
 
 export interface Check {
   name: string;
+  workflowName: string | null;
   status: string;
   conclusion: string | null;
   required: boolean;
@@ -207,7 +208,7 @@ function mergeQueueEntry(value: unknown): Snapshot["mergeQueue"] {
 }
 function snapshotSelection(ref: PrRef): string {
   const queue = "mergeQueueEntry{state position enqueuedAt}";
-  return `${queue} stack{number size} stackEntry{position} id url number title state isDraft headRefName headRefOid baseRefName baseRefOid mergeable mergeStateStatus reviewDecision labels(first:50){nodes{name}} autoMergeRequest{mergeMethod enabledBy{login}} baseRef{target{oid} compare(headRef:${JSON.stringify(`refs/pull/${ref.number}/head`)}){behindBy}} commits(last:1){nodes{commit{oid statusCheckRollup{state contexts(first:100){nodes{__typename ... on CheckRun{name status conclusion isRequired(pullRequestNumber:${ref.number}) detailsUrl databaseId checkSuite{workflowRun{databaseId}}} ... on StatusContext{context state isRequired(pullRequestNumber:${ref.number}) targetUrl}}}}}}} reviewThreads(first:100){${threadPageSelection}} latestReviews(first:20){nodes{author{login} state submittedAt body}} comments(last:100){nodes{author{login} body createdAt}}`;
+  return `${queue} stack{number size} stackEntry{position} id url number title state isDraft headRefName headRefOid baseRefName baseRefOid mergeable mergeStateStatus reviewDecision labels(first:50){nodes{name}} autoMergeRequest{mergeMethod enabledBy{login}} baseRef{target{oid} compare(headRef:${JSON.stringify(`refs/pull/${ref.number}/head`)}){behindBy}} commits(last:1){nodes{commit{oid statusCheckRollup{state contexts(first:100){nodes{__typename ... on CheckRun{name status conclusion isRequired(pullRequestNumber:${ref.number}) detailsUrl databaseId checkSuite{workflowRun{databaseId workflow{name}}}} ... on StatusContext{context state isRequired(pullRequestNumber:${ref.number}) targetUrl}}}}}}} reviewThreads(first:100){${threadPageSelection}} latestReviews(first:20){nodes{author{login} state submittedAt body}} comments(last:100){nodes{author{login} body createdAt}}`;
 }
 function parseSnapshot(value: unknown, ref: PrRef, threadNodes: unknown[]): Snapshot {
   const v = object(value);
@@ -230,6 +231,7 @@ function parseSnapshot(value: unknown, ref: PrRef, threadNodes: unknown[]): Snap
               : object(c.checkSuite).workflowRun;
           return {
             name: text(c.name ?? c.context),
+            workflowName: run == null ? null : nullableText(object(object(run).workflow).name),
             status: text(c.status ?? c.state),
             conclusion: nullableText(c.conclusion ?? c.state),
             required: c.isRequired === true,
@@ -348,7 +350,7 @@ export async function fetchFingerprints(
             (x): x is string => typeof x === "string",
           );
         })
-        .sort();
+        .sort((a, b) => Date.parse(a) - Date.parse(b));
       return { count: number(e.totalCount), latest: dates.at(-1) ?? null };
     };
     const checks: Record<string, number> = {};
