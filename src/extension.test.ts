@@ -8,7 +8,6 @@ import engModeExtension, {
   executeEngOrch,
   EXPERT_DECISION_GUIDANCE,
 } from "./extension.ts";
-import { MINIMUM_GOAL_TOKEN_BUDGET } from "./goal-tool.ts";
 import type { ExpertClassifier } from "./typesafe.ts";
 import type { ExtensionEventContext } from "./extension-types.ts";
 
@@ -155,15 +154,11 @@ describe("eng_orch executable entrypoint", () => {
     let expertRenderer: ((_message: unknown, _options: unknown, theme: { fg(color: "accent" | "dim", text: string): string }) => unknown) | undefined;
     const registered = new Map<string, RegisteredTool>();
     const registeredCommands: Record<string, (args: string, context: unknown) => Promise<void>> = {};
-    let tokenBudgetMinimum: number | undefined;
     const chain = {
       optional: () => chain,
       int: () => chain,
       describe: () => chain,
-      min: (value: number) => {
-        tokenBudgetMinimum = value;
-        return chain;
-      },
+      min: () => chain,
       positive: () => chain,
       nonnegative: () => chain,
     };
@@ -273,7 +268,6 @@ describe("eng_orch executable entrypoint", () => {
     if (!goal || !engOrch) throw new Error("Eng Mode tools were not registered");
     expect(goal).toMatchObject({ strict: true, loadMode: "essential" });
     expect(engOrch).toMatchObject({ strict: true, loadMode: "essential" });
-    expect(tokenBudgetMinimum).toBe(MINIMUM_GOAL_TOKEN_BUDGET);
     const signal = new AbortController().signal;
     const onUpdate = () => {};
     const invokeTool = async (params: Record<string, unknown>, options: unknown) => ({ params, options });
@@ -281,16 +275,12 @@ describe("eng_orch executable entrypoint", () => {
       params: { op: "get" },
       options: { signal, onUpdate },
     });
-    await expect(goal.execute("call-default", { op: "create", objective: "ship" }, undefined, undefined, { invokeTool })).resolves.toEqual({
-      params: { op: "create", objective: "ship", token_budget: MINIMUM_GOAL_TOKEN_BUDGET },
+    await expect(goal.execute("call-create", { op: "create", objective: "ship" }, undefined, undefined, { invokeTool })).resolves.toEqual({
+      params: { op: "create", objective: "ship" },
       options: {},
     });
-    await expect(goal.execute("call-low", { op: "create", objective: "ship", token_budget: 42 }, undefined, undefined, { invokeTool })).resolves.toEqual({
-      params: { op: "create", objective: "ship", token_budget: MINIMUM_GOAL_TOKEN_BUDGET },
-      options: {},
-    });
-    await expect(goal.execute("call-high", { op: "create", objective: "ship", token_budget: 600_000_000 }, undefined, undefined, { invokeTool })).resolves.toEqual({
-      params: { op: "create", objective: "ship", token_budget: 600_000_000 },
+    await expect(goal.execute("call-budget", { op: "create", objective: "ship", token_budget: 42 }, undefined, undefined, { invokeTool })).resolves.toEqual({
+      params: { op: "create", objective: "ship" },
       options: {},
     });
     await expect(goal.execute("call-2", { op: "get" }, signal, onUpdate, {})).rejects.toThrow(

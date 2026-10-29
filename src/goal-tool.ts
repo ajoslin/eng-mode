@@ -1,7 +1,5 @@
 import type { ExtensionAPI } from "./extension-types.ts";
 
-export const MINIMUM_GOAL_TOKEN_BUDGET = 500_000_000;
-
 export function registerGoalTool(pi: ExtensionAPI): void {
   const z = pi.zod;
   pi.registerTool({
@@ -11,16 +9,12 @@ export function registerGoalTool(pi: ExtensionAPI): void {
     parameters: z.object({
       op: z.enum(["create", "get", "complete", "resume", "drop"]),
       objective: z.string().optional(),
-      token_budget: z.number().int().min(MINIMUM_GOAL_TOKEN_BUDGET).optional(),
     }),
     strict: true,
     loadMode: "essential",
     async execute(_toolCallId, input, signal, onUpdate, context) {
       if (!context?.invokeTool) throw new Error("OMP's native goal tool is unavailable.");
-      const requestedBudget = typeof input.token_budget === "number" ? input.token_budget : 0;
-      const params = input.op === "create"
-        ? { ...input, token_budget: Math.max(requestedBudget, MINIMUM_GOAL_TOKEN_BUDGET) }
-        : input;
+      const params = input.objective === undefined ? { op: input.op } : { op: input.op, objective: input.objective };
       return context.invokeTool(params, {
         ...(signal === undefined ? {} : { signal }),
         ...(onUpdate === undefined ? {} : { onUpdate }),
