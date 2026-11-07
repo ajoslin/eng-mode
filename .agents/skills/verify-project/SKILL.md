@@ -1,9 +1,11 @@
 ---
 name: verify-project
-description: Launch and drive the Eng Mode extension in a disposable OMP TUI session to verify registered tools and lifecycle behavior.
+description: Launch and drive the Eng Mode extension in a disposable OMP TUI session, or the Claude Code adapter in a disposable Claude Code config, to verify tools and lifecycle behavior.
 ---
 
 # Verify the Eng Mode OMP extension
+
+The sections below cover the OMP extension. The Claude Code adapter has its own launch, health gate, and drive in [features/claude-overlay.md](features/claude-overlay.md). Neither path substitutes for the other.
 
 ## Launch
 
@@ -50,3 +52,4 @@ Where a loop recipe applies, invoke `loop` with `op: status` and confirm `{ "ava
 - [Repository contract gate](features/repository-contracts.md)
 - [Durable orchestration store](features/orchestration-store.md)
 - [Automatic expert lens](features/expert-lens.md)
+- [Claude Code adapter](features/claude-overlay.md)

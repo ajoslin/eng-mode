@@ -18,5 +18,5 @@
     "noUncheckedIndexedAccess": true,
     "types": ["bun"]
   },
-  "include": ["src", "skills/eng-github/scripts"]
+  "include": ["src", "skills/eng-github/scripts", "plugins/eng-mode/lib"]
 }

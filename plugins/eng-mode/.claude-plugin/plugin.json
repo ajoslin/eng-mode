@@ -1,0 +1,19 @@
+{
+  "name": "eng-mode",
+  "displayName": "Eng Mode (pstack alias)",
+  "version": "0.2.0",
+  "description": "Minimal Claude Code adapter: /eng-mode aliases pstack poteto-mode, plus eng-github routing and an extra-model helper.",
+  "author": {
+    "name": "ajoslin",
+    "url": "https://github.com/ajoslin"
+  },
+  "homepage": "https://github.com/ajoslin/eng-mode",
+  "repository": "https://github.com/ajoslin/eng-mode",
+  "license": "MIT",
+  "keywords": [
+    "eng-mode",
+    "pstack",
+    "claude-code",
+    "workflow"
+  ]
+}
