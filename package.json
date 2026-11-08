@@ -3,12 +3,14 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Global Eng Mode engineering workflows, agents, orchestration, and goal/loop integration for OMP.",
+  "description": "Global Eng Mode engineering workflows, agents, orchestration, and goal/loop integration for OMP, plus a minimal Claude Code alias adapter for pstack.",
   "repository": "github:ajoslin/eng-mode",
   "license": "MIT",
   "files": [
+    ".claude-plugin",
     "agents",
     "docs",
+    "plugins",
     "skills",
     "src",
     "workflow-law.yml",
@@ -26,7 +28,8 @@
     "compact-adviser": "bun src/compact-adviser.ts",
     "test": "bun test ./src",
     "typecheck": "bunx tsgo -p tsconfig.json",
-    "check": "bun run workflow-law:check && bun run test && bun run typecheck"
+    "check": "bun run workflow-law:check && bun run test && bun run typecheck",
+    "claude:install": "sh plugins/eng-mode/scripts/install.sh"
   },
   "dependencies": {
     "@effect-agent/ai-decision": "0.1.0-beta.109",

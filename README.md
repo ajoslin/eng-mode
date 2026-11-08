@@ -51,6 +51,10 @@ setup-eng-mode
 
 To update, run the install command again, restart OMP, and rerun `setup-eng-mode` in each repository.
 
+## Claude Code
+
+`plugins/eng-mode` is a minimal Claude Code adapter on the installed [pstack-claude](https://github.com/michael-denyer/pstack-claude) plugin: `/eng-mode TASK` aliases pstack's `poteto-mode`, GitHub calls route through `eng-github`, and `eng-extra-model` reaches non-Claude models through CLIProxyAPI or Codex. With pstack installed, run `bun run claude:install` from this checkout and start a new session. See [plugins/eng-mode/README.md](plugins/eng-mode/README.md).
+
 ## What belongs in each repository
 
 Eng Mode supplies the reusable workflow. Each repository owns:

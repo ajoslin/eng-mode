@@ -13,6 +13,7 @@ This repository ships one OMP extension from `src/extension.ts`, reusable skills
 - Reuse OMP primitives when an equivalent model-callable interface exists. When OMP exposes only operator UI state, keep any extension-owned state explicit and isolated.
 - Skills define workflow semantics; runtime code provides only mechanisms and lifecycle state.
 - Clean cutovers are required: migrate every shipped skill and guide in the same change, then remove obsolete semantics.
+- `plugins/eng-mode` is the minimal Claude Code adapter, listed by `.claude-plugin/marketplace.json`. `/eng-mode` aliases the installed `pstack@pstack-claude` `poteto-mode`; the plugin adds only `eng-github` routing and `eng-extra-model`. It ships no playbooks, hooks, or state. `skills/eng-github` is a symlink into `skills/`.
 
 ## TypeScript
 
@@ -28,12 +29,14 @@ Commands:
 - Full test: `bun test ./src`
 - Typecheck: `bunx tsgo -p tsconfig.json`
 - Required pre-commit pass: `bun run check`
+- Claude adapter manifests: `claude plugin validate .` and `claude plugin validate plugins/eng-mode`
+- Claude adapter local install: `bun run claude:install`
 
 There is no separate lint command.
 
 ## Verification and review
 
-The product verification contract is `verify-project`. Use it for user-visible OMP extension behavior; unit tests alone do not prove that OMP can load and drive the tool.
+The product verification contract is `verify-project`. Use it for user-visible OMP extension behavior and for the Claude Code adapter; unit tests alone do not prove that OMP can load and drive the tool.
 
 Before handoff, run `unslop`, then `no-comments`, then `bun run check`. Use `interrogate` for cross-cutting runtime or lifecycle changes. GitHub work uses `eng-github`; stack submission uses `eng-github stack submit --base BASE BRANCH...`.
 

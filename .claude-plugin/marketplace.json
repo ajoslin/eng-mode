@@ -1,0 +1,16 @@
+{
+  "name": "eng-mode",
+  "owner": {
+    "name": "ajoslin",
+    "url": "https://github.com/ajoslin"
+  },
+  "description": "Eng Mode for Claude Code: /eng-mode alias for pstack-claude.",
+  "plugins": [
+    {
+      "name": "eng-mode",
+      "source": "./plugins/eng-mode",
+      "description": "/eng-mode alias for pstack poteto-mode, plus eng-github and extra-model helper.",
+      "version": "0.2.0"
+    }
+  ]
+}
